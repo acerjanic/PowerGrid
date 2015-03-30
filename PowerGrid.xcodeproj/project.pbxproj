@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		5E063CC61AB27D6200F98D62 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E063CC51AB27D6200F98D62 /* main.cpp */; };
+		5E1674191AC3B52700478DE2 /* Gfft.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E1674171AC3B52700478DE2 /* Gfft.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,6 +26,9 @@
 /* Begin PBXFileReference section */
 		5E063CC21AB27D6200F98D62 /* PowerGrid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PowerGrid; sourceTree = BUILT_PRODUCTS_DIR; };
 		5E063CC51AB27D6200F98D62 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		5E063CCC1AB28BDF00F98D62 /* fftshift.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = fftshift.hpp; sourceTree = "<group>"; };
+		5E1674171AC3B52700478DE2 /* Gfft.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Gfft.cpp; sourceTree = "<group>"; };
+		5E1674181AC3B52700478DE2 /* Gfft.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Gfft.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +62,9 @@
 			isa = PBXGroup;
 			children = (
 				5E063CC51AB27D6200F98D62 /* main.cpp */,
+				5E1674171AC3B52700478DE2 /* Gfft.cpp */,
+				5E1674181AC3B52700478DE2 /* Gfft.h */,
+				5E063CCC1AB28BDF00F98D62 /* fftshift.hpp */,
 			);
 			path = PowerGrid;
 			sourceTree = "<group>";
@@ -118,6 +125,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5E1674191AC3B52700478DE2 /* Gfft.cpp in Sources */,
 				5E063CC61AB27D6200F98D62 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -202,14 +210,20 @@
 		5E063CCA1AB27D6200F98D62 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				LIBRARY_SEARCH_PATHS = /usr/lib;
+				OTHER_LDFLAGS = /usr/lib/libarmadillo.dylib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = /usr/include;
 			};
 			name = Debug;
 		};
 		5E063CCB1AB27D6200F98D62 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				LIBRARY_SEARCH_PATHS = /usr/lib;
+				OTHER_LDFLAGS = /usr/lib/libarmadillo.dylib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = /usr/include;
 			};
 			name = Release;
 		};
@@ -232,6 +246,7 @@
 				5E063CCB1AB27D6200F98D62 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
