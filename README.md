@@ -1,8 +1,8 @@
 # PowerGrid</h1>
 
-##  for working on the PowerGrid software. 
+##  Respository for working on the PowerGrid software. 
 
-###Subfolders:
+###  Subfolders:
 /PowerGrid - This contains the code directly used by the project
 /Resources - This contains code that is not directly used by the project for reference
 
