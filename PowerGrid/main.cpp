@@ -24,6 +24,7 @@ namespace arma {
 #include "op_circshift_bones.hpp"
 #include "op_circshift_meat.hpp"
 #include "fn_circshift.hpp"
+#include "fftshift.hpp"
 }
 
 using namespace arma;
@@ -33,14 +34,16 @@ using namespace std;
 int main(int argc, char** argv)
 {
     
-    mat A = randu<mat>(4,5);
-    mat B = randu<mat>(4,5);
+    mat A = randu<mat>(6,6);
+    mat B = randu<mat>(6,6);
     
     cout << A << endl;
     
+    cout << fftshift(A) << endl;
+    
     cout << circshift(A,1,0) << endl;
     
-    cout << A*B.t() << endl;
+    //cout << A*B.t() << endl;
     
     return 0;
 }

@@ -9,6 +9,12 @@
 #ifndef __PowerGrid__Gfft__
 #define __PowerGrid__Gfft__
 
-#include <stdio.h>
 
+class Gfft<typename T1> {
+public:
+    //Default Class Constructor and Destructor
+    Gfft();
+    ~Gfft();
+    
+}
 #endif /* defined(__PowerGrid__Gfft__) */
