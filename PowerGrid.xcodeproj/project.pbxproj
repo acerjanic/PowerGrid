@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		5E063CC61AB27D6200F98D62 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E063CC51AB27D6200F98D62 /* main.cpp */; };
-		5E1674191AC3B52700478DE2 /* Gfft.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E1674171AC3B52700478DE2 /* Gfft.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -26,9 +25,11 @@
 /* Begin PBXFileReference section */
 		5E063CC21AB27D6200F98D62 /* PowerGrid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PowerGrid; sourceTree = BUILT_PRODUCTS_DIR; };
 		5E063CC51AB27D6200F98D62 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		5E063CCC1AB28BDF00F98D62 /* fftshift.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = fftshift.hpp; sourceTree = "<group>"; };
 		5E1674171AC3B52700478DE2 /* Gfft.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Gfft.cpp; sourceTree = "<group>"; };
 		5E1674181AC3B52700478DE2 /* Gfft.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Gfft.h; sourceTree = "<group>"; };
+		5ECD44E21ACCF19300E79C4A /* op_circshift_meat.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = op_circshift_meat.hpp; sourceTree = "<group>"; };
+		5ECD44E31ACCF1A000E79C4A /* op_circshift_bones.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = op_circshift_bones.hpp; sourceTree = "<group>"; };
+		5ECD44E41ACCF1E600E79C4A /* fn_circshift.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = fn_circshift.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,10 +62,12 @@
 		5E063CC41AB27D6200F98D62 /* PowerGrid */ = {
 			isa = PBXGroup;
 			children = (
+				5ECD44E41ACCF1E600E79C4A /* fn_circshift.hpp */,
 				5E063CC51AB27D6200F98D62 /* main.cpp */,
 				5E1674171AC3B52700478DE2 /* Gfft.cpp */,
 				5E1674181AC3B52700478DE2 /* Gfft.h */,
-				5E063CCC1AB28BDF00F98D62 /* fftshift.hpp */,
+				5ECD44E31ACCF1A000E79C4A /* op_circshift_bones.hpp */,
+				5ECD44E21ACCF19300E79C4A /* op_circshift_meat.hpp */,
 			);
 			path = PowerGrid;
 			sourceTree = "<group>";
@@ -125,7 +128,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5E1674191AC3B52700478DE2 /* Gfft.cpp in Sources */,
 				5E063CC61AB27D6200F98D62 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

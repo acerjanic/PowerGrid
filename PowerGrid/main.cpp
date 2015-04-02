@@ -18,54 +18,29 @@
 
 
 #include <iostream>
-
 #include "armadillo"
+
+namespace arma {
+#include "op_circshift_bones.hpp"
+#include "op_circshift_meat.hpp"
+#include "fn_circshift.hpp"
+}
 
 using namespace arma;
 using namespace std;
 
 
-
 int main(int argc, char** argv)
 {
-    // points to which we will fit the line
-    mat data = "1 6; 2 5; 3 7; 4 10";
     
-    cout << "Points used for the estimation:" << endl;
-    cout << data << endl;
+    mat A = randu<mat>(4,5);
+    mat B = randu<mat>(4,5);
     
-    // Build matrices to solve Ax = b problem:
-    vec b(data.n_rows);
-    mat C(data.n_rows, 2);
+    cout << A << endl;
     
-    for(u32 i=0; i<data.n_rows; ++i)
-    {
-        b(i)   = data(i,1);
-        
-        C(i,0) = 1;
-        C(i,1) = data(i,0);
-    }
+    cout << circshift(A,1,0) << endl;
     
-    cout << "b:" << endl;
-    cout << b << endl;
-    
-    cout << "Constraint matrix:" << endl;
-    cout << C << endl;
-    
-    // Compute least-squares solution:
-    vec solution = solve(C,b);
-    
-    // solution should be "3.5; 1.4"
-    cout << "solution:" << endl;
-    cout << solution << endl;
-    
-    
-    cout << "Reprojection error:" << endl;
-    
-    for(u32 i=0; i<data.n_rows; ++i)
-    {
-        cout << "  residual: " << ( data(i,1) - (solution(0) + solution(1) * data(i,0)) ) << endl;
-    }
+    cout << A*B.t() << endl;
     
     return 0;
 }
