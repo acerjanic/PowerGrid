@@ -4,8 +4,8 @@
 #ifndef CEEMPLEMATIO_H
 #define CEEMPLEMATIO_H
 
-#include <CeempleArmadillo.h>
-#include <matio.h>
+#include "CeempleArmadillo.h"
+#include "matio.h"
 
 template <class T> struct MatioTypes {
   static const matio_types DataType = MAT_T_UNKNOWN;
@@ -30,7 +30,7 @@ bool savemat(const std::string &FileName, const std::string &VarName,
             FileName.c_str());
     return false;
   }
-  unsigned dims[2] = {Var.n_rows, Var.n_cols};
+  size_t dims[2] = {Var.n_rows, Var.n_cols};
   matvar_t *matvar =
       Mat_VarCreate(VarName.c_str(), MAT_C_DOUBLE, MatioTypes<T>::DataType, 2,
                     dims, (void *)Var.memptr(), 0);

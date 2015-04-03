@@ -20,7 +20,7 @@ T1 fftshift(T1& X, uword dim);
 
 template<typename T1>
 arma_inline
-T1 fftshift(T1& X);
+T1 fftshift(T1 X);
 
 template<typename T1>
 arma_inline
@@ -37,7 +37,7 @@ T1 fftshift(
         arma_extra_debug_sigprint();
         arma_debug_print( "fftshift(): trying to shift dimension greater than 2");
     }
-    uword halfShift = 2;
+
     T1 out = circshift(X,dim,std::floor(size/2));
     return out;
 }
@@ -45,11 +45,13 @@ T1 fftshift(
 template<typename T1>
 arma_inline
 T1 fftshift(
-            T1& X
+            T1 X
             ) {
-    uword halfShift = 2;
+
     T1 out = circshift(circshift(X,0,std::floor(X.n_rows/2)),1,std::floor(X.n_cols/2));
     return out;
 }
+
+
 
 #endif /* defined(__PowerGrid__fftshift__hpp) */

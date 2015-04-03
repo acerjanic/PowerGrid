@@ -17,15 +17,8 @@
 // http://en.wikipedia.org/wiki/Linear_least_squares#Motivational_example
 
 
-#include <iostream>
-#include "armadillo"
-
-namespace arma {
-#include "op_circshift_bones.hpp"
-#include "op_circshift_meat.hpp"
-#include "fn_circshift.hpp"
-#include "fftshift.hpp"
-}
+#include "PowerGrid.h"
+#include "../Support/CeempleMatio.h"
 
 using namespace arma;
 using namespace std;
@@ -34,17 +27,23 @@ using namespace std;
 int main(int argc, char** argv)
 {
     
-    mat A = randu<mat>(6,6);
-    mat B = randu<mat>(6,6);
+    Mat<cx_double> test;
     
-    cout << A << endl;
+    loadmat("/Users/alexcerjanic/Developer/PowerGrid/Resources/test.mat","test",&test);
     
-    cout << fftshift(A) << endl;
+    Gfft<Col<cx_double>> G(64,64);
+
+    Col<cx_double> testForward = G*vectorise(test);
     
-    cout << circshift(A,1,0) << endl;
+    Col<cx_double> testAdjoint = G/testForward;
     
-    //cout << A*B.t() << endl;
-    
+    savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testForwardReal.mat","testForwardReal", real(testForward).eval());
+    savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testForwardImag.mat","testForwardImag", imag(testForward).eval());
+
+    savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testAdjointReal.mat","testAdjointReal", real(testAdjoint).eval());
+    savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testAdjointImag.mat","testAdjointImag", imag(testAdjoint).eval());
+
+
     return 0;
 }
 
