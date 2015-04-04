@@ -6,22 +6,12 @@
 //  Copyright (c) 2015 MRFIL. All rights reserved.
 //
 
-// Tutorial for linear least square fitting
-// Author: Pierre Moulon
-// Date: 8 December 2009
-// Objective:
-// Fit a 2D line with to a set of points
-// Specifically, find a and b in the model y = ax + b
-//
-// Direct application of the example in:
-// http://en.wikipedia.org/wiki/Linear_least_squares#Motivational_example
 
+#include "PowerGrid.h" //Project headers.
+#include "../Support/CeempleMatio.h" //Headers for using savemat and loadmat
 
-#include "PowerGrid.h"
-#include "../Support/CeempleMatio.h"
-
-using namespace arma;
-using namespace std;
+using namespace arma; //Armdillo stuff is in the arma namespace
+using namespace std; //complex type comes from the STL
 
 
 int main(int argc, char** argv)
@@ -47,7 +37,8 @@ int main(int argc, char** argv)
     
     savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/out.mat","fftShiftOut", fftshift(test).eval());
 
-    //Testing the
+    //Writing the transforms to disk for evaluation in MATLAB. Note that we can't read or write complex natively (yet), so lets
+    //seperate real and imaginary first. Also, we can't put multiple variables in a single file yet. These are TODOs.
     savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testForwardReal.mat","testForwardReal", real(testForward).eval());
     savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testForwardImag.mat","testForwardImag", imag(testForward).eval());
 
