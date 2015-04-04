@@ -28,7 +28,8 @@
 		5E5618DE1ACDAC7D005A6EF3 /* fftshift.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = fftshift.hpp; sourceTree = "<group>"; };
 		5E5618DF1ACDBCB2005A6EF3 /* Gfft.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Gfft.hpp; sourceTree = "<group>"; };
 		5E5618E01ACDC18E005A6EF3 /* PowerGrid.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PowerGrid.h; sourceTree = "<group>"; };
-		5EB4437D1AD04E6300CEF071 /* simpleTutorial.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = simpleTutorial.cpp; sourceTree = "<group>"; };
+		5EB4437F1AD05B1800CEF071 /* SENSE.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = SENSE.hpp; sourceTree = "<group>"; };
+		5EB443801AD05D4F00CEF071 /* Gdft.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Gdft.hpp; sourceTree = "<group>"; };
 		5ECD44E21ACCF19300E79C4A /* op_circshift_meat.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = op_circshift_meat.hpp; sourceTree = "<group>"; };
 		5ECD44E31ACCF1A000E79C4A /* op_circshift_bones.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = op_circshift_bones.hpp; sourceTree = "<group>"; };
 		5ECD44E41ACCF1E600E79C4A /* fn_circshift.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = fn_circshift.hpp; sourceTree = "<group>"; };
@@ -65,13 +66,14 @@
 			isa = PBXGroup;
 			children = (
 				5E5618DF1ACDBCB2005A6EF3 /* Gfft.hpp */,
+				5EB443801AD05D4F00CEF071 /* Gdft.hpp */,
 				5E5618DE1ACDAC7D005A6EF3 /* fftshift.hpp */,
 				5ECD44E41ACCF1E600E79C4A /* fn_circshift.hpp */,
 				5E063CC51AB27D6200F98D62 /* main.cpp */,
-				5EB4437D1AD04E6300CEF071 /* simpleTutorial.cpp */,
 				5E5618E01ACDC18E005A6EF3 /* PowerGrid.h */,
 				5ECD44E31ACCF1A000E79C4A /* op_circshift_bones.hpp */,
 				5ECD44E21ACCF19300E79C4A /* op_circshift_meat.hpp */,
+				5EB4437F1AD05B1800CEF071 /* SENSE.hpp */,
 			);
 			path = PowerGrid;
 			sourceTree = "<group>";

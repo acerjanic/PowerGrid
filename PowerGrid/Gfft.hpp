@@ -21,6 +21,7 @@ public:
         n2 = b;
     }
     
+    //Class variables go here.
     uword n1 = 0; //Data size (n1*n1)
     uword n2 = 0; //Image size (n2,n2)
 

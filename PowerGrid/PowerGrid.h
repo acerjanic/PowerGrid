@@ -21,6 +21,8 @@ namespace arma {
 #include "fn_circshift.hpp"
 #include "fftshift.hpp"
 #include "Gfft.hpp"
+#include "SENSE.hpp"
+#include "Gdft.hpp"
     
 }
 
