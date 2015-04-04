@@ -27,15 +27,17 @@ using namespace std;
 int main(int argc, char** argv)
 {
     
-    Mat<cx_double> test;
+    Mat<double> test;
     
     loadmat("/Users/alexcerjanic/Developer/PowerGrid/Resources/test.mat","test",&test);
     
     Gfft<Col<cx_double>> G(64,64);
 
-    Col<cx_double> testForward = G*vectorise(test);
+    Col<cx_double> testForward = G*vectorise(conv_to<Mat<cx_double>>::from(test));
     
     Col<cx_double> testAdjoint = G/testForward;
+    savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/out.mat","fftShiftOut", fftshift(test).eval());
+
     
     savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testForwardReal.mat","testForwardReal", real(testForward).eval());
     savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testForwardImag.mat","testForwardImag", imag(testForward).eval());
