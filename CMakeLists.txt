@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.1)
 project("PowerGrid")
-add_executable(PowerGrid ./PowerGrid/main.cpp)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 find_package(MATIO)
-find_package(Armadillo
-	HINTS "${CMAKE_PREFIX_PATH}/software/armadillo-4.650.4/}")
-
-
+include_directories(${MATIO_INCLUDE_DIRS})
+set(LIBS ${LIBS} ${MATIO_LIBRARIES})
+find_package(Armadillo REQUIRED)
+include_directories(${ARMADILLO_INCLUDE_DIRS})
+MESSAGE(${ARMADILLO_INCLUDE_DIRS})
+set(LIBS ${LIBS} ${ARMADILLO_LIBRARIES})
+add_executable(PowerGrid ./PowerGrid/main.cpp)
+target_link_libraries(PowerGrid ${LIBS})
