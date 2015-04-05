@@ -21,8 +21,8 @@ T1 pwls_pcg(T1& x, Tobj const& A,T1 const& W, T1 const& yi, Robj const& R, uword
   for (unsigned int ii(0); ii < niter; +ii)
   {
     // Compute negative gradient
-    T1 ngrad = A.t() * (W * (yi - Ax));
-    T1 pgrad = R.cgrad(R,x);
+    T1 ngrad = A / (W * (yi - Ax));
+    T1 pgrad = R.Gradient(R,x);
     ngrad = ngrad - pgrad;
 
     // Direction
@@ -61,17 +61,14 @@ T1 pwls_pcg(T1& x, Tobj const& A,T1 const& W, T1 const& yi, Robj const& R, uword
       double pdenom = dot_double(abs(ddir)%abs(ddir) , R.denom(R,x + step*ddir));
       double denom = dAWAd + pednom;
 
-      if (abs(denom) < 1e-10) { double step = 0.0;}
-      else {  }
-
-      pgrad = R.cgrad(R,x+step*ddir);
+      pgrad = R.Gradient(R,x+step*ddir);
       pdot = real(dot_double(conj(ddir),pgrad));
       step = step - (-dAWr + step * dAWAd +pdot) / denom;
      }
 
     // Check downhill direction
     if (step < 0) {
-      cout <<"Warning downhill"<<endl;
+      cout <<"Warning downhill?"<<endl;
     }
 
     // Update
@@ -82,12 +79,11 @@ T1 pwls_pcg(T1& x, Tobj const& A,T1 const& W, T1 const& yi, Robj const& R, uword
 
 }
 
+
 T1 dot_double(T1 A, T1 B)
 {
   return sum(A%B);
 }
-
-
 
 
 

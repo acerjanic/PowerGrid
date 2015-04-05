@@ -62,6 +62,7 @@ public:
         sp_mat C = join_vert(C1,C2);
         return trans(C*d)*(C*d);
     }
+    
 };
 
 #endif
