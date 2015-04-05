@@ -30,6 +30,7 @@ public:
     T1 operator*(const T1& d)
     {
         uword stx = (this->n2-this->n1)/2;
+
         //Create 2D array object for use with the fft
         Mat<cx_double> d2D = reshape(d,this->n2,this->n2);
         
@@ -48,14 +49,14 @@ public:
         //Create 2D array object for use with the fft
         Mat<cx_double> d2D = reshape(d,this->n1,this->n1);
         Mat<cx_double> d2Dtrimmed = zeros<Mat<cx_double>>(this->n2,this->n2);
-        
+
         d2Dtrimmed = d2D(span(stx,stx+this->n1-1),span(stx,stx+this->n1-1));
 
         //d2Dtrimmed = this->n2*this->n2*fftshift(fft2(fftshift(d2Dtrimmed)));
         //NOTE: Armadillo's ffts appear to be normalized with the 1/N^2 in the 2D case already build into ifft2.
         //We don't need the n2*n2 term anymore, we can match the MATLAB Gfft behavior without it.
         
-        d2Dtrimmed = fftshift(fft2(fftshift(d2Dtrimmed)));
+        d2Dtrimmed = fftshift(ifft2(fftshift(d2Dtrimmed)));
         //equivalent to returning col(output) in MATLAB with IRT
         return vectorise(d2Dtrimmed);
         
