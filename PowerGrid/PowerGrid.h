@@ -22,6 +22,7 @@ namespace arma {
 #include "fftshift.hpp"
 #include "Gfft.hpp"
 #include "SENSE.hpp"
+#include "QuadPenalty.hpp"
 //#include "Gdft.hpp"
     
 }
