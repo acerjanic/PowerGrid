@@ -6,7 +6,7 @@ using namespace arma;
 Mat<cx_double> test_pwls_pcg()
 {
    // Simulate the k-space data
-    Mat<cx_double> x = ones<Mat<cx_double>>(64,64);
+   Mat<cx_double> x = ones<Mat<cx_double>>(64,64);
 
    Gfft<Col<cx_double>> G(64,64);
 
@@ -17,10 +17,10 @@ Mat<cx_double> test_pwls_pcg()
    umat ReconMask;
    ReconMask.ones(64,64);
    QuadPenalty<Col<cx_double>>R(64,64,1,ReconMask);
-   uword niter = 20;
+    uword niter = 2;
    Col<cx_double> xinit = zeros<Col<cx_double>>(64*64); // initial estimate of x
-   Col<cx_double> W;
-   W << 1;
+    Mat<cx_double> W;
+    W = eye<Mat<cx_double>>(4096,4096);
     Col<cx_double> x_t;
     x_t = pwls_pcg1<Col<cx_double>,Gfft<Col<cx_double>>,QuadPenalty<Col<cx_double>>>(xinit, G, W, y, R, niter);
 	

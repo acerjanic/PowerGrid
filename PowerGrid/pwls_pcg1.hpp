@@ -17,14 +17,21 @@ complex<double> dot_double(T1 A, T2 B)
     return sumReturn;
 }
 
+template<typename T1>
+double norm_grad(T1 g,T1 yi,Mat<cx_double> W)
+{
+    double normGrad = conv_to<double>::from(norm(g) / real(trans(yi) * (W * yi)));
+    return normGrad;
+}
+
 template<typename T1, typename Tobj, typename Robj>
-T1 pwls_pcg1(T1& x, Tobj const& A,T1 const& W, T1 const& yi, Robj const& R, uword niter)
+T1 pwls_pcg1(T1& x, Tobj const& A,Mat<cx_double> const& W, T1 const& yi, Robj const& R, uword niter)
 {
     
     // Initialize projection
     
     T1 Ax = A*x;
-    double oldinprod = 0;
+    double oldinprod = 1.0;
     double gamma = 0.0;
     T1 ddir;
     T1 Adir;
@@ -41,10 +48,15 @@ T1 pwls_pcg1(T1& x, Tobj const& A,T1 const& W, T1 const& yi, Robj const& R, uwor
     T1 proj;
     T1 stepIntermediate;
     double step;
+    T1 rdenom;
     for (unsigned int ii = 0; ii < niter; ii++)
     {
         // Compute negative gradient
         ngrad = A / (W * (yi - Ax));
+        if (norm_grad(ngrad,yi,W) < 1e-10) {
+            cout << "Terminating early due to zero gradient." << endl;
+            return x;
+        }
         pgrad = R.Gradient(x);
         ngrad = ngrad - pgrad;
         // Direction
@@ -78,20 +90,22 @@ T1 pwls_pcg1(T1& x, Tobj const& A,T1 const& W, T1 const& yi, Robj const& R, uwor
         // Step size in search direction
         
         Adir = A * ddir;
-        WAdir = W*Adir;
+        WAdir = W * Adir;
         dAWAd = real(dot_double(conj(Adir).eval(),WAdir));
-        proj = Adir.t() *(W*(yi -Ax));
+        proj = Adir.t() * (W * (yi -Ax));
         dAWr = conv_to<double>::from(real(proj).eval());
         step = 0.0;
         
         for (unsigned int j =0; j<2; j++)
         {
             
-            pdenom = real(dot_double(pow(abs(ddir),2.0).eval() , R.Denom(x + step*ddir)));
+            
+            pdenom = real(dot_double(pow(abs(ddir),2.0).eval(), R.Denom(x + step*ddir)));
             denom = dAWAd + pdenom;
             
             pgrad = R.Gradient(x+step*ddir);
             pdot = real(dot_double(conj(ddir),pgrad));
+            cout << denom << endl;
             stepIntermediate = (-dAWr + step * dAWAd + pdot) / denom;
             step = step - conv_to<double>::from(stepIntermediate.eval());
         }
@@ -104,7 +118,7 @@ T1 pwls_pcg1(T1& x, Tobj const& A,T1 const& W, T1 const& yi, Robj const& R, uwor
         // Update
         Ax = Ax + step * Adir;
         x = x + step * ddir;
-        
+        cout << "Iteration Complete = " << ii << endl;
     }
     return x;
 }
