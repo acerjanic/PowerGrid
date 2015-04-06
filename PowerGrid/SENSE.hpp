@@ -19,7 +19,7 @@ public:
     uword n2 = 0; //Image size
     uword nc = 0; //number of coils
     Tobj *G_obj;
-    T1 SMap;
+    Mat<cx_double> SMap;
 
     
     //Class constructor
@@ -28,7 +28,7 @@ public:
       n2 = b;
       nc = c;
       G_obj = &G;
-      SMap = SENSEmap;
+      SMap = reshape(SENSEmap,n2,nc);
     }
     
     //Overloaded operators go here
@@ -54,7 +54,7 @@ public:
 
       Mat<cx_double> inData = reshape(d,this->n2,this->nc);
 
-      Col<cx_double> outData = zeros<Col<cx_double>>(this->n1);
+      Col<cx_double> outData = zeros<Col<cx_double>>(this->n2);
 
       for (unsigned int ii=0; ii < this->nc; ii++) {
         T1 data = inData.col(ii);
