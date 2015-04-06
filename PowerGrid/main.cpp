@@ -20,9 +20,9 @@ int main(int argc, char** argv)
     
     //Mat<cx_double> testComplex;
     //Load our read double matrix object. (You need to match type to avoide mangling the data.)
-    loadmat("/Users/alexcerjanic/Developer/PowerGrid/Resources/test.mat","test",&test);
+    loadmat("/Users/alexcerjanic/Developer/PG/Resources/test.mat","test",&test);
     
-    //loadmat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testForwardTest.mat","testForward",&testComplex);
+    //loadmat("/Users/alexcerjanic/Developer/PG/Resources/testForwardTest.mat","testForward",&testComplex);
     //Create our Gfft object for type complex double and N1=64, N2=64
     Gfft<Col<cx_double>> G(64,64);
 
@@ -35,21 +35,23 @@ int main(int argc, char** argv)
     
     //Testing the my fftshift function. Armadillo delays evaluations to batch them. You can force the evaluation with data.eval()
     //If we just passed the variable rather than the variable wrapped in a function, we wouldn't need the eval.
-    //savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testForwardOut.mat","testForwardOut",test);
+    //savemat("/Users/alexcerjanic/Developer/PG/Resources/testForwardOut.mat","testForwardOut",test);
 
-    savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/out.mat","fftShiftOut", fftshift(test).eval());
+    savemat("/Users/alexcerjanic/Developer/PG/Resources/out.mat","fftShiftOut", fftshift(test).eval());
     
     //Writing the transforms to disk for evaluation in MATLAB. Note that we can't read or write complex natively (yet), so lets
     //seperate real and imaginary first. Also, we can't put multiple variables in a single file yet. These are TODOs.
-    savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testForwardReal.mat","testForwardReal", real(testForward).eval());
-    savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testForwardImag.mat","testForwardImag", imag(testForward).eval());
-    savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testForwardTest.mat","testForward", testForward);
-    savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testAdjointTest.mat","testAdjoint", testAdjoint);
+    savemat("/Users/alexcerjanic/Developer/PG/Resources/testForwardReal.mat","testForwardReal", real(testForward).eval());
+    savemat("/Users/alexcerjanic/Developer/PG/Resources/testForwardImag.mat","testForwardImag", imag(testForward).eval());
+    savemat("/Users/alexcerjanic/Developer/PG/Resources/testForwardTest.mat","testForward", testForward);
+    savemat("/Users/alexcerjanic/Developer/PG/Resources/testAdjointTest.mat","testAdjoint", testAdjoint);
 
-    savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testAdjointReal.mat","testAdjointReal", real(testAdjoint).eval());
-    savemat("/Users/alexcerjanic/Developer/PowerGrid/Resources/testAdjointImag.mat","testAdjointImag", imag(testAdjoint).eval());
+    savemat("/Users/alexcerjanic/Developer/PG/Resources/testAdjointReal.mat","testAdjointReal", real(testAdjoint).eval());
+    savemat("/Users/alexcerjanic/Developer/PG/Resources/testAdjointImag.mat","testAdjointImag", imag(testAdjoint).eval());
     
-    
+    Mat<cx_double> testPWLS_PCG1;
+    testPWLS_PCG1 = test_pwls_pcg();
+    savemat("/Users/alexcerjanic/Developer/PG/Resources/testPWLS.mat","testpwls", testPWLS_PCG1);
     return 0;
 }
 

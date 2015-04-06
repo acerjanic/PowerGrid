@@ -14,6 +14,7 @@
 #include "../Support/CeempleComplex.h"
 #include "../Support/CeempleArmadillo.h"
 #include "../Support/CeempleMatio.h"
+#include "test_pwls_pcg.h"
 
 namespace arma {
 #include "op_circshift_bones.hpp"
@@ -23,6 +24,7 @@ namespace arma {
 #include "Gfft.hpp"
 #include "SENSE.hpp"
 #include "QuadPenalty.hpp"
+#include "pwls_pcg1.hpp"
 //#include "Gdft.hpp"
     
 }

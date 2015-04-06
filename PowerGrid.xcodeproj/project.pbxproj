@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		5E063CC61AB27D6200F98D62 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E063CC51AB27D6200F98D62 /* main.cpp */; };
+		5EF111901AD1EE660078A37E /* test_pwls_pcg.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5EF1118F1AD1EE660078A37E /* test_pwls_pcg.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -34,6 +35,9 @@
 		5ECD44E21ACCF19300E79C4A /* op_circshift_meat.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = op_circshift_meat.hpp; sourceTree = "<group>"; };
 		5ECD44E31ACCF1A000E79C4A /* op_circshift_bones.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = op_circshift_bones.hpp; sourceTree = "<group>"; };
 		5ECD44E41ACCF1E600E79C4A /* fn_circshift.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = fn_circshift.hpp; sourceTree = "<group>"; };
+		5EF1118E1AD1EE660078A37E /* pwls_pcg1.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = pwls_pcg1.hpp; sourceTree = "<group>"; };
+		5EF1118F1AD1EE660078A37E /* test_pwls_pcg.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = test_pwls_pcg.cpp; sourceTree = "<group>"; };
+		5EF111911AD204F80078A37E /* test_pwls_pcg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = test_pwls_pcg.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +70,8 @@
 		5E063CC41AB27D6200F98D62 /* PowerGrid */ = {
 			isa = PBXGroup;
 			children = (
+				5EF1118E1AD1EE660078A37E /* pwls_pcg1.hpp */,
+				5EF1118F1AD1EE660078A37E /* test_pwls_pcg.cpp */,
 				5E5618DF1ACDBCB2005A6EF3 /* Gfft.hpp */,
 				5EB443801AD05D4F00CEF071 /* Gdft.hpp */,
 				5E5618DE1ACDAC7D005A6EF3 /* fftshift.hpp */,
@@ -76,6 +82,7 @@
 				5ECD44E21ACCF19300E79C4A /* op_circshift_meat.hpp */,
 				5EB4437F1AD05B1800CEF071 /* SENSE.hpp */,
 				5EB443811AD0E5E700CEF071 /* QuadPenalty.hpp */,
+				5EF111911AD204F80078A37E /* test_pwls_pcg.h */,
 			);
 			path = PowerGrid;
 			sourceTree = "<group>";
@@ -136,6 +143,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5EF111901AD1EE660078A37E /* test_pwls_pcg.cpp in Sources */,
 				5E063CC61AB27D6200F98D62 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -1,27 +1,29 @@
-#include "CeempleArmadillo.h"
-#include <iostream>
+#include "PowerGrid.h"
 
-#include "PowerGrid.h" //Project headers.
+using namespace arma;
 
 // Define code for testing
-int main()
+Mat<cx_double> test_pwls_pcg()
 {
    // Simulate the k-space data
-   Mat<cx_double> x = ones(64,64);
+    Mat<cx_double> x = ones<Mat<cx_double>>(64,64);
 
    Gfft<Col<cx_double>> G(64,64);
 
-   col<cx_double> y;
+   Col<cx_double> y;
    y = G *vectorise(x);
 
    // Variables needed for the recon: Penalty object, num of iterations 
-   
-   QuadPenalty<col<cx_double>>R;
-   unword niter = 20;	
-   col<cx_double> xinit = zeros(64*64,1); // initial estimate of x
-   col<cx_double> W = 1;
-   x_t = pwls_pcg1(xinit, G, W, y, R, niter);
+   umat ReconMask;
+   ReconMask.ones(64,64);
+   QuadPenalty<Col<cx_double>>R(64,64,1,ReconMask);
+   uword niter = 20;
+   Col<cx_double> xinit = zeros<Col<cx_double>>(64*64); // initial estimate of x
+   Col<cx_double> W;
+   W << 1;
+    Col<cx_double> x_t;
+    x_t = pwls_pcg1<Col<cx_double>,Gfft<Col<cx_double>>,QuadPenalty<Col<cx_double>>>(xinit, G, W, y, R, niter);
 	
-   return 0;
+   return x_t;
 }
 

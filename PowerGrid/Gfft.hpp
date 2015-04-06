@@ -27,7 +27,7 @@ public:
 
     //Overloaded methods for forward and adjoint transform
     //Forward transform operation
-    T1 operator*(const T1& d)
+    T1 operator*(const T1& d) const
     {
         uword stx = (this->n2-this->n1)/2;
 
@@ -42,7 +42,7 @@ public:
     }
     
     //Adjoint transform operation
-    T1 operator/(const T1& d)
+    T1 operator/(const T1& d) const
     {
         uword stx = (this->n2-this->n1)/2;
 

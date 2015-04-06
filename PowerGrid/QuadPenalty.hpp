@@ -25,8 +25,8 @@ public:
     double Beta;
     Col<uword> ReconMask;
     
-    sp_mat C1;
-    sp_mat C2;
+    mat C1;
+    mat C2;
     
     
     //Custom Class Constructor
@@ -40,26 +40,29 @@ public:
         this->ReconMask = ReconMask;
         
         //Create Sparse Differencing Matricies
-        this->C1 = arma::kron(speye<sp_mat>(Nx,Nx), speye(Ny,Ny) - circshift(speye(Ny,Ny), 1,0));
-        this->C2 = arma::kron(speye<sp_mat>(Nx,Nx) - circshift(speye(Nx,Nx), 1,0),speye(Ny,Ny));
+        mat DenseX;
+        mat DenseY;
+        
+        this->C1 = arma::kron(DenseX.eye(Nx,Nx), DenseY.eye(Ny,Ny) - circshift(DenseY.eye(Ny,Ny), 1,0));
+        this->C2 = arma::kron(DenseX.eye(Nx,Nx) - circshift(DenseX.eye(Nx,Nx), 1,0),DenseY.eye(Ny,Ny));
        
     }
     
     //Class Methods
-    double Penalty(const T1& d)
+    double Penalty(const T1& d) const
     {
         return this->Beta*(pow(C1*d,2.0)+pow(C2*d,2.0))*(this->DeltaX*this->DeltaY);
     }
     
-    T1 Gradient(const T1& d)
+    T1 Gradient(const T1& d) const
     {
         return (C1*d+C2*d)*(this->DeltaX*this->DeltaY);
     }
     
     
-    T1 Denom(const T1& d)
+    T1 Denom(const T1& d) const
     {
-        sp_mat C = join_vert(C1,C2);
+        mat C = join_vert(C1,C2);
         return trans(C*d)*(C*d);
     }
     
