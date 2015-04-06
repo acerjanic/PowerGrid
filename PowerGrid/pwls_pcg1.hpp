@@ -11,35 +11,35 @@
 using namespace arma;
 
 template<typename T1,typename T2>
-complex<double> dot_double(T1 A, T2 B)
+complex<double> dot_double(Col<T1> A, Col<T2> B)
 {
     complex<double> sumReturn = sum(A % B);
     return sumReturn;
 }
 
 template<typename T1, typename Tobj, typename Robj>
-T1 pwls_pcg1(T1& x, Tobj const& A,T1 const& W, T1 const& yi, Robj const& R, uword niter)
+Col<T1> pwls_pcg1(Col<T1> const& x, Tobj const& A,Col<T1> const& W, Col<T1> const& yi, Robj const& R, uword niter)
 {
     
     // Initialize projection
     
-    T1 Ax = A*x;
+    Col<T1> Ax = A*x;
     double oldinprod = 0;
     double gamma = 0.0;
-    T1 ddir;
-    T1 Adir;
+    Col<T1> ddir;
+    Col<T1> Adir;
     double dAWAd;
-    T1 dAWr;
+    Col<T1> dAWr;
     double pdenom;
     double denom;
     
-    T1 ngrad;
-    T1 pgrad;
+    Col<T1> ngrad;
+    Col<T1> pgrad;
     double pdot;
-    T1 cngrad;
-    T1 WAdir;
-    T1 proj;
-    T1 stepIntermediate;
+    Col<T1> cngrad;
+    Col<T1> WAdir;
+    Col<T1> proj;
+    Col<T1> stepIntermediate;
     double step;
     for (unsigned int ii = 0; ii < niter; ii++)
     {
@@ -66,7 +66,7 @@ T1 pwls_pcg1(T1& x, Tobj const& A,T1 const& W, T1 const& yi, Robj const& R, uwor
             ddir = ngrad + gamma * ddir;
         }
         
-        T1 oldgrad = ngrad;
+        Col<T1> oldgrad = ngrad;
         oldinprod = newinprod;
         
         // Check if descent direction
