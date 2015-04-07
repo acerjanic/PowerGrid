@@ -52,13 +52,13 @@ int main(int argc, char** argv)
     //Test SENSE
 
     //Create an empty unsized matrix of type real double
-    Mat<cx_double> SMap;
+    Mat<double> SMap;
 
     //Load our read double matrix object. (You need to match type to avoide mangling the data.)
     loadmat("/Users/alexcerjanic/Developer/PG/Resources/SMap.mat","SMap",&SMap);
 
     //create our SENSE object, coils =2
-    SENSE<cx_double, Gfft<cx_double>> S(G,vectorise(SMap),4096*2,4096,2);
+    SENSE<cx_double, Gfft<cx_double>> S(G,vectorise(conv_to<Col<cx_double>>::from(SMap)),4096*2,4096,2);
 
     //Perform the forward transformation and store the result in a colum vector of type complex double
      //Note the conv_to<type to convert to>::from(data) command to convert our real double phantom to type complex double
@@ -80,7 +80,7 @@ int main(int argc, char** argv)
     Col<double> kz;
     loadmat("/Users/alexcerjanic/Developer/PG/Resources/kx_sp.mat","kx",&kx);
     loadmat("/Users/alexcerjanic/Developer/PG/Resources/ky_sp.mat","ky",&ky);
-    loadmat("/Users/alexcerjanic/Developer/PG/Resources/ky_sp.mat","ky",&cxData);
+    loadmat("/Users/alexcerjanic/Developer/PG/Resources/data_gdft.mat","data_gdft",&cxData);
 
     //loadmat("/Users/alexcerjanic/Developer/PG/Resources/testGdftTraj.mat","kz",&kz);
     kz.copy_size(ky);

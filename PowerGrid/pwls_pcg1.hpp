@@ -25,7 +25,7 @@ double norm_grad(T1 g,T1 yi,Mat<cx_double> W)
 }
 
 template<typename T1, typename Tobj, typename Robj>
-Col<T1> pwls_pcg1(Col<T1>& x, Tobj const& A,Col<T1> const& W, Col<T1> const& yi, Robj const& R, uword niter)
+Col<T1> pwls_pcg1(Col<T1>& x, Tobj const& A,Mat<T1> const& W, Col<T1> const& yi, Robj const& R, uword niter)
 {
     
     // Initialize projection
