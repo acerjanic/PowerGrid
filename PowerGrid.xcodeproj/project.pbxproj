@@ -228,6 +228,8 @@
 		5E063CCA1AB27D6200F98D62 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_C_LANGUAGE_STANDARD = c11;
+				GENERATE_PROFILING_CODE = YES;
 				LIBRARY_SEARCH_PATHS = (
 					/usr/lib,
 					/usr/local/lib,
@@ -244,6 +246,10 @@
 		5E063CCB1AB27D6200F98D62 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_USE_OPTIMIZATION_PROFILE = NO;
+				GCC_C_LANGUAGE_STANDARD = c11;
+				GCC_OPTIMIZATION_LEVEL = fast;
+				GENERATE_PROFILING_CODE = YES;
 				LIBRARY_SEARCH_PATHS = (
 					/usr/lib,
 					/usr/local/lib,

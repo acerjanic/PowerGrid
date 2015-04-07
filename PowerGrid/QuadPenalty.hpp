@@ -23,14 +23,14 @@ public:
     double DeltaX;
     double DeltaY;
     double Beta;
-    Col<uword> ReconMask;
+    Mat<uword> ReconMask;
     
     mat C1;
     mat C2;
     
     
     //Custom Class Constructor
-    QuadPenalty(uword Nx,uword Ny,double Beta,Col<uword> ReconMask)
+    QuadPenalty(uword Nx,uword Ny,double Beta,Mat<uword> ReconMask)
     {
         //Set Class Memebers
         this->Nx = Nx;
@@ -63,7 +63,8 @@ public:
     T1 Denom(const T1& d) const
     {
         mat C = join_vert(C1,C2);
-        return trans(C*d)*(C*d);
+        double weight = conv_to<double>::from((trans(C*d)*(C*d)));
+        return weight*ones<T1>(d.n_rows);
     }
     
 };

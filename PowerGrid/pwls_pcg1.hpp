@@ -17,6 +17,13 @@ complex<double> dot_double(Col<T1> A, Col<T2> B)
     return sumReturn;
 }
 
+template<typename T1>
+double norm_grad(T1 g,T1 yi,Mat<cx_double> W)
+{
+    double normGrad = conv_to<double>::from(norm(g) / real(trans(yi) * (W * yi)));
+    return normGrad;
+}
+
 template<typename T1, typename Tobj, typename Robj>
 Col<T1> pwls_pcg1(Col<T1> const& x, Tobj const& A,Col<T1> const& W, Col<T1> const& yi, Robj const& R, uword niter)
 {
@@ -41,10 +48,15 @@ Col<T1> pwls_pcg1(Col<T1> const& x, Tobj const& A,Col<T1> const& W, Col<T1> cons
     Col<T1> proj;
     Col<T1> stepIntermediate;
     double step;
+    T1 rdenom;
     for (unsigned int ii = 0; ii < niter; ii++)
     {
         // Compute negative gradient
         ngrad = A / (W * (yi - Ax));
+        if (norm_grad(ngrad,yi,W) < 1e-10) {
+            cout << "Terminating early due to zero gradient." << endl;
+            return x;
+        }
         pgrad = R.Gradient(x);
         ngrad = ngrad - pgrad;
         // Direction
@@ -78,20 +90,22 @@ Col<T1> pwls_pcg1(Col<T1> const& x, Tobj const& A,Col<T1> const& W, Col<T1> cons
         // Step size in search direction
         
         Adir = A * ddir;
-        WAdir = W*Adir;
+        WAdir = W * Adir;
         dAWAd = real(dot_double(conj(Adir).eval(),WAdir));
-        proj = Adir.t() *(W*(yi -Ax));
+        proj = Adir.t() * (W * (yi -Ax));
         dAWr = conv_to<double>::from(real(proj).eval());
         step = 0.0;
         
         for (unsigned int j =0; j<2; j++)
         {
             
-            pdenom = real(dot_double(pow(abs(ddir),2.0).eval() , R.Denom(x + step*ddir)));
+            
+            pdenom = real(dot_double(pow(abs(ddir),2.0).eval(), R.Denom(x + step*ddir)));
             denom = dAWAd + pdenom;
             
             pgrad = R.Gradient(x+step*ddir);
             pdot = real(dot_double(conj(ddir),pgrad));
+            cout << denom << endl;
             stepIntermediate = (-dAWr + step * dAWAd + pdot) / denom;
             step = step - conv_to<double>::from(stepIntermediate.eval());
         }
@@ -104,7 +118,7 @@ Col<T1> pwls_pcg1(Col<T1> const& x, Tobj const& A,Col<T1> const& W, Col<T1> cons
         // Update
         Ax = Ax + step * Adir;
         x = x + step * ddir;
-        
+        cout << "Iteration Complete = " << ii << endl;
     }
     return x;
 }

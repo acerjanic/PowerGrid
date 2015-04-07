@@ -69,8 +69,11 @@ int main(int argc, char** argv)
 
      savemat("/Users/alexcerjanic/Developer/PG/Resources/testForwardTest_SENSE.mat","testForward_SENSE", testForward_SENSE);
      savemat("/Users/alexcerjanic/Developer/PG/Resources/testAdjointTest_SENSE.mat","testAdjoint_SENSE", testAdjoint_SENSE);
-
+     //Test PWLS_PCG1
     
+     Mat<cx_double> testPWLS = test_pwls_pcg();
+     savemat("/Users/alexcerjanic/Developer/PG/Resources/testPWLS.mat","testPWLS", testPWLS);
+
     return 0;
 }
 
