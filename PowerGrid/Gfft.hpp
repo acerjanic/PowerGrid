@@ -27,28 +27,28 @@ public:
 
     //Overloaded methods for forward and adjoint transform
     //Forward transform operation
-    T1 operator*(const T1& d) const
+    Col<T1> operator*(const Col<T1>& d) const
     {
         uword stx = (this->n2-this->n1)/2;
 
         //Create 2D array object for use with the fft
-        Mat<cx_double> d2D = reshape(d,this->n2,this->n2);
+        Mat<T1> d2D = reshape(d,this->n2,this->n2);
         
         d2D = fftshift(fft2(fftshift(d2D)));
-        Mat<cx_double> d2Dtrimmed = d2D(span(stx,stx+this->n1-1),span(stx,stx+this->n1-1));
+        Mat<T1> d2Dtrimmed = d2D(span(stx,stx+this->n1-1),span(stx,stx+this->n1-1));
         //equivalent to returning col(output) in MATLAB with IRT
         return vectorise(d2Dtrimmed);
         
     }
     
     //Adjoint transform operation
-    T1 operator/(const T1& d) const
+    Col<T1> operator/(const Col<T1>& d) const
     {
         uword stx = (this->n2-this->n1)/2;
 
         //Create 2D array object for use with the fft
-        Mat<cx_double> d2D = reshape(d,this->n1,this->n1);
-        Mat<cx_double> d2Dtrimmed = zeros<Mat<cx_double>>(this->n2,this->n2);
+        Mat<T1> d2D = reshape(d,this->n1,this->n1);
+        Mat<T1> d2Dtrimmed = zeros<Mat<T1>>(this->n2,this->n2);
 
         d2Dtrimmed = d2D(span(stx,stx+this->n1-1),span(stx,stx+this->n1-1));
 

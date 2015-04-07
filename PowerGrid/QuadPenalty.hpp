@@ -49,22 +49,22 @@ public:
     }
     
     //Class Methods
-    double Penalty(const T1& d) const
+    double Penalty(const Col<T1>& d) const
     {
         return this->Beta*(pow(C1*d,2.0)+pow(C2*d,2.0))*(this->DeltaX*this->DeltaY);
     }
     
-    T1 Gradient(const T1& d) const
+    Col<T1> Gradient(const Col<T1>& d) const
     {
         return (C1*d+C2*d)*(this->DeltaX*this->DeltaY);
     }
     
     
-    T1 Denom(const T1& d) const
+    Col<T1> Denom(const Col<T1>& d) const
     {
         mat C = join_vert(C1,C2);
         double weight = conv_to<double>::from((trans(C*d)*(C*d)));
-        return weight*ones<T1>(d.n_rows);
+        return weight*ones<Col<T1>>(d.n_rows);
     }
     
 };

@@ -25,28 +25,28 @@ double norm_grad(T1 g,T1 yi,Mat<cx_double> W)
 }
 
 template<typename T1, typename Tobj, typename Robj>
-T1 pwls_pcg1(T1& x, Tobj const& A,Mat<cx_double> const& W, T1 const& yi, Robj const& R, uword niter)
+Col<T1> pwls_pcg1(Col<T1>& x, Tobj const& A,Col<T1> const& W, Col<T1> const& yi, Robj const& R, uword niter)
 {
     
     // Initialize projection
     
-    T1 Ax = A*x;
-    double oldinprod = 1.0;
+    Col<T1> Ax = A*x;
+    double oldinprod = 0;
     double gamma = 0.0;
-    T1 ddir;
-    T1 Adir;
+    Col<T1> ddir;
+    Col<T1> Adir;
     double dAWAd;
-    T1 dAWr;
+    Col<T1> dAWr;
     double pdenom;
     double denom;
     
-    T1 ngrad;
-    T1 pgrad;
+    Col<T1> ngrad;
+    Col<T1> pgrad;
     double pdot;
-    T1 cngrad;
-    T1 WAdir;
-    T1 proj;
-    T1 stepIntermediate;
+    Col<T1> cngrad;
+    Col<T1> WAdir;
+    Col<T1> proj;
+    Col<T1> stepIntermediate;
     double step;
     T1 rdenom;
     for (unsigned int ii = 0; ii < niter; ii++)
@@ -78,7 +78,7 @@ T1 pwls_pcg1(T1& x, Tobj const& A,Mat<cx_double> const& W, T1 const& yi, Robj co
             ddir = ngrad + gamma * ddir;
         }
         
-        T1 oldgrad = ngrad;
+        Col<T1> oldgrad = ngrad;
         oldinprod = newinprod;
         
         // Check if descent direction
@@ -98,11 +98,19 @@ T1 pwls_pcg1(T1& x, Tobj const& A,Mat<cx_double> const& W, T1 const& yi, Robj co
         
         for (unsigned int j =0; j<2; j++)
         {
-            
-            
             pdenom = real(dot_double(pow(abs(ddir),2.0).eval(), R.Denom(x + step*ddir)));
             denom = dAWAd + pdenom;
             
+            if (std::abs(denom) < 1e-10 || std::abs(denom) > 1e25) {
+              if (real(dot_double(ngrad,ngrad)) < 1e-10) {
+                cout << " Found exact solution" << endl;
+              }
+              else {
+                cout << "0 or inf denom" << endl;
+                return x;
+              }
+            }
+
             pgrad = R.Gradient(x+step*ddir);
             pdot = real(dot_double(conj(ddir),pgrad));
             cout << denom << endl;
@@ -117,7 +125,7 @@ T1 pwls_pcg1(T1& x, Tobj const& A,Mat<cx_double> const& W, T1 const& yi, Robj co
         
         // Update
         Ax = Ax + step * Adir;
-        x = x + step * ddir;
+        x = x + (step * ddir);
         cout << "Iteration Complete = " << ii << endl;
     }
     return x;

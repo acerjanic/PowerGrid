@@ -19,11 +19,11 @@ public:
     uword n2 = 0; //Image size
     uword nc = 0; //number of coils
     Tobj *G_obj;
-    Mat<cx_double> SMap;
+    Mat<T1> SMap; //dimensions Image size b (n1 by number of coils (nc)
 
     
     //Class constructor
-    SENSE(Tobj &G, T1 SENSEmap, uword a, uword b,uword c ) {
+    SENSE(Tobj &G, Col<T1> SENSEmap, uword a, uword b,uword c ) {
       n1 = a;
       n2 = b;
       nc = c;
@@ -35,12 +35,12 @@ public:
     
     //Forward transformation is *
     // d is the vector of data of type T1, note it is const, so we don't modify it directly rather return another vector of type T1
-    T1 operator*(const T1& d) const {
+    Col<T1> operator*(const Col<T1>& d) const {
 
-      Mat<cx_double> outData = zeros<Mat<cx_double>>(this->n2,this->nc);
+      Mat<T1> outData = zeros<Mat<T1>>(this->n2,this->nc);
 
       for (unsigned int ii=0; ii < this->nc; ii++) {
-        T1 data = d%(this->SMap.col(ii));
+        Col<T1> data = d%(this->SMap.col(ii));
 
         outData.col(ii) = (*this->G_obj)*(data);
 
@@ -50,15 +50,15 @@ public:
       return vectorise(outData);
     }
     
-    T1 operator/(const T1& d) const {
+    Col<T1> operator/(const Col<T1>& d) const {
 
-      Mat<cx_double> inData = reshape(d,this->n2,this->nc);
+      Mat<T1> inData = reshape(d,this->n2,this->nc);
 
-      Col<cx_double> outData = zeros<Col<cx_double>>(this->n2);
+      Col<T1> outData = zeros<Col<T1>>(this->n2);
 
       for (unsigned int ii=0; ii < this->nc; ii++) {
-        T1 data = inData.col(ii);
-        outData = outData + this->SMap.col(ii)%((*this->G_obj)/data);
+        Col<T1> data = inData.col(ii);
+        outData += this->SMap.col(ii)%((*this->G_obj)/data);
 
       }
 
