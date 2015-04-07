@@ -98,11 +98,19 @@ Col<T1> pwls_pcg1(Col<T1> const& x, Tobj const& A,Col<T1> const& W, Col<T1> cons
         
         for (unsigned int j =0; j<2; j++)
         {
-            
-            
             pdenom = real(dot_double(pow(abs(ddir),2.0).eval(), R.Denom(x + step*ddir)));
             denom = dAWAd + pdenom;
             
+            if (abs(denom) < 1e-10 || abs(denom) > 1e25) {
+              if (real(dot_double(ngrad,ngrad)) < 1e-10) {
+                cout << " Found exact solution" << endl;
+              }
+              else {
+                cout << "0 or inf denom" << endl;
+                return;
+              }
+            }
+
             pgrad = R.Gradient(x+step*ddir);
             pdot = real(dot_double(conj(ddir),pgrad));
             cout << denom << endl;
