@@ -25,6 +25,7 @@ namespace arma {
 #include "SENSE.hpp"
 #include "QuadPenalty.hpp"
 #include "pwls_pcg1.hpp"
+#include "ftCpu.hpp"
 //#include "Gdft.hpp"
     
 }

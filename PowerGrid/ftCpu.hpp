@@ -37,7 +37,7 @@ THE SOFTWARE.
 
 /*****************************************************************************
 
-    File Name   [ftCpu.cpp]
+    File Name   [ftCpu.h]
 
     Synopsis    [The CPU version of Fourier transform and inverse Fourier
         transform.]
@@ -46,12 +46,64 @@ THE SOFTWARE.
 
     Revision    [0.1; Initial build; Yue Zhuo, BIOE UIUC]
     Revision    [0.1.1; Add OpenMP, Code cleaning; Xiao-Long Wu, ECE UIUC]
-    Revision    [1.0a; Further optimization, Code cleaning, Adding comments;
+    Revision    [1.0a; Further optimization, Code cleaning, Adding more comments;
                  Xiao-Long Wu, ECE UIUC, Jiading Gai, Beckman Institute]
     Date        [10/27/2010]
 
-*****************************************************************************/
+ *****************************************************************************/
 
+#ifndef FT_CPU_H
+#define FT_CPU_H
+
+/*---------------------------------------------------------------------------*/
+/*  Included library headers                                                 */
+/*---------------------------------------------------------------------------*/
+// Numeric constants according to the precision type.
+#ifdef ENABLE_DOUBLE_PRECISION
+#define MRI_PI               3.1415926535897932384626433832795029
+#define MRI_NN               64
+#define MRI_DELTAZ           0.003
+#define MRI_ZERO             0.0
+#define MRI_ONE              1.0
+#define MRI_NEG_ONE         -1.0
+#define MRI_POINT_FIVE       0.5
+#define MRI_SMOOTH_FACTOR    0.0000001
+#else
+#define MRI_PI               3.1415926535897932384626433832795029f
+#define MRI_NN               64
+#define MRI_DELTAZ           0.003f
+#define MRI_ZERO             0.0f
+#define MRI_ONE              1.0f
+#define MRI_NEG_ONE         -1.0f
+#define MRI_POINT_FIVE       0.5f
+#define MRI_SMOOTH_FACTOR    0.000001f
+#endif
+/*---------------------------------------------------------------------------*/
+/*  Namespace declared - begin                                               */
+/*---------------------------------------------------------------------------*/
+
+//namespace uiuc_mri {
+
+/*---------------------------------------------------------------------------*/
+/*  Function prototypes                                                      */
+/*---------------------------------------------------------------------------*/
+/*
+    void
+ftCpu(T1 *kdata_r, T1 *kdata_i,
+      const T1 *idata_r, const T1 *idata_i,
+      const DataTraj *ktraj, const DataTraj *itraj,
+      const T1 *fm, const T1 *t,
+      const int num_k, const int num_i
+      );
+
+    void
+iftCpu(T1 *idata_r, T1 *idata_i,
+       const T1 *kdata_r, const T1 *kdata_i,
+       const DataTraj *ktraj, const DataTraj *itraj,
+       const T1 *fm, const T1 *t,
+       const int num_k, const int num_i
+       );
+*/
 /*---------------------------------------------------------------------------*/
 /*  Included library headers                                                 */
 /*---------------------------------------------------------------------------*/
@@ -60,9 +112,8 @@ THE SOFTWARE.
 #include <string.h>
 #include <math.h>
 
-#include <tools.h>
-#include <structures.h>
-#include <ftCpu.h>
+//#include <tools.h>
+//#include <structures.h>
 
 /*---------------------------------------------------------------------------*/
 /*  Namespace declared - begin                                               */
@@ -83,19 +134,20 @@ THE SOFTWARE.
 /*                                                                           */
 /*===========================================================================*/
 
+template <typename T1>
 #if COMPUTE_FLOPS
-FLOAT_T sinc_cpu(FLOAT_T x, double *flop)
+T1 sinc_cpu(T1 x, double *flop)
 #else
-FLOAT_T sinc_cpu(FLOAT_T x)
+T1 sinc_cpu(T1 x)
 #endif
 {
     if (fabs(x) < 0.0001) {
         return 1.0;
     }
-
-    #if COMPUTE_FLOPS
+    
+#if COMPUTE_FLOPS
     *flop += 13 + 1 + 1 + 1;
-    #endif
+#endif
     return sin(MRI_PI * x) / (MRI_PI * x);
 }
 
@@ -106,86 +158,85 @@ FLOAT_T sinc_cpu(FLOAT_T x)
 /*  Description []                                                           */
 /*                                                                           */
 /*===========================================================================*/
-
-    void
-ftCpu(FLOAT_T *kdata_r, FLOAT_T *kdata_i,
-      const FLOAT_T *idata_r, const FLOAT_T *idata_i,
-      const DataTraj *ktraj, const DataTraj *itraj,
-      const FLOAT_T *fm, const FLOAT_T *t,
+template <typename T1>
+void
+ftCpu(T1 *kdata_r, T1 *kdata_i,
+      const T1 *idata_r, const T1 *idata_i, const T1 *kx,
+      const T1 *ky, const T1 *kz,
+      const T1 *kx_i, const T1 *ky_i, const T1 *kz_i,
       const int num_k, const int num_i
       )
 {
-    startMriTimer(getMriTimer()->timer_ftCpu);
-
-    FLOAT_T sumr = 0, sumi = 0, tpi = 0, kzdeltaz = 0, kziztpi = 0,
-            expr = 0, cosexpr = 0, sinexpr = 0, t_tpi = 0,
-            kx_N = 0, ky_N = 0, kxtpi = 0, kytpi = 0;
+    //startMriTimer(getMriTimer()->timer_ftCpu);
+    
+    T1 sumr = 0, sumi = 0, tpi = 0, kzdeltaz = 0, kziztpi = 0,
+    expr = 0, cosexpr = 0, sinexpr = 0, t_tpi = 0,
+    kx_N = 0, ky_N = 0, kxtpi = 0, kytpi = 0;
     int i = 0, j = 0;
-
+    
     //--------------------------------------------------------------------
     //                         Initialization
     //--------------------------------------------------------------------
     tpi = 2 * MRI_PI;
-    #if DATATRAJ_NO_Z_DIM
+#if DATATRAJ_NO_Z_DIM
     kzdeltaz = 0 * MRI_DELTAZ;
     kziztpi  = 0 * 0 * tpi;
-    #else // DataTraj is using z dimension
-    kzdeltaz = ktraj[0].z * MRI_DELTAZ;
-    kziztpi  = ktraj[0].z * itraj[0].z * tpi;
-    #endif
-
-    #if COMPUTE_FLOPS
+#else // DataTraj is using z dimension
+    kzdeltaz = kz[0] * MRI_DELTAZ;
+    kziztpi  = kz[0] * kz_i[0] * tpi;
+#endif
+    
+#if COMPUTE_FLOPS
     getMriFlop()->flop_ftCpu += 1 + 1 + 2;
-    #endif
-
+#endif
+    
     //--------------------------------------------------------------------
     //                    Fourier Transform:       Gx=G * x
     //--------------------------------------------------------------------
     // NON-conjugate transpose of G
-    #if 0 //USE_OPENMP // FIXME: We can choose either this or the inner loop.
-    #pragma omp parallel for
-    #endif
+#if 0 //USE_OPENMP // FIXME: We can choose either this or the inner loop.
+#pragma omp parallel for
+#endif
     for (i = 0; i < num_k; i++) { // i is the time point in k-space
         sumr = 0.0;
         sumi = 0.0;
-
-        t_tpi = t[i] / tpi;
-        kx_N = ktraj[i].x / MRI_NN; // MRI_NN for normalized kx
-        ky_N = ktraj[i].y / MRI_NN;
-        kxtpi = ktraj[i].x * tpi;
-        kytpi = ktraj[i].y * tpi;
-
-        #if COMPUTE_FLOPS
+        
+        //t_tpi = t[i] / tpi;
+        kx_N = kx[i] / MRI_NN; // MRI_NN for normalized kx
+        ky_N = ky[i] / MRI_NN;
+        kxtpi = kx[i] * tpi;
+        kytpi = ky[i] * tpi;
+        
+#if COMPUTE_FLOPS
         getMriFlop()->flop_ftCpu += 1 + 1 + 1 + 1 + 1;
-        #endif
-
-        #if USE_OPENMP
-        #pragma omp parallel for default(none) reduction(+:sumr, sumi) \
-         private(expr, cosexpr, sinexpr) \
-         shared(i, kx_N, ky_N, kzdeltaz, t_tpi, fm, kxtpi, kytpi, \
-                kziztpi, itraj, t, idata_r, idata_i)
-        #endif
+#endif
+        
+#if USE_OPENMP
+#pragma omp parallel for default(none) reduction(+:sumr, sumi) \
+private(expr, cosexpr, sinexpr) \
+shared(i, kx_N, ky_N, kzdeltaz, t_tpi, fm, kxtpi, kytpi, \
+kziztpi, kx_i, ky_i, kz_i, t, idata_r, idata_i)
+#endif
         for (j = 0; j < num_i; j++) { // j is the pixel point in image-space
-            expr = (kxtpi * itraj[j].x + kytpi * itraj[j].y + kziztpi) +
-                       (fm[j] * t[i]);
-            #if ENABLE_DOUBLE_PRECISION
-                cosexpr = cos(expr); sinexpr = sin(expr);
-            #else
-                cosexpr = cosf(expr); sinexpr = sinf(expr);
-            #endif
+            expr = (kxtpi * kx_i[j] + kytpi * ky_i[j] + kziztpi);
+#if ENABLE_DOUBLE_PRECISION
+            cosexpr = cos(expr); sinexpr = sin(expr);
+#else
+            cosexpr = cosf(expr); sinexpr = sinf(expr);
+#endif
             sumr += (cosexpr * idata_r[j]) + (sinexpr * idata_i[j]);
             sumi += (-sinexpr * idata_r[j]) + (cosexpr * idata_i[j]);
-
-            #if COMPUTE_FLOPS
+            
+#if COMPUTE_FLOPS
             // sin: 13 flop; cos: 12 flop; +,-,*,/: 1
             getMriFlop()->flop_ftCpu += 2 + 2 + 2 + 2 + 6 + 12 + 13 + 5 + 6;
-            #endif
+#endif
         }
         kdata_r[i] = sumr; // Real part
         kdata_i[i] = sumi; // Imaginary part
     }
-
-    stopMriTimer(getMriTimer()->timer_ftCpu);
+    
+    //stopMriTimer(getMriTimer()->timer_ftCpu);
 }
 
 /*===========================================================================*/
@@ -195,85 +246,84 @@ ftCpu(FLOAT_T *kdata_r, FLOAT_T *kdata_i,
 /*  Description []                                                           */
 /*                                                                           */
 /*===========================================================================*/
-
-    void
-iftCpu(FLOAT_T *idata_r, FLOAT_T *idata_i,
-       const FLOAT_T *kdata_r, const FLOAT_T *kdata_i,
-       const DataTraj *ktraj, const DataTraj *itraj,
-       const FLOAT_T *fm, const FLOAT_T *t,
+template <typename T1>
+void
+iftCpu(T1 *idata_r, T1 *idata_i,
+       const T1 *kdata_r, const T1 *kdata_i,
+       const T1 *kx, const T1 *ky, const T1 *kz,
+       const T1 *kx_i, const T1 *ky_i, const T1 *kz_i,
        const int num_k, const int num_i
        )
 {
-    startMriTimer(getMriTimer()->timer_iftCpu);
-
-    FLOAT_T sumr = 0, sumi = 0, tpi = 0, kzdeltaz = 0, kziztpi = 0,
-            expr = 0, cosexpr = 0, sinexpr = 0,
-            itraj_x_tpi = 0, itraj_y_tpi = 0;
+    //startMriTimer(getMriTimer()->timer_iftCpu);
+    
+    T1 sumr = 0, sumi = 0, tpi = 0, kzdeltaz = 0, kziztpi = 0,
+    expr = 0, cosexpr = 0, sinexpr = 0,
+    itraj_x_tpi = 0, itraj_y_tpi = 0;
     int i = 0, j = 0;
-
+    
     //--------------------------------------------------------------------
     //                         Initialization
     //--------------------------------------------------------------------
     tpi = MRI_PI * 2.0;
-    #if DATATRAJ_NO_Z_DIM
+#if DATATRAJ_NO_Z_DIM
     kzdeltaz = 0 * MRI_DELTAZ;
     kziztpi = 0 * 0 * tpi;
-    #else // DataTraj is using z dimension
-    kzdeltaz = ktraj[0].z * MRI_DELTAZ;
-    kziztpi = ktraj[0].z * itraj[0].z * tpi;
-    #endif
-
-    #if COMPUTE_FLOPS
+#else // DataTraj is using z dimension
+    kzdeltaz = kz[0] * MRI_DELTAZ;
+    kziztpi = kz[0] * kz_i[0] * tpi;
+#endif
+    
+#if COMPUTE_FLOPS
     getMriFlop()->flop_iftCpu += 1 + 1 + 2;
-    #endif
-
+#endif
+    
     //--------------------------------------------------------------------
     //               Inverse Fourier Transform:     x=(G^H) * Gx
     //--------------------------------------------------------------------
     // the conjugate transpose of G
-    #if 0 //USE_OPENMP // FIXME: We can choose either this or the inner loop.
-    #pragma omp parallel for
-    #endif
+#if 0 //USE_OPENMP // FIXME: We can choose either this or the inner loop.
+#pragma omp parallel for
+#endif
     for (j = 0; j < num_i; j++) { // j is the pixel points in image-space
         sumr = 0.0;
         sumi = 0.0;
-
-        itraj_x_tpi = itraj[j].x * tpi;
-        itraj_y_tpi = itraj[j].y * tpi;
-
-        #if COMPUTE_FLOPS
+        
+        itraj_x_tpi = kx_i[j] * tpi;
+        itraj_y_tpi = ky_i[j] * tpi;
+        
+#if COMPUTE_FLOPS
         getMriFlop()->flop_iftCpu += 1 + 1 + 1 + 1 + 1;
-        #endif
-
-        #if USE_OPENMP
-        #pragma omp parallel for default(none) reduction(+:sumr, sumi) \
-         private(expr, cosexpr, sinexpr) \
-         shared(j, ktraj, t, kzdeltaz, itraj_x_tpi, itraj_y_tpi, kziztpi, \
-                fm, kdata_r, kdata_i)
-        #endif
+#endif
+        
+#if USE_OPENMP
+#pragma omp parallel for default(none) reduction(+:sumr, sumi) \
+private(expr, cosexpr, sinexpr) \
+shared(j, kx, ky, kz, t, kzdeltaz, itraj_x_tpi, itraj_y_tpi, kziztpi, \
+fm, kdata_r, kdata_i)
+#endif
         for (i = 0; i < num_k; i++) { // i is the time points in k-space
-            expr = (ktraj[i].x * itraj_x_tpi +
-                    ktraj[i].y * itraj_y_tpi + kziztpi) +
-                   (fm[j] * t[i]);
-            #if ENABLE_DOUBLE_PRECISION
-                cosexpr = cos(expr); sinexpr = sin(expr);
-            #else
-                cosexpr = cosf(expr); sinexpr = sinf(expr);
-            #endif
+            expr = (kx_i[i] * itraj_x_tpi +
+                    ky_i[i] * itraj_y_tpi + kziztpi);
+#if ENABLE_DOUBLE_PRECISION
+            cosexpr = cos(expr); sinexpr = sin(expr);
+#else
+            cosexpr = cosf(expr); sinexpr = sinf(expr);
+#endif
             sumr += (cosexpr * kdata_r[i]) - (sinexpr * kdata_i[i]);
             sumi += (sinexpr * kdata_r[i]) + (cosexpr * kdata_i[i]);
-
-            #if COMPUTE_FLOPS
+            
+#if COMPUTE_FLOPS
             // sin: 13 flop; cos: 12 flop; +,-,*,/: 1
             getMriFlop()->flop_iftCpu += 3 + 3 + 2 + 2 + 6 + 12 + 13 + 5 + 5;
-            #endif
+#endif
         }
-
+        
         idata_r[j] = sumr;  // Real part
         idata_i[j] = sumi;  // Imaginary part
     }
-
-    stopMriTimer(getMriTimer()->timer_iftCpu);
+    
+    //stopMriTimer(getMriTimer()->timer_iftCpu);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -281,4 +331,7 @@ iftCpu(FLOAT_T *idata_r, FLOAT_T *idata_i,
 /*---------------------------------------------------------------------------*/
 
 //}
+//}
+
+#endif // FT_CPU_H
 
