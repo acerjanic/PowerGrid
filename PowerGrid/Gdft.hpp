@@ -27,7 +27,7 @@ public:
     
     //Overloaded methods for forward and adjoint transform
     //Forward transform operation
-    Col<T1> operator*(const Col<T1>& d) //Don't change these arguments
+    Col<T1> operator*(const Col<T1>& d) const//Don't change these arguments
     {
         //This is just specifying size assuming things are the same size, change as necessary
         uword dataLength = size(d,1);
@@ -43,7 +43,12 @@ public:
         //Process data here, like calling a brute force transform, dft...
         // I assume you create the pointers to the arrays where the transformed data will be stored
         // realXformedDataPtr and imagXformedDataPtr and they are of type float*
-        
+        ftCpu(FLOAT_T *kdata_r, FLOAT_T *kdata_i,
+              const FLOAT_T *idata_r, const FLOAT_T *idata_i,
+              const DataTraj *ktraj, const DataTraj *itraj,
+              const FLOAT_T *fm, const FLOAT_T *t,
+              const int num_k, const int num_i
+              )
         
         //To return data, we need to put our data back into Armadillo objects
         //We are telling the object how long it is because it will copy the data back into managed memory
@@ -61,13 +66,13 @@ public:
     }
     
     //Adjoint transform operation
-    T1 operator/(const T1& d)
+    Col<T1> operator/(const Col<T1>& d) const
     {
         
         uword dataLength = size(d,1);
 
-        Col<float> realData = real(d);
-        Col<float> imagData = imag(d);
+        Col<T1> realData = real(d);
+        Col<T1> imagData = imag(d);
         
         float *realDataPtr = realData.memptr();
         float *imagDataPtr = imagData.memptr();

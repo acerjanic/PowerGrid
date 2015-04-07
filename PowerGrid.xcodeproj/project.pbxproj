@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		5E063CC61AB27D6200F98D62 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E063CC51AB27D6200F98D62 /* main.cpp */; };
+		5E4228371AD3381300705BAC /* ftCpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E4228361AD3381300705BAC /* ftCpu.cpp */; };
 		5EF111901AD1EE660078A37E /* test_pwls_pcg.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5EF1118F1AD1EE660078A37E /* test_pwls_pcg.cpp */; };
 /* End PBXBuildFile section */
 
@@ -26,6 +27,8 @@
 /* Begin PBXFileReference section */
 		5E063CC21AB27D6200F98D62 /* PowerGrid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PowerGrid; sourceTree = BUILT_PRODUCTS_DIR; };
 		5E063CC51AB27D6200F98D62 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		5E4228361AD3381300705BAC /* ftCpu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ftCpu.cpp; path = Resources/IMPATIENT/ftCpu.cpp; sourceTree = SOURCE_ROOT; };
+		5E4228381AD339C500705BAC /* ftCpu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ftCpu.h; path = Resources/IMPATIENT/ftCpu.h; sourceTree = SOURCE_ROOT; };
 		5E5618DE1ACDAC7D005A6EF3 /* fftshift.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = fftshift.hpp; sourceTree = "<group>"; };
 		5E5618DF1ACDBCB2005A6EF3 /* Gfft.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Gfft.hpp; sourceTree = "<group>"; };
 		5E5618E01ACDC18E005A6EF3 /* PowerGrid.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PowerGrid.h; sourceTree = "<group>"; };
@@ -70,6 +73,8 @@
 		5E063CC41AB27D6200F98D62 /* PowerGrid */ = {
 			isa = PBXGroup;
 			children = (
+				5E4228381AD339C500705BAC /* ftCpu.h */,
+				5E4228361AD3381300705BAC /* ftCpu.cpp */,
 				5EF1118E1AD1EE660078A37E /* pwls_pcg1.hpp */,
 				5EF1118F1AD1EE660078A37E /* test_pwls_pcg.cpp */,
 				5E5618DF1ACDBCB2005A6EF3 /* Gfft.hpp */,
@@ -145,6 +150,7 @@
 			files = (
 				5EF111901AD1EE660078A37E /* test_pwls_pcg.cpp in Sources */,
 				5E063CC61AB27D6200F98D62 /* main.cpp in Sources */,
+				5E4228371AD3381300705BAC /* ftCpu.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
