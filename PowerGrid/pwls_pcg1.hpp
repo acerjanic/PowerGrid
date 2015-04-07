@@ -101,7 +101,7 @@ Col<T1> pwls_pcg1(Col<T1> const& x, Tobj const& A,Col<T1> const& W, Col<T1> cons
             pdenom = real(dot_double(pow(abs(ddir),2.0).eval(), R.Denom(x + step*ddir)));
             denom = dAWAd + pdenom;
             
-            if (abs(denom) < 1e-10 || abs(denom) > 1e25) {
+            if (std::abs(denom) < 1e-10 || std::abs(denom) > 1e25) {
               if (real(dot_double(ngrad,ngrad)) < 1e-10) {
                 cout << " Found exact solution" << endl;
               }

@@ -35,7 +35,7 @@ public:
     
     //Forward transformation is *
     // d is the vector of data of type T1, note it is const, so we don't modify it directly rather return another vector of type T1
-    Col<T1> operator*(const col<T1>& d) const {
+    Col<T1> operator*(const Col<T1>& d) const {
 
       Mat<T1> outData = zeros<Mat<T1>>(this->n2,this->nc);
 
