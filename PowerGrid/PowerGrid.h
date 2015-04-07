@@ -16,6 +16,7 @@
 #include "../Support/CeempleMatio.h"
 #include "test_pwls_pcg.h"
 
+
 namespace arma {
 #include "op_circshift_bones.hpp"
 #include "op_circshift_meat.hpp"
@@ -26,8 +27,8 @@ namespace arma {
 #include "QuadPenalty.hpp"
 #include "pwls_pcg1.hpp"
 #include "ftCpu.hpp"
-//#include "Gdft.hpp"
-    
+#include "Gdft.hpp"
+#include "test_gdft.hpp" 
 }
 
 #endif

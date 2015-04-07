@@ -78,14 +78,15 @@ int main(int argc, char** argv)
     Col<double> kx;
     Col<double> ky;
     Col<double> kz;
-    loadmat("/Users/alexcerjanic/Developer/PG/Resources/testGdftTraj.mat","kx",&kx);
-    loadmat("/Users/alexcerjanic/Developer/PG/Resources/testGdftTraj.mat","ky",&ky);
-    
+    loadmat("/Users/alexcerjanic/Developer/PG/Resources/kx_sp.mat","kx",&kx);
+    loadmat("/Users/alexcerjanic/Developer/PG/Resources/ky_sp.mat","ky",&ky);
+    loadmat("/Users/alexcerjanic/Developer/PG/Resources/ky_sp.mat","ky",&cxData);
+
     //loadmat("/Users/alexcerjanic/Developer/PG/Resources/testGdftTraj.mat","kz",&kz);
     kz.copy_size(ky);
     kz.zeros();
-    
-    savemat("/Users/alexcerjanic/Developer/PG/Resources/testGdft.mat","testGdft",test_gdft(cxData,kx,ky,kz));
+    Col<cx_double> out = test_gdft<cx_double,double>(conv_to<Col<cx_double>>::from(cxData),kx,ky,kz);
+    savemat("/Users/alexcerjanic/Developer/PG/Resources/testGdft.mat","testGdft",out);
 
     return 0;
 }
