@@ -73,6 +73,19 @@ int main(int argc, char** argv)
     
      Mat<cx_double> testPWLS = test_pwls_pcg();
      savemat("/Users/alexcerjanic/Developer/PG/Resources/testPWLS.mat","testPWLS", testPWLS);
+    
+    Mat<cx_double> cxData;
+    Col<double> kx;
+    Col<double> ky;
+    Col<double> kz;
+    loadmat("/Users/alexcerjanic/Developer/PG/Resources/testGdftTraj.mat","kx",&kx);
+    loadmat("/Users/alexcerjanic/Developer/PG/Resources/testGdftTraj.mat","ky",&ky);
+    
+    //loadmat("/Users/alexcerjanic/Developer/PG/Resources/testGdftTraj.mat","kz",&kz);
+    kz.copy_size(ky);
+    kz.zeros();
+    
+    savemat("/Users/alexcerjanic/Developer/PG/Resources/testGdft.mat","testGdft",test_gdft(cxData,kx,ky,kz));
 
     return 0;
 }

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		5E063CC61AB27D6200F98D62 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E063CC51AB27D6200F98D62 /* main.cpp */; };
+		5E42283C1AD487BD00705BAC /* test_gdft.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E42283A1AD487BD00705BAC /* test_gdft.cpp */; };
 		5EF111901AD1EE660078A37E /* test_pwls_pcg.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5EF1118F1AD1EE660078A37E /* test_pwls_pcg.cpp */; };
 /* End PBXBuildFile section */
 
@@ -27,6 +28,8 @@
 		5E063CC21AB27D6200F98D62 /* PowerGrid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PowerGrid; sourceTree = BUILT_PRODUCTS_DIR; };
 		5E063CC51AB27D6200F98D62 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		5E4228391AD450FE00705BAC /* ftCpu.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ftCpu.hpp; sourceTree = "<group>"; };
+		5E42283A1AD487BD00705BAC /* test_gdft.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = test_gdft.cpp; sourceTree = "<group>"; };
+		5E42283B1AD487BD00705BAC /* test_gdft.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = test_gdft.h; sourceTree = "<group>"; };
 		5E5618DE1ACDAC7D005A6EF3 /* fftshift.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = fftshift.hpp; sourceTree = "<group>"; };
 		5E5618DF1ACDBCB2005A6EF3 /* Gfft.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Gfft.hpp; sourceTree = "<group>"; };
 		5E5618E01ACDC18E005A6EF3 /* PowerGrid.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PowerGrid.h; sourceTree = "<group>"; };
@@ -85,6 +88,8 @@
 				5EB4437F1AD05B1800CEF071 /* SENSE.hpp */,
 				5EB443811AD0E5E700CEF071 /* QuadPenalty.hpp */,
 				5EF111911AD204F80078A37E /* test_pwls_pcg.h */,
+				5E42283A1AD487BD00705BAC /* test_gdft.cpp */,
+				5E42283B1AD487BD00705BAC /* test_gdft.h */,
 			);
 			path = PowerGrid;
 			sourceTree = "<group>";
@@ -147,6 +152,7 @@
 			files = (
 				5EF111901AD1EE660078A37E /* test_pwls_pcg.cpp in Sources */,
 				5E063CC61AB27D6200F98D62 /* main.cpp in Sources */,
+				5E42283C1AD487BD00705BAC /* test_gdft.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
