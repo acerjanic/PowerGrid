@@ -14,10 +14,14 @@ set(POWERGRID_ALL_SOURCES
     ./PowerGrid/main.cpp
     ./PowerGrid/test_pwls_pcg.cpp
 )
-add_executable(PowerGrid ${POWERGRID_ALL_SOURCES})
-target_link_libraries(PowerGrid ${LIBS})
+add_executable(PowerGridMain ${POWERGRID_ALL_SOURCES})
+target_link_libraries(PowerGridMain ${LIBS})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/usr/include")
 
+if(CMAKE_COMPILER_IS_GNUCXX)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lgfortran")
+endif()
+ 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
 CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
