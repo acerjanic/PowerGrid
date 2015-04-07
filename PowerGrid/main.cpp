@@ -24,7 +24,7 @@ int main(int argc, char** argv)
     
     //loadmat("/Users/alexcerjanic/Developer/PG/Resources/testForwardTest.mat","testForward",&testComplex);
     //Create our Gfft object for type complex double and N1=64, N2=64
-    Gfft<Col<cx_double>> G(64,64);
+    Gfft<cx_double> G(64,64);
 
     //Perform the forward transformation and store the result in a colum vector of type complex double
     //Note the conv_to<type to convert to>::from(data) command to convert our real double phantom to type complex double
@@ -52,13 +52,13 @@ int main(int argc, char** argv)
     //Test SENSE
 
     //Create an empty unsized matrix of type real double
-    Mat<double> SMap;
+    Mat<cx_double> SMap;
 
     //Load our read double matrix object. (You need to match type to avoide mangling the data.)
     loadmat("/Users/alexcerjanic/Developer/PG/Resources/SMap.mat","SMap",&SMap);
 
     //create our SENSE object, coils =2
-    SENSE<Col<cx_double>, Gfft<Col<cx_double>>> S(G,vectorise(conv_to<Mat<cx_double>>::from(SMap)),4096*2,4096,2);
+    SENSE<cx_double, Gfft<cx_double>> S(G,vectorise(SMap),4096*2,4096,2);
 
     //Perform the forward transformation and store the result in a colum vector of type complex double
      //Note the conv_to<type to convert to>::from(data) command to convert our real double phantom to type complex double

@@ -14,7 +14,7 @@ Mat<cx_double> test_pwls_pcg()
 
    // Formard operator
    Gfft<cx_double> G(64,64);
-   Col<cx_double> TestForwars;
+   Col<cx_double> TestForward;
    TestForward = G *vectorise(conv_to<Mat<cx_double>>::from(test));
 
    // Variables needed for the recon: Penalty object, num of iterations 

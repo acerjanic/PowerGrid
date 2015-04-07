@@ -11,7 +11,7 @@
 using namespace arma;
 
 template<typename T1,typename T2>
-complex<double> dot_double(Col<T1> A, Col<T2> B)
+complex<double> dot_double(T1 A, T2 B)
 {
     complex<double> sumReturn = sum(A % B);
     return sumReturn;
@@ -25,7 +25,7 @@ double norm_grad(T1 g,T1 yi,Mat<cx_double> W)
 }
 
 template<typename T1, typename Tobj, typename Robj>
-Col<T1> pwls_pcg1(Col<T1> const& x, Tobj const& A,Col<T1> const& W, Col<T1> const& yi, Robj const& R, uword niter)
+Col<T1> pwls_pcg1(Col<T1>& x, Tobj const& A,Col<T1> const& W, Col<T1> const& yi, Robj const& R, uword niter)
 {
     
     // Initialize projection
@@ -107,7 +107,7 @@ Col<T1> pwls_pcg1(Col<T1> const& x, Tobj const& A,Col<T1> const& W, Col<T1> cons
               }
               else {
                 cout << "0 or inf denom" << endl;
-                return;
+                return x;
               }
             }
 
@@ -125,7 +125,7 @@ Col<T1> pwls_pcg1(Col<T1> const& x, Tobj const& A,Col<T1> const& W, Col<T1> cons
         
         // Update
         Ax = Ax + step * Adir;
-        x = x + step * ddir;
+        x = x + (step * ddir);
         cout << "Iteration Complete = " << ii << endl;
     }
     return x;
