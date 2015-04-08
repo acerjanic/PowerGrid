@@ -104,6 +104,7 @@ Col<T1> pwls_pcg1(Col<T1>& x, Tobj const& A,Mat<T1> const& W, Col<T1> const& yi,
             if (std::abs(denom) < 1e-10 || std::abs(denom) > 1e25) {
               if (real(dot_double(ngrad,ngrad)) < 1e-10) {
                 cout << " Found exact solution" << endl;
+                  return x;
               }
               else {
                 cout << "0 or inf denom" << endl;

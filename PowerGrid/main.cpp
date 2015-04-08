@@ -52,27 +52,27 @@ int main(int argc, char** argv)
     //Test SENSE
 
     //Create an empty unsized matrix of type real double
-    Mat<double> SMap;
+    //Mat<double> SMap;
 
     //Load our read double matrix object. (You need to match type to avoide mangling the data.)
-    loadmat("/Users/alexcerjanic/Developer/PG/Resources/SMap.mat","SMap",&SMap);
+    //loadmat("/Users/alexcerjanic/Developer/PG/Resources/SMap.mat","SMap",&SMap);
 
     //create our SENSE object, coils =2
-    SENSE<cx_double, Gfft<cx_double>> S(G,vectorise(conv_to<Col<cx_double>>::from(SMap)),4096*2,4096,2);
+    //SENSE<cx_double, Gfft<cx_double>> S(G,vectorise(conv_to<Col<cx_double>>::from(SMap)),4096*2,4096,2);
 
     //Perform the forward transformation and store the result in a colum vector of type complex double
      //Note the conv_to<type to convert to>::from(data) command to convert our real double phantom to type complex double
-     Col<cx_double> testForward_SENSE = S*vectorise(conv_to<Mat<cx_double>>::from(test));
+     //Col<cx_double> testForward_SENSE = S*vectorise(conv_to<Mat<cx_double>>::from(test));
 
      //Now perform the adjoint transform
-     Col<cx_double> testAdjoint_SENSE = S/testForward_SENSE;
+     //Col<cx_double> testAdjoint_SENSE = S/testForward_SENSE;
 
-     savemat("/Users/alexcerjanic/Developer/PG/Resources/testForwardTest_SENSE.mat","testForward_SENSE", testForward_SENSE);
-     savemat("/Users/alexcerjanic/Developer/PG/Resources/testAdjointTest_SENSE.mat","testAdjoint_SENSE", testAdjoint_SENSE);
+     //savemat("/Users/alexcerjanic/Developer/PG/Resources/testForwardTest_SENSE.mat","testForward_SENSE", testForward_SENSE);
+     //savemat("/Users/alexcerjanic/Developer/PG/Resources/testAdjointTest_SENSE.mat","testAdjoint_SENSE", testAdjoint_SENSE);
      //Test PWLS_PCG1
     
-     Mat<cx_double> testPWLS = test_pwls_pcg();
-     savemat("/Users/alexcerjanic/Developer/PG/Resources/testPWLS.mat","testPWLS", testPWLS);
+     //Mat<cx_double> testPWLS = test_pwls_pcg();
+     //savemat("/Users/alexcerjanic/Developer/PG/Resources/testPWLS.mat","testPWLS", testPWLS);
     
     Mat<cx_double> cxData;
     Col<double> kx;
@@ -85,7 +85,7 @@ int main(int argc, char** argv)
     //loadmat("/Users/alexcerjanic/Developer/PG/Resources/testGdftTraj.mat","kz",&kz);
     kz.copy_size(ky);
     kz.zeros();
-    Col<cx_double> out = test_gdft<cx_double,double>(conv_to<Col<cx_double>>::from(cxData),kx,ky,kz);
+    Col<cx_double> out = test_gdft<cx_double,double>(conv_to<Col<cx_double>>::from(test),kx,ky,kz);
     savemat("/Users/alexcerjanic/Developer/PG/Resources/testGdft.mat","testGdft",out);
 
     return 0;
