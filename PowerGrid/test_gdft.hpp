@@ -20,11 +20,13 @@ Col<T1> test_gdft(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T
     Mat<T2> ix(64,64);
     Mat<T2> iy(64,64);
     Mat<T2> iz(64,64);
-    
+    Mat<T2> FM(64,64);
+    Mat<T2> t(64,64);
     ix.zeros();
     iy.zeros();
     iz.zeros();
-    
+    FM.zeros();
+    t.zeros();
     for(uword ii = 0; ii < 64; ii++) {
         for (uword jj = 0; jj < 64; jj++) {
             ix(ii,jj) = ((T2)ii-32.0)/64.0;
@@ -34,7 +36,7 @@ Col<T1> test_gdft(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T
     savemat("/Users/alexcerjanic/Developer/PG/Resources/ix.mat","ix",ix);
     savemat("/Users/alexcerjanic/Developer/PG/Resources/iy.mat","iy",iy);
     // Forward operator
-    Gdft<T1,T2> G(4010,64*64,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
+    Gdft<T1,T2> G(4010,64*64,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM),vectorise(t));
     
     Col<cx_double> TestForward;
     TestForward = G * vectorise(conv_to<Mat<cx_double>>::from(d));

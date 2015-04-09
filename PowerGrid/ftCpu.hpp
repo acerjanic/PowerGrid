@@ -158,6 +158,7 @@ ftCpu(T1 *kdata_r, T1 *kdata_i,
       const T1 *idata_r, const T1 *idata_i, const T1 *kx,
       const T1 *ky, const T1 *kz,
       const T1 *ix, const T1 *iy, const T1 *iz,
+      const T1 *FM, const T1 *t,
       const int num_k, const int num_i
       )
 {
@@ -203,7 +204,8 @@ shared(i, kx_N, ky_N, kzdeltaz, t_tpi, fm, kxtpi, kytpi, \
 kziztpi, kx_i, ky_i, kz_i, t, idata_r, idata_i)
 #endif
         for (j = 0; j < num_i; j++) { // j is the pixel point in image-space
-            expr = (kxtpi * ix[j] + kytpi * iy[j] + kziztpi);
+            expr = (kxtpi * ix[j] + kytpi * iy[j] + kziztpi +
+                    (FM[j] * t[i]));
 
             cosexpr = std::cos(expr); sinexpr = std::sin(expr);
 
@@ -234,6 +236,7 @@ iftCpu(T1 *idata_r, T1 *idata_i,
        const T1 *kdata_r, const T1 *kdata_i,
        const T1 *kx, const T1 *ky, const T1 *kz,
        const T1 *ix, const T1 *iy, const T1 *iz,
+       const T1 *FM, const T1 *t,
        const int num_k, const int num_i
        )
 {
@@ -275,7 +278,8 @@ fm, kdata_r, kdata_i)
 #endif
         for (i = 0; i < num_k; i++) { // i is the time points in k-space
             expr = (kx[i] * itraj_x_tpi +
-                    ky[i] * itraj_y_tpi + kziztpi);
+                    ky[i] * itraj_y_tpi + kziztpi +
+                    (FM[j] * t[i]));
 
             cosexpr = std::cos(expr); sinexpr = std::sin(expr);
 

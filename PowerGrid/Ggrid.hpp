@@ -1,21 +1,22 @@
 //
-//  Gdft.hpp
+//  Ggrid.hpp
 //  PowerGrid
 //
-//  Created by Alex Cerjanic on 4/4/15.
+//  Created by Alex Cerjanic on 4/8/15.
 //  Copyright (c) 2015 MRFIL. All rights reserved.
 //
 
-#ifndef PowerGrid_Gdft_hpp
-#define PowerGrid_Gdft_hpp
+#ifndef PowerGrid_Ggrid_h
+#define PowerGrid_Ggrid_h
 template<typename T1,typename T2> //This is of type complex<double> or complex<float>, or any other type like float or single
-class Gdft {
+class Ggrid {
     
 public:
+    
     //Default Class Constructor and Destructor
-    Gdft();
+    Ggrid();
     //Class Constructor
-    Gdft(uword a, uword b, const Col<T2> &k1, const Col<T2> &k2, const Col<T2> &k3, const Col<T2> &i1, const Col<T2> &i2, const Col<T2> &i3,const Col<T2> &f1, const Col<T2> &t1) //Change these argumenst as you need to setup the object
+    Ggrid(uword a, uword b, const Col<T2> &k1, const Col<T2> &k2, const Col<T2> &k3, const Col<T2> &i1, const Col<T2> &i2, const Col<T2> &i3) //Change these argumenst as you need to setup the object
     {
         n1 = a;
         n2 = b;
@@ -25,8 +26,6 @@ public:
         ix = i1;
         iy = i2;
         iz = i3;
-        FM = f1;
-        t  = t1;
     }
     
     //Class variables go here. Change as necessary
@@ -36,11 +35,9 @@ public:
     Col<T2> kx; //k-space coordinates
     Col<T2> ky;
     Col<T2> kz;
-    Col<T2> ix; //image space coordinates 
+    Col<T2> ix; //image space coordinates
     Col<T2> iy;
     Col<T2> iz;
-    Col<T2> FM;
-    Col<T2> t;
     
     //Overloaded methods for forward and adjoint transform
     //Forward transform operation
@@ -72,7 +69,6 @@ public:
                   realDataPtr, imagDataPtr, kx.memptr(),
                   ky.memptr(), kz.memptr(),
                   ix.memptr(), iy.memptr(), iz.memptr(),
-                  FM.memptr(), t.memptr(),
                   this->n1, this->n2
                   );
         
@@ -116,12 +112,11 @@ public:
         // I assume you create the pointers to the arrays where the transformed data will be stored
         // realXformedDataPtr and imagXformedDataPtr and they are of type float*
         iftCpu<T2>(realXformedDataPtr,imagXformedDataPtr,
-                  realDataPtr, imagDataPtr, kx.memptr(),
-                  ky.memptr(), kz.memptr(),
-                  ix.memptr(), iy.memptr(), iz.memptr(),
-                   FM.memptr(), t.memptr(),
-                  this->n1, this->n2
-                  );
+                   realDataPtr, imagDataPtr, kx.memptr(),
+                   ky.memptr(), kz.memptr(),
+                   ix.memptr(), iy.memptr(), iz.memptr(),
+                   this->n1, this->n2
+                   );
         
         //realXformedData(realXformedDataPtr, dataLength);
         //imagXformedData(imagXformedDataPtr, dataLength);
