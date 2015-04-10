@@ -16,13 +16,13 @@ public:
     //Default Class Constructor and Destructor
     Ggrid();
     //Class Constructor
-    Ggrid(uword a, uword b, const Col<T2> &k1, const Col<T2> &k2, const Col<T2> &k3, const Col<T2> &i1, const Col<T2> &i2, const Col<T2> &i3) //Change these argumenst as you need to setup the object
+    Ggrid(uword dataLength, uword nx, uword ny, uword nz, const Col<T2> &k1, const Col<T2> &k2, const Col<T2> &k3, const Col<T2> &i1, const Col<T2> &i2, const Col<T2> &i3) //Change these argumenst as you need to setup the object
     {
-        n1 = a;
-        n2 = b;
-        kx = k1;
-        ky = k2;
-        kz = k3;
+        n1 = dataLength;
+        n2 = nx*ny*nz;
+        Nx = nx;
+        Ny = ny;
+        Nz = nz;
         ix = i1;
         iy = i2;
         iz = i3;
@@ -31,6 +31,9 @@ public:
     //Class variables go here. Change as necessary
     uword n1 = 0;
     uword n2 = 0;
+    uword Nx = 0;
+    uword Ny = 0;
+    uword Nz = 0;
     
     Col<T2> kx; //k-space coordinates
     Col<T2> ky;
@@ -87,7 +90,7 @@ public:
         
     }
     
-    //Adjoint transform operation
+    //Adjoint transform operation - starting here with gridding...
     Col<T1> operator/(const Col<T1>& d) const
     {
         
@@ -111,13 +114,21 @@ public:
         //Process data here, like calling a brute force transform, dft...
         // I assume you create the pointers to the arrays where the transformed data will be stored
         // realXformedDataPtr and imagXformedDataPtr and they are of type float*
+        
+        
+        computeFH_CPU_Grid(int dataLength, kx.memptr(),  ky.memptr(),  kz.memptr(),
+                           realDataPtr, imagDataPtr, Nx, Ny, Nz,
+                           float *t, float *t_d, float l,
+                           float gridOS,
+                           realXformedDataPtr, imagXformedDataPtr);
+        /*
         iftCpu<T2>(realXformedDataPtr,imagXformedDataPtr,
                    realDataPtr, imagDataPtr, kx.memptr(),
                    ky.memptr(), kz.memptr(),
                    ix.memptr(), iy.memptr(), iz.memptr(),
                    this->n1, this->n2
                    );
-        
+        */
         //realXformedData(realXformedDataPtr, dataLength);
         //imagXformedData(imagXformedDataPtr, dataLength);
         

@@ -27,6 +27,9 @@
 		5E063CC21AB27D6200F98D62 /* PowerGrid */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PowerGrid; sourceTree = BUILT_PRODUCTS_DIR; };
 		5E063CC51AB27D6200F98D62 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		5E314E881AD5AC7200E3AD30 /* Ggrid.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Ggrid.hpp; sourceTree = "<group>"; };
+		5E314E891AD6126F00E3AD30 /* gridding.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = gridding.hpp; sourceTree = "<group>"; };
+		5E314E8A1AD61C5C00E3AD30 /* impatientTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = impatientTypes.h; sourceTree = "<group>"; };
+		5E314E8B1AD6E09400E3AD30 /* griddingSupport.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = griddingSupport.hpp; sourceTree = "<group>"; };
 		5E4228391AD450FE00705BAC /* ftCpu.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ftCpu.hpp; sourceTree = "<group>"; };
 		5E42283D1AD49A2800705BAC /* test_gdft.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = test_gdft.hpp; sourceTree = "<group>"; };
 		5E5618DE1ACDAC7D005A6EF3 /* fftshift.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = fftshift.hpp; sourceTree = "<group>"; };
@@ -89,6 +92,9 @@
 				5EB4437F1AD05B1800CEF071 /* SENSE.hpp */,
 				5EB443811AD0E5E700CEF071 /* QuadPenalty.hpp */,
 				5EF111911AD204F80078A37E /* test_pwls_pcg.h */,
+				5E314E891AD6126F00E3AD30 /* gridding.hpp */,
+				5E314E8A1AD61C5C00E3AD30 /* impatientTypes.h */,
+				5E314E8B1AD6E09400E3AD30 /* griddingSupport.hpp */,
 			);
 			path = PowerGrid;
 			sourceTree = "<group>";

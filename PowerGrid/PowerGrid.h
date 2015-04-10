@@ -15,7 +15,7 @@
 #include "../Support/CeempleArmadillo.h"
 #include "../Support/CeempleMatio.h"
 #include "test_pwls_pcg.h"
-
+#include "impatientTypes.h"
 
 namespace arma {
 #include "op_circshift_bones.hpp"
@@ -29,6 +29,7 @@ namespace arma {
 #include "ftCpu.hpp"
 #include "Gdft.hpp"
 #include "test_gdft.hpp" 
+#include "gridding.hpp"
 }
 
 #endif
