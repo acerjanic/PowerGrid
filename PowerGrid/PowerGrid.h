@@ -29,6 +29,9 @@ namespace arma {
 #include "ftCpu.hpp"
 #include "Gdft.hpp"
 #include "test_gdft.hpp" 
+#include "FieldCorrection.hpp"
+#include "test_FieldCorrection.hpp"
+
 }
 
 #endif

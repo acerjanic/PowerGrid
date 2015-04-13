@@ -47,7 +47,6 @@ public:
     Col<T1> operator*(const Col<T1>& d) const//Don't change these arguments
     {
         //This is just specifying size assuming things are the same size, change as necessary
-        uword dataLength = d.n_rows;
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
         //Now we grab the data out of armadillo with the memptr() function
@@ -58,10 +57,8 @@ public:
         
         Col<T2> realXformedData;
         Col<T2> imagXformedData;
-        realXformedData.copy_size(realData);
-        imagXformedData.copy_size(realData);
-        realXformedData.zeros();
-        imagXformedData.zeros();
+        realXformedData.zeros(this->n1);
+        imagXformedData.zeros(this->n1);
         
         T2* realXformedDataPtr = realXformedData.memptr();
         T2* imagXformedDataPtr = imagXformedData.memptr();
@@ -83,7 +80,7 @@ public:
         
         //We can free the realDataXformPtr and imagDataXformPtr at this point and Armadillo will manage armadillo object memory as things change size or go out of scope and need to be destroyed
         
-        Col<T1> XformedData(dataLength);
+        Col<T1> XformedData(this->n1);
         XformedData.set_real(realXformedData);
         XformedData.set_imag(imagXformedData);
         
@@ -95,8 +92,6 @@ public:
     Col<T1> operator/(const Col<T1>& d) const
     {
         
-        uword dataLength = d.n_rows;
-        
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
         
@@ -105,10 +100,8 @@ public:
         
         Col<T2> realXformedData;
         Col<T2> imagXformedData;
-        realXformedData.copy_size(realData);
-        imagXformedData.copy_size(realData);
-        realXformedData.zeros();
-        imagXformedData.zeros();
+        realXformedData.zeros(this->n2);
+        imagXformedData.zeros(this->n2);
         
         T2* realXformedDataPtr = realXformedData.memptr();
         T2* imagXformedDataPtr = imagXformedData.memptr();
@@ -128,7 +121,7 @@ public:
         
         //We can free the realDataXformPtr and imagDataXformPtr at this point and Armadillo will manage armadillo object memory as things change size or go out of scope and need to be destroyed
         
-        Col<T1> XformedData(dataLength);
+        Col<T1> XformedData(this->n2);
         XformedData.set_real(realXformedData);
         XformedData.set_imag(imagXformedData);
         

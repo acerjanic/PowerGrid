@@ -16,35 +16,37 @@ using namespace arma;
 template<typename T1,typename T2>
 Col<T1> test_gdft(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T2> kz)
 {
+	 string testPath = "/shared/mrfil-data/jholtrop/repos/PowerGrid/Resources/";
+
     //Setup image space coordinates/trajectory
     Mat<T2> ix(64,64);
     Mat<T2> iy(64,64);
     Mat<T2> iz(64,64);
     Mat<T2> FM(64,64);
-    Mat<T2> t(64,64);
+    Mat<T2> t;
     ix.zeros();
     iy.zeros();
     iz.zeros();
     FM.zeros();
-    t.zeros();
+    t.zeros(kx.n_elem);
     for(uword ii = 0; ii < 64; ii++) {
         for (uword jj = 0; jj < 64; jj++) {
             ix(ii,jj) = ((T2)ii-32.0)/64.0;
             iy(ii,jj) = ((T2)jj-32.0)/64.0;
         }
     }
-    savemat("/Users/alexcerjanic/Developer/PG/Resources/ix.mat","ix",ix);
-    savemat("/Users/alexcerjanic/Developer/PG/Resources/iy.mat","iy",iy);
+    savemat(testPath+"ix.mat","ix",ix);
+    savemat(testPath+"iy.mat","iy",iy);
     // Forward operator
     Gdft<T1,T2> G(4010,64*64,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM),vectorise(t));
     
     Col<cx_double> TestForward;
     TestForward = G * vectorise(conv_to<Mat<cx_double>>::from(d));
-    savemat("/Users/alexcerjanic/Developer/PG/Resources/testGdftForward.mat","testGdftForward",TestForward);
+    savemat(testPath+"testGdftForward.mat","testGdftForward",TestForward);
     
     Col<cx_double> TestAdjoint;
     TestAdjoint = G / TestForward;
-    savemat("/Users/alexcerjanic/Developer/PG/Resources/testGdftAdjoint.mat","testGdftAdjoint",TestAdjoint);
+    savemat(testPath+"testGdftAdjoint.mat","testGdftAdjoint",TestAdjoint);
 
     // Variables needed for the recon: Penalty object, num of iterations
     umat ReconMask;
@@ -52,10 +54,10 @@ Col<T1> test_gdft(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T
     
     QuadPenalty<T1>R(64,64,1,ReconMask);
     
-    uword niter = 20;
+    uword niter = 10;
     Col<T1> xinit = zeros<Col<cx_double>>(64*64); // initial estimate of x
     Mat<T1> W;
-    W = eye<Mat<T1>>(G.n2,G.n2); // Should be the size of k-space data: Is it right?
+    W = eye<Mat<T1>>(G.n1,G.n1); // Should be the size of k-space data: Is it right?
 
     Col<T1> x_t;
     x_t = pwls_pcg1<T1,Gdft<T1,T2>,QuadPenalty<T1>>(xinit, G, W, TestForward, R, niter);
