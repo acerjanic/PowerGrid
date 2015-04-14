@@ -34,21 +34,21 @@ public:
     //Class constructor
     FieldCorrection(Tobj &G, Col<T2> map_in, Col<T2> timeVec_in, uword a, uword b,uword c ) {
 
-    n1 = a; //Data size
+      n1 = a; //Data size
       n2 = b;//Image size
       L = c; //number of time segments
       obj = &G;
       fieldMap = map_in;
       timeVec = timeVec_in;
-      AA = zeros<mat>(n1,L); //time segments weights
+      AA.zeros(n1,L); //time segments weights
       T2 rangt = timeVec.max()-timeVec.min();
       tau = (rangt+datum::eps)/(L-1);
 
       //Hanning interpolator
       for (unsigned int ii=0; ii < L; ii++) {
         for (unsigned int jj=0; jj < n1; jj++) {
-          if (std::abs(timeVec(jj)-((ii-1)*tau))<=tau){
-            AA(jj,ii) = 0.5 + 0.5*std::cos((datum::pi)*(timeVec(jj)-((ii-1)*tau))/tau);
+          if ((fabs(timeVec(jj)-((ii)*tau)))<=tau){
+            AA(jj,ii) = 0.5 + 0.5*std::cos((datum::pi)*(timeVec(jj)-((ii)*tau))/tau);
           }
         }
       }
@@ -67,7 +67,7 @@ public:
       //loop through time segments
       for (unsigned int ii=0; ii < this->L; ii++) {
 
-		Col<T1> Wo = exp(-i*(this->fieldMap)*((ii-1)*tau));
+		Col<T1> Wo = exp(-i*(this->fieldMap)*((ii)*tau));
 
 		outData += (this->AA.col(ii))%((*this->obj)*(Wo%d));
 
@@ -84,7 +84,7 @@ public:
 
       for (unsigned int ii=0; ii < this->L; ii++) {
 
-        Col<T1> Wo = exp(-i*(this->fieldMap)*((ii-1)*tau));
+        Col<T1> Wo = exp(-i*(this->fieldMap)*((ii)*tau));
 
         outData +=  Wo%((*this->obj)/(AA.col(ii)%d));
 
