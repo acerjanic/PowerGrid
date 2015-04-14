@@ -9,6 +9,8 @@
 #ifndef PowerGrid_gridding_hpp
 #define PowerGrid_gridding_hpp
 
+#include "fftw.h" //for fft library
+
 using namespace arma;
 
 // 2D gold gridding on CPU
@@ -374,10 +376,48 @@ computeFH_CPU_Grid(
         gridding_Gold_3D(n, params, samples, LUT, sizeLUT, t, l,
                          gridData, sampleDensity);
     }
-    
+
     // ifftshift(gridData):
+    if(Nz==1)
+    {
+        cuda_fft2shift_grid(gridData_d,gridData_d,params.gridSize[0],
+                            params.gridSize[1], 1);
+    }
+    else
+    {
+        cuda_fft3shift_grid(gridData_d,gridData_d,params.gridSize[0],
+                            params.gridSize[1],params.gridSize[2],1);
+    }
+
     // ifftn(gridData):
+    fftwnd_plan plan;
+    if(Nz==1)
+    {
+        plan = fftw2d_create_plan(params.gridSize[0],
+                                     params.gridSize[1], FFTW_INVERSE, FFTW_ESTIMATE);
+    }
+    else
+    {
+        plan = fftw3d_create_plan(params.gridSize[0],
+                                params.gridSize[1],params.gridSize[2], FFTW_INVERSE, FFTW_ESTIMATE);
+    }
+    /* Inverse transform 'gridData_d' in place. */
+    fftwnd_one(plan, gridData_d, gridData_d);
+    fftwnd_destrop_plan(plan); 
+
+
     // fftshift(gridData):
+    if(Nz==1)
+    {
+        cuda_fft2shift_grid(gridData_d, gridData_d, params.gridSize[0],
+                            params.gridSize[1], 0);
+    }
+    else
+    {
+        cuda_fft3shift_grid(gridData_d, gridData_d, params.gridSize[0],
+                            params.gridSize[1], params.gridSize[2],0);
+    }
+
     
     // crop the center region of the "image".
     if(Nz==1)
@@ -386,14 +426,12 @@ computeFH_CPU_Grid(
                              params.imageSize[0], params.imageSize[1],
                              params.gridSize[0], params.gridSize[1]);
     }
-    else
-    {
+    else {
         crop_center_region3d(gridData_crop_d, gridData_d,
                              params.imageSize[0], params.imageSize[1], params.imageSize[2],
                              params.gridSize[0], params.gridSize[1], params.gridSize[2]);
     }
-    
-    
+
     // deapodization
     if(Nz==1)
     {

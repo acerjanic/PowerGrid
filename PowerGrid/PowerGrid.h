@@ -30,6 +30,8 @@ namespace arma {
 #include "Gdft.hpp"
 #include "test_gdft.hpp" 
 #include "gridding.hpp"
+#include "griddingSupport.hpp"
+
 }
 
 #endif
