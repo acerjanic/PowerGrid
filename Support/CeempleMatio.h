@@ -33,7 +33,7 @@ template <> struct MatioTypes<double> {
 
 
 // Return true on success.
-template <class T>
+template <typename T>
 typename arma::enable_if2
 <(arma::is_cx<T>::no),bool>::result
 savemat(const std::string &FileName, const std::string &VarName,
@@ -61,7 +61,7 @@ savemat(const std::string &FileName, const std::string &VarName,
 }
 
 // Return true on success.
-template <class T1>
+template <typename T1>
 typename arma::enable_if2
 <(arma::is_cx<T1>::yes),bool>::result
 savemat(const std::string &FileName, const std::string &VarName,
@@ -94,7 +94,7 @@ savemat(const std::string &FileName, const std::string &VarName,
 }
 
 
-template <class T>
+template <typename T>
 typename arma::enable_if2
 <(arma::is_cx<T>::no),bool>::result
 loadmat(const std::string &FileName, const std::string &VarName,
@@ -128,7 +128,7 @@ loadmat(const std::string &FileName, const std::string &VarName,
   return matvar2D;
 }
 
-template <class T1>
+template <typename T1>
 typename arma::enable_if2
 <(arma::is_cx<T1>::yes),bool>::result
  loadmat(const std::string &FileName, const std::string &VarName,
