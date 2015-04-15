@@ -28,7 +28,7 @@ public:
     Col<T2> fieldMap; //Field map in radians per second
     Col<T2> timeVec;
     Mat<T2> AA;
-    T1 i = (0,1);
+    T1 i = (0.0,1.0);
 
     
     //Class constructor
@@ -47,14 +47,22 @@ public:
 
 
       //Hanning interpolator
-      for (unsigned int ii=0; ii < L; ii++) {
-        for (unsigned int jj=0; jj < n1; jj++) {
-          if ((fabs(timeVec(jj)-((ii)*tau)))<=tau){
-            AA(jj,ii) = 0.5 + 0.5*std::cos((datum::pi)*(timeVec(jj)-((ii)*tau))/tau);
-          }
-        }
+      if (L > 1){
+    	  tau = (rangt+datum::eps)/(L-1);
+		  for (unsigned int ii=0; ii < L; ii++) {
+			for (unsigned int jj=0; jj < n1; jj++) {
+			  if ((fabs(timeVec(jj)-((ii)*tau)))<=tau){
+				AA(jj,ii) = 0.5 + 0.5*std::cos((datum::pi)*(timeVec(jj)-((ii)*tau))/tau);
+			  }
+			}
+		  }
       }
-
+      else {
+    	  tau = 0;
+    	  AA.ones();
+      }
+      //string testPath = "/shared/mrfil-data/jholtrop/repos/PowerGrid/Resources/";
+      //savemat(testPath+"AA.mat","AA",AA);
 
     }
     
@@ -69,6 +77,7 @@ public:
       //loop through time segments
       for (unsigned int ii=0; ii < this->L; ii++) {
 
+    	//apply a phase to each time segment
 		Col<T1> Wo = exp(-i*(this->fieldMap)*((ii)*tau));
 
 		outData += (this->AA.col(ii))%((*this->obj)*(Wo%d));

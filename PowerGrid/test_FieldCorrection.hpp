@@ -51,13 +51,11 @@ Col<T1> test_FieldCorrection()
 
     Col<T2> tvec_gdft;
     tvec_gdft.zeros(nro);
-
-    // Forward operator
-    Gdft<T1,T2> G(nro,64*64,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM_gdft),vectorise(tvec_gdft));
     
-    uword L = 15;
+    uword L = 10;
     Mat<T2> FM;
     loadmat(testPath+"FM.mat","FM",&FM);
+
     //FM.zeros();
    T2 tsamp = 5e-6;
    Col<T2> tvec;
@@ -67,9 +65,12 @@ Col<T1> test_FieldCorrection()
    }
    tvec = tvec*tsamp;
 
-   cout << "min tvec = " << tvec.min() << endl;
+    // Forward operator
+    Gdft<T1,T2> G(nro,64*64,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM_gdft),vectorise(tvec_gdft));
 
-    FieldCorrection<T1, T2, Gdft<T1,T2>> A(G,vectorise(FM*0.1),vectorise(tvec),nro,64*64,L);
+   //cout << "min tvec = " << tvec.min() << endl;
+
+    FieldCorrection<T1, T2, Gdft<T1,T2>> A(G,vectorise(FM),vectorise(tvec),nro,64*64,L);
 
     // Variables needed for the recon: Penalty object, num of iterations
     umat ReconMask;
@@ -83,7 +84,7 @@ Col<T1> test_FieldCorrection()
     W = eye<Mat<T1>>(A.n1,A.n1); // Should be the size of k-space data: Is it right?
 
     Col<T1> data;
-    loadmat(testPath+"data_onecoil_FM.mat","data",&data);
+    loadmat(testPath+"data_onecoil.mat","data",&data);
 
 
     Col<T1> x_t;
