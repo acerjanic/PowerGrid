@@ -2,11 +2,11 @@
 //  FieldCorrection.hpp
 //  PowerGrid
 //
-//  Created by Alex Cerjanic on 4/4/15.
+//  Created by Joe Holtrop on 4/10/15.
 //  Copyright (c) 2015 MRFIL. All rights reserved.
 //
 // This using field correction by time segmentation
-// The data is correctied to time 0 with reference to the time vector passed
+// The data is corrected to time 0 with reference to the time vector passed
 //
 //
 
@@ -23,14 +23,13 @@ public:
     uword n1 = 0; //Data size
     uword n2 = 0; //Image size
     uword L = 0; //number of time segments
-    T2 tau;
+    T2 tau;		//time segment length
     Tobj *obj;
-    Col<T2> fieldMap; //Field map in radians per second
-    Col<T2> timeVec;
-    Mat<T2> AA;
-    T1 i = (0.0,1.0);
+    Col<T2> fieldMap; //Field map (in radians per second)
+    Col<T2> timeVec;  //timing vector of when each data point was collected relative to the echo time (in seconds)
+    Mat<T2> AA;		//interpolator coefficients for the different time segments
+    T1 i = T1(0.,1.);
 
-    
     //Class constructor
     FieldCorrection(Tobj &G, Col<T2> map_in, Col<T2> timeVec_in, uword a, uword b,uword c ) {
 
@@ -45,7 +44,6 @@ public:
       T2 rangt = timeVec.max()-T_min;
       tau = (rangt+datum::eps)/(L-1);
 
-
       //Hanning interpolator
       if (L > 1){
     	  tau = (rangt+datum::eps)/(L-1);
@@ -57,12 +55,11 @@ public:
 			}
 		  }
       }
-      else {
+      else { //no time segmentation needed
     	  tau = 0;
     	  AA.ones();
       }
-      //string testPath = "/shared/mrfil-data/jholtrop/repos/PowerGrid/Resources/";
-      //savemat(testPath+"AA.mat","AA",AA);
+
 
     }
     
@@ -72,6 +69,7 @@ public:
     // d is the vector of data of type T1, note it is const, so we don't modify it directly rather return another vector of type T1
     Col<T1> operator*(const Col<T1>& d) const {
 
+    //output is the size of the kspace data
       Col<T1> outData = zeros<Mat<T1>>(this->n1);
 
       //loop through time segments
@@ -80,6 +78,7 @@ public:
     	//apply a phase to each time segment
 		Col<T1> Wo = exp(-i*(this->fieldMap)*((ii)*tau));
 
+		//perform multiplication by the object and sum up the time segments
 		outData += (this->AA.col(ii))%((*this->obj)*(Wo%d));
 
 
@@ -88,15 +87,20 @@ public:
       return outData;
     }
     
+
+
     Col<T1> operator/(const Col<T1>& d) const {
 
-
+       //output is the size of the image
       Col<T1> outData = zeros<Mat<T1>>(this->n2);
 
+      //loop through the time segemtns
       for (unsigned int ii=0; ii < this->L; ii++) {
 
+    	//create the phase map for the Lth time segment
         Col<T1> Wo = exp(i*(this->fieldMap)*((ii)*tau));
 
+        //perform adjoint operation by the object and sum up the time segments
         outData +=  Wo%((*this->obj)/(AA.col(ii)%d));
 
       }

@@ -56,9 +56,10 @@ Col<T1> test_FieldCorrection()
     Mat<T2> FM;
     loadmat(testPath+"FM.mat","FM",&FM);
 
-    //FM.zeros();
-   T2 tsamp = 5e-6;
+  //FM.zeros();
+   T2 tsamp = 5e-6; //sampling rate
    Col<T2> tvec;
+
    tvec.zeros(nro);
    for (uword ii=0; ii<nro; ii++) {
 		   tvec(ii) = ii;
@@ -84,7 +85,7 @@ Col<T1> test_FieldCorrection()
     W = eye<Mat<T1>>(A.n1,A.n1); // Should be the size of k-space data: Is it right?
 
     Col<T1> data;
-    loadmat(testPath+"data_onecoil.mat","data",&data);
+    loadmat(testPath+"data_onecoil_FM.mat","data",&data);
 
 
     Col<T1> x_t;
