@@ -18,8 +18,8 @@ public:
     //Class Constructor
     Ggrid(uword dataLength, uword nx, uword ny, uword nz, const Col<T2> &k1, const Col<T2> &k2, const Col<T2> &k3, const Col<T2> &i1, const Col<T2> &i2, const Col<T2> &i3) //Change these argumenst as you need to setup the object
     {
-        n1 = dataLength;
-        n2 = nx*ny*nz;
+        n1 = nx*ny*nz;
+        n2 = dataLength;
         Nx = nx;
         Ny = ny;
         Nz = nz;
@@ -48,6 +48,10 @@ public:
     {
         //This is just specifying size assuming things are the same size, change as necessary
         uword dataLength = d.n_rows;
+        Mat<T2> FM(ix.n_rows,iy.n_rows);
+        Mat<T2> t(ix.n_rows,iy.n_rows);
+        FM.zeros();
+        t.zeros();
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
         //Now we grab the data out of armadillo with the memptr() function
@@ -72,8 +76,9 @@ public:
                   realDataPtr, imagDataPtr, kx.memptr(),
                   ky.memptr(), kz.memptr(),
                   ix.memptr(), iy.memptr(), iz.memptr(),
+                  FM.memptr(), t.memptr(),
                   this->n1, this->n2
-                  );
+        );
         
         //To return data, we need to put our data back into Armadillo objects
         //We are telling the object how long it is because it will copy the data back into managed memory
@@ -115,12 +120,10 @@ public:
         // I assume you create the pointers to the arrays where the transformed data will be stored
         // realXformedDataPtr and imagXformedDataPtr and they are of type float*
         
-        
-        computeFH_CPU_Grid(int dataLength, kx.memptr(),  ky.memptr(),  kz.memptr(),
+        T2 gridOS = 2.0;
+        computeFH_CPU_Grid<T2>(dataLength, kx.memptr(),  ky.memptr(),  kz.memptr(),
                            realDataPtr, imagDataPtr, Nx, Ny, Nz,
-                           float *t, float *t_d, float l,
-                           float gridOS,
-                           realXformedDataPtr, imagXformedDataPtr);
+                           gridOS, realXformedDataPtr, imagXformedDataPtr);
         /*
         iftCpu<T2>(realXformedDataPtr,imagXformedDataPtr,
                    realDataPtr, imagDataPtr, kx.memptr(),

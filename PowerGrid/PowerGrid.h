@@ -10,12 +10,15 @@
 #define PowerGrid_PowerGrid_h
 
 #include <iostream>
+#include <cmath>
 #include "armadillo"
 #include "../Support/CeempleComplex.h"
 #include "../Support/CeempleArmadillo.h"
 #include "../Support/CeempleMatio.h"
 #include "test_pwls_pcg.h"
 #include "impatientTypes.h"
+#include "fftw3.h" //for fft library
+
 
 namespace arma {
 #include "op_circshift_bones.hpp"
@@ -29,8 +32,10 @@ namespace arma {
 #include "ftCpu.hpp"
 #include "Gdft.hpp"
 #include "test_gdft.hpp" 
-#include "gridding.hpp"
 #include "griddingSupport.hpp"
+#include "gridding.hpp"
+#include "Ggrid.hpp"
+#include "test_ggrid.hpp"
 
 }
 

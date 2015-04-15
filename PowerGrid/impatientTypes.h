@@ -8,18 +8,19 @@
 
 #ifndef PowerGrid_impatientTypes_h
 #define PowerGrid_impatientTypes_h
-typedef struct{
+template<typename T1>
+struct parameters{
     int numSamples;
     int imageSize[3];
     int gridSize[3];
-    float gridOS;
-    float kernelWidth;
+    T1 gridOS;
+    T1 kernelWidth;
     int binsize;
     int useLUT;
     int sync;
-}parameters;
+};
 
-template <T1>
+template <typename T1>
 struct ReconstructionSample{
     T1 real;
     T1 imag;

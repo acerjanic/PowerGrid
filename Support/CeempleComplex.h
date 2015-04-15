@@ -31,4 +31,29 @@ template <class T> std::complex<T> operator/(int x, const std::complex<T> &y) {
   return double(x) / y;
 }
 
+template <class T> std::complex<T> operator+(const std::complex<T> &x, float y) {
+  return x + double(y);
+}
+template <class T> std::complex<T> operator+(float x, const std::complex<T> &y) {
+  return double(x) + y;
+}
+template <class T> std::complex<T> operator-(const std::complex<T> &x, float y) {
+  return x - double(y);
+}
+template <class T> std::complex<T> operator-(float x, const std::complex<T> &y) {
+  return double(x) - y;
+}
+template <class T> std::complex<T> operator*(const std::complex<T> &x, float y) {
+  return x * double(y);
+}
+template <class T> std::complex<T> operator*(float x, const std::complex<T> &y) {
+  return double(x) * y;
+}
+template <class T> std::complex<T> operator/(const std::complex<T> &x, float y) {
+  return x / double(y);
+}
+template <class T> std::complex<T> operator/(float x, const std::complex<T> &y) {
+  return double(x) / y;
+}
+
 #endif // CEEMPLECOMPLEX_H
