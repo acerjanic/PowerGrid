@@ -90,8 +90,8 @@ int main(int argc, char** argv)
     //Col<cx_double> out = test_gdft<cx_double,double>(conv_to<Col<cx_double>>::from(test),kx,ky,kz);
     //savemat(testPath+"testGdft.mat","testGdft",out);
 
-    Col<cx_double> out_FieldCorrected = test_FieldCorrection<cx_double,double>();
-    savemat(testPath+"test_FieldCorrection.mat","test_FieldCorrection",out_FieldCorrected);
+   Col<cx_double> out_FieldCorrected = test_FieldCorrection<cx_double,double>();
+   savemat(testPath+"test_FieldCorrection.mat","test_FieldCorrection",out_FieldCorrected);
 
     return 0;
 }

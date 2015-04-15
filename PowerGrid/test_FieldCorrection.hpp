@@ -29,12 +29,15 @@ Col<T1> test_FieldCorrection()
     iz.zeros();
     FM_gdft.zeros();
     
+    //generate the image space cordinates of the voxels we want to reconstruct
+    // after vectorizing ix and iy the image coordinates must match the Field and SENSe map image coordinates
     for(uword ii = 0; ii < 64; ii++) {
         for (uword jj = 0; jj < 64; jj++) {
-            ix(ii,jj) = ((T2)ii-32.0)/64.0;
-            iy(ii,jj) = ((T2)jj-32.0)/64.0;
+            ix(ii,jj) = ((T2)jj-32.0)/64.0;
+            iy(ii,jj) = ((T2)ii-32.0)/64.0;
         }
     }
+
     Col<T2> kx;
     loadmat(testPath+"kx_sp.mat","kx",&kx);
     Col<T2> ky;
@@ -52,7 +55,7 @@ Col<T1> test_FieldCorrection()
     // Forward operator
     Gdft<T1,T2> G(nro,64*64,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM_gdft),vectorise(tvec_gdft));
     
-    uword L = 10;
+    uword L = 15;
     Mat<T2> FM;
     loadmat(testPath+"FM.mat","FM",&FM);
     //FM.zeros();
@@ -64,13 +67,15 @@ Col<T1> test_FieldCorrection()
    }
    tvec = tvec*tsamp;
 
-    FieldCorrection<T1, T2, Gdft<T1,T2>> A(G,vectorise(FM),vectorise(tvec),nro,64*64,L);
+   cout << "min tvec = " << tvec.min() << endl;
+
+    FieldCorrection<T1, T2, Gdft<T1,T2>> A(G,vectorise(FM*0.1),vectorise(tvec),nro,64*64,L);
 
     // Variables needed for the recon: Penalty object, num of iterations
     umat ReconMask;
     ReconMask.ones(64,64);
     
-    QuadPenalty<T1>R(64,64,1,ReconMask);
+    QuadPenalty<T1>R(64,64,0,ReconMask);
     
     uword niter = 10;
     Col<T1> xinit = zeros<Col<cx_double>>(64*64); // initial estimate of x

@@ -41,8 +41,10 @@ public:
       fieldMap = map_in;
       timeVec = timeVec_in;
       AA.zeros(n1,L); //time segments weights
-      T2 rangt = timeVec.max()-timeVec.min();
+      T2 T_min = timeVec.min();
+      T2 rangt = timeVec.max()-T_min;
       tau = (rangt+datum::eps)/(L-1);
+
 
       //Hanning interpolator
       for (unsigned int ii=0; ii < L; ii++) {
@@ -84,7 +86,7 @@ public:
 
       for (unsigned int ii=0; ii < this->L; ii++) {
 
-        Col<T1> Wo = exp(-i*(this->fieldMap)*((ii)*tau));
+        Col<T1> Wo = exp(i*(this->fieldMap)*((ii)*tau));
 
         outData +=  Wo%((*this->obj)/(AA.col(ii)%d));
 

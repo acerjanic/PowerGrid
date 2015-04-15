@@ -22,31 +22,46 @@ Col<T1> test_gdft(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T
     Mat<T2> ix(64,64);
     Mat<T2> iy(64,64);
     Mat<T2> iz(64,64);
-    Mat<T2> FM(64,64);
-    Mat<T2> t;
     ix.zeros();
     iy.zeros();
     iz.zeros();
-    FM.zeros();
-    t.zeros(kx.n_elem);
+
+    Mat<T2> FM;
+    loadmat(testPath+"FM.mat","FM",&FM);
+    //FM.zeros();
+   T2 tsamp = 5e-6;
+   Col<T2> t;
+   t.zeros(kx.n_elem);
+   for (uword ii=0; ii<kx.n_elem; ii++) {
+		   t(ii) = ii;
+   }
+   t = t*tsamp;
+
+
+
     for(uword ii = 0; ii < 64; ii++) {
         for (uword jj = 0; jj < 64; jj++) {
-            ix(ii,jj) = ((T2)ii-32.0)/64.0;
-            iy(ii,jj) = ((T2)jj-32.0)/64.0;
+            ix(ii,jj) = ((T2)jj-32.0)/64.0;
+            iy(ii,jj) = ((T2)ii-32.0)/64.0;
         }
     }
-    savemat(testPath+"ix.mat","ix",ix);
-    savemat(testPath+"iy.mat","iy",iy);
+    //savemat(testPath+"ix.mat","ix",ix);
+    //savemat(testPath+"iy.mat","iy",iy);
     // Forward operator
     Gdft<T1,T2> G(4010,64*64,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM),vectorise(t));
     
+    Col<T1> data;
+    loadmat(testPath+"data_onecoil_FM.mat","data",&data);
+
     Col<cx_double> TestForward;
     TestForward = G * vectorise(conv_to<Mat<cx_double>>::from(d));
     savemat(testPath+"testGdftForward.mat","testGdftForward",TestForward);
     
     Col<cx_double> TestAdjoint;
-    TestAdjoint = G / TestForward;
+    //TestAdjoint = G / TestForward;
+    TestAdjoint = G / data;
     savemat(testPath+"testGdftAdjoint.mat","testGdftAdjoint",TestAdjoint);
+
 
     // Variables needed for the recon: Penalty object, num of iterations
     umat ReconMask;
@@ -59,8 +74,9 @@ Col<T1> test_gdft(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T
     Mat<T1> W;
     W = eye<Mat<T1>>(G.n1,G.n1); // Should be the size of k-space data: Is it right?
 
+
     Col<T1> x_t;
-    x_t = pwls_pcg1<T1,Gdft<T1,T2>,QuadPenalty<T1>>(xinit, G, W, TestForward, R, niter);
+    x_t = pwls_pcg1<T1,Gdft<T1,T2>,QuadPenalty<T1>>(xinit, G, W, data, R, niter);
     
     return x_t;
     
