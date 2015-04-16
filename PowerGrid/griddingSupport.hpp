@@ -519,6 +519,86 @@ crop_center_region3d(
     	}
     }
 }
+template <typename T1>
+void
+zero_pad2d(
+		std::complex<T1> *dst,std::complex<T1> *src,
+		int imageSizeX, int imageSizeY,
+		T1 gridOS)
+{
+	/* (gridSizeX,gridSizeY) is the size of 'src' */
+//    assert( (!(gridSizeX%2) && !(gridSizeY%2) ) );
+//    assert( (!(imageSizeX%2) && !(imageSizeY%2) ) );
+
+	int offsetY;
+	int offsetX;
+	int dX_dst;
+	int dY_dst;
+	int common_index_dst;
+	int common_index_src;
+	for (int dY_src=0;dY_src<imageSizeY;dY_src++)
+	{
+		for (int dX_src=0;dX_src<imageSizeX;dX_src++)
+		{
+			offsetY = (int)(((T1)imageSizeY*gridOS / 2.0f) - ((T1)imageSizeY / 2.0f));
+			offsetX = (int)(((T1)imageSizeX*gridOS / 2.0f) - ((T1)imageSizeX / 2.0f));
+
+			dY_dst = dY_src + offsetY;
+			dX_dst = dX_src + offsetX;
+
+			common_index_dst = dY_dst*imageSizeX*gridOS + dX_dst;
+			common_index_src = dY_src*imageSizeX  + dX_src;
+
+			dst[common_index_dst] = src[common_index_src];
+		}
+	}
+
+}
+
+
+template <typename T1>
+void
+zero_pad3d(
+		std::complex<T1> *dst,std::complex<T1> *src,
+		int imageSizeX, int imageSizeY, int imageSizeZ,
+		T1 gridOS)
+{
+	/* (gridSizeX,gridSizeY,gridSizeZ) is the size of 'src' */
+//    assert( (!(gridSizeX%2) && !(gridSizeY%2) && !(gridSizeZ%2)) );
+//    assert( (!(imageSizeX%2) && !(imageSizeY%2) && !(imageSizeZ%2)) );
+
+	int offsetY;
+	int offsetX;
+	int offsetZ;
+
+	int dY_dst;
+	int dX_dst;
+	int dZ_dst;
+	int common_index_dst;
+	int common_index_src;
+
+	for (int dZ_src = 0; dZ_src < imageSizeY; dZ_src++)
+	{
+		for (int dY_src = 0; dY_src < imageSizeX; dY_src++)
+		{
+			for (int dX_src = 0; dX_src < imageSizeZ; dX_src++)
+			{
+				offsetY = (int)(((float)imageSizeY*gridOS / 2.0f) - ((float)imageSizeY / 2.0f));
+				offsetX = (int)(((float)imageSizeX*gridOS / 2.0f) - ((float)imageSizeX / 2.0f));
+				offsetZ = (int)(((float)imageSizeZ*gridOS / 2.0f) - ((float)imageSizeZ / 2.0f));
+
+				dY_dst = dY_src + offsetY;
+				dX_dst = dX_src + offsetX;
+				dZ_dst = dZ_src + offsetZ;
+
+				common_index_dst = dZ_dst*imageSizeX*imageSizeY*gridOS*gridOS + dY_dst*imageSizeX*gridOS + dX_dst;
+				common_index_src = dZ_src*imageSizeX*imageSizeY   + dY_src*imageSizeX  + dX_src;
+
+				dst[common_index_dst]= src[common_index_src];
+			}
+		}
+	}
+}
 /*
 void
 cuda_fft2shift_grid(

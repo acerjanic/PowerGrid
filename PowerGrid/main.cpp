@@ -78,6 +78,7 @@ int main(int argc, char** argv)
     Col<double> kx;
     Col<double> ky;
     Col<double> kz;
+
     loadmat("/Users/alexcerjanic/Developer/PG/Resources/kx_sp.mat","kx",&kx);
     loadmat("/Users/alexcerjanic/Developer/PG/Resources/ky_sp.mat","ky",&ky);
     loadmat("/Users/alexcerjanic/Developer/PG/Resources/data_gdft.mat","data_gdft",&cxData);

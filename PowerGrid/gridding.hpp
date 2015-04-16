@@ -847,7 +847,7 @@ computeFd_CPU_Grid(
 
     //allocate gridData
     complex<T1> *gridData = new complex<T1>[imageNumElems];
-    sampleDensity = new T1[imageNumElems];
+    sampleDensity = new T1[gridNumElems];
 
     // Have to set 'gridData' and 'sampleDensity' to zero.
     // Because they will be involved in accumulative operations
@@ -860,29 +860,44 @@ computeFd_CPU_Grid(
     }
 
     complex<T1> *gridData_d = new complex<T1>[imageNumElems];
-    memcpy(gridData_d,gridData,gridNumElems*sizeof(complex<T1>));
+    memcpy(gridData_d,gridData,imageNumElems*sizeof(complex<T1>));
 
     // deapodization
     if(Nz==1)
     {
-        deapodization2d(gridData, gridData_d,
+        deapodization2d(gridData_d, gridData,
                         Nx, Ny, kernelWidth, beta, params.gridOS);
     }
     else
     {
-        deapodization3d(gridData, gridData_d,
+        deapodization3d(gridData_d, gridData,
                         Nx, Ny, Nz, kernelWidth, beta, params.gridOS);
     }
+    complex<T1> *gridData_os = new complex<T1>[gridNumElems];
 
+    //zero pad
+    if(Nz==1)
+    {
+        zero_pad2d(gridData_os, gridData_d,
+                        Nx, Ny, params.gridOS);
+    }
+    else
+    {
+        zero_pad3d(gridData_os, gridData_d,
+                   Nx, Ny, Nz,params.gridOS);
+    }
+
+    complex<T1> *gridData_os_d = new complex<T1>[gridNumElems];
+    memcpy(gridData_os_d,gridData_os,gridNumElems*sizeof(complex<T1>));
     // fftshift(gridData):
 
     if(Nz==1)
     {
-        fftshift2(gridData, gridData_d,params.gridSize[0],
+        fftshift2(gridData_os_d, gridData_os,params.gridSize[0],
                   params.gridSize[1]);
     }
     else {
-        fftshift3(gridData, gridData_d, params.gridSize[0],
+        fftshift3(gridData_os_d, gridData_os, params.gridSize[0],
                   params.gridSize[1], params.gridSize[2]);
     }
 
@@ -891,12 +906,12 @@ computeFd_CPU_Grid(
     if(Nz==1)
     {
         plan = fftw_plan_dft_2d(params.gridSize[0],
-                                params.gridSize[1], (fftw_complex *)gridData, (fftw_complex *)gridData, FFTW_FORWARD, FFTW_ESTIMATE);
+                                params.gridSize[1], (fftw_complex *)gridData_os_d, (fftw_complex *)gridData_os_d, FFTW_FORWARD, FFTW_ESTIMATE);
     }
     else
     {
         plan = fftw_plan_dft_3d(params.gridSize[0],
-                                params.gridSize[1], params.gridSize[2], (fftw_complex *)gridData, (fftw_complex *)gridData, FFTW_FORWARD, FFTW_ESTIMATE);
+                                params.gridSize[1], params.gridSize[2], (fftw_complex *)gridData_os_d, (fftw_complex *)gridData_os_d, FFTW_FORWARD, FFTW_ESTIMATE);
     }
 
     /* Inverse transform 'gridData_d' in place. */
@@ -906,11 +921,11 @@ computeFd_CPU_Grid(
     // ifftshift(gridData):
     if(Nz==1)
     {
-        ifftshift2(gridData_d,gridData,params.gridSize[0], params.gridSize[1]);
+        ifftshift2(gridData_os,gridData_os_d,params.gridSize[0], params.gridSize[1]);
     }
     else
     {
-        ifftshift3(gridData_d,gridData,params.gridSize[0],params.gridSize[1],params.gridSize[2]);
+        ifftshift3(gridData_os,gridData_os_d,params.gridSize[0],params.gridSize[1],params.gridSize[2]);
     }
 
 
@@ -918,16 +933,16 @@ computeFd_CPU_Grid(
     if(Nz==1)
     {
         gridding_Silver_2D<T1>(n, params,kx,ky, beta, samples, LUT, sizeLUT,
-                               gridData_d, sampleDensity);
+                               gridData_os, sampleDensity);
     }
     else
     {
         gridding_Silver_3D<T1>(n, params, kx, ky, kz, beta, samples, LUT, sizeLUT,
-                               gridData_d, sampleDensity);
+                               gridData_os, sampleDensity);
     }
 
-    cx_vec temp(samples,n);
-    savemat("/Users/alexcerjanic/Developer/PG/Resources/testFFT.mat","testfft",temp);
+    //cx_vec temp(samples,n);
+    //savemat("/Users/alexcerjanic/Developer/PG/Resources/testFFT.mat","testfft",temp);
     /*
     // crop the center region of the "image".
     if(Nz==1)
@@ -964,6 +979,8 @@ computeFd_CPU_Grid(
     free(samples);
     delete(gridData);
     delete(gridData_d);
+    delete(gridData_os);
+    delete(gridData_os_d);
     delete(sampleDensity);
     //delete(gridData_crop_d);
 }
