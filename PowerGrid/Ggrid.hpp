@@ -26,6 +26,9 @@ public:
         ix = i1;
         iy = i2;
         iz = i3;
+        kx = k1;
+        ky = k2;
+        kz = k3;
     }
     
     //Class variables go here. Change as necessary
@@ -47,9 +50,9 @@ public:
     Col<T1> operator*(const Col<T1>& d) const//Don't change these arguments
     {
         //This is just specifying size assuming things are the same size, change as necessary
-        uword dataLength = d.n_rows;
-        Mat<T2> FM(ix.n_rows,iy.n_rows);
-        Mat<T2> t(ix.n_rows,iy.n_rows);
+        //uword dataLength = d.n_rows;
+        Col<T2> FM(ix.n_rows*iy.n_rows);
+        Col<T2> t(ix.n_rows*iy.n_rows);
         FM.zeros();
         t.zeros();
         Col<T2> realData = real(d);
@@ -60,10 +63,8 @@ public:
         T2* realDataPtr = realData.memptr();
         T2* imagDataPtr = imagData.memptr();
         
-        Col<T2> realXformedData;
-        Col<T2> imagXformedData;
-        realXformedData.copy_size(realData);
-        imagXformedData.copy_size(realData);
+        Col<T2> realXformedData(this->n2);
+        Col<T2> imagXformedData(this->n2);
         realXformedData.zeros();
         imagXformedData.zeros();
         
@@ -72,13 +73,19 @@ public:
         //Process data here, like calling a brute force transform, dft...
         // I assume you create the pointers to the arrays where the transformed data will be stored
         // realXformedDataPtr and imagXformedDataPtr and they are of type float*
+        /*
         ftCpu<T2>(realXformedDataPtr,imagXformedDataPtr,
                   realDataPtr, imagDataPtr, kx.memptr(),
                   ky.memptr(), kz.memptr(),
                   ix.memptr(), iy.memptr(), iz.memptr(),
                   FM.memptr(), t.memptr(),
-                  this->n1, this->n2
+                  this->n2, this->n1
         );
+         */
+        T2 gridOS = 2.0;
+        computeFd_CPU_Grid<T2>(n2, kx.memptr(),  ky.memptr(),  kz.memptr(),
+                               realDataPtr, imagDataPtr, Nx, Ny, Nz,
+                               gridOS, realXformedDataPtr, imagXformedDataPtr);
         
         //To return data, we need to put our data back into Armadillo objects
         //We are telling the object how long it is because it will copy the data back into managed memory
@@ -87,7 +94,7 @@ public:
         
         //We can free the realDataXformPtr and imagDataXformPtr at this point and Armadillo will manage armadillo object memory as things change size or go out of scope and need to be destroyed
         
-        Col<T1> XformedData(dataLength);
+        Col<T1> XformedData(this->n2);
         XformedData.set_real(realXformedData);
         XformedData.set_imag(imagXformedData);
         
@@ -99,7 +106,7 @@ public:
     Col<T1> operator/(const Col<T1>& d) const
     {
         
-        uword dataLength = d.n_rows;
+        uword dataLength = n2;
         
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
@@ -107,10 +114,9 @@ public:
         T2* realDataPtr = realData.memptr();
         T2* imagDataPtr = imagData.memptr();
         
-        Col<T2> realXformedData;
-        Col<T2> imagXformedData;
-        realXformedData.copy_size(realData);
-        imagXformedData.copy_size(realData);
+        Col<T2> realXformedData(n1);
+        Col<T2> imagXformedData(n1);
+
         realXformedData.zeros();
         imagXformedData.zeros();
         
@@ -137,7 +143,7 @@ public:
         
         //We can free the realDataXformPtr and imagDataXformPtr at this point and Armadillo will manage armadillo object memory as things change size or go out of scope and need to be destroyed
         
-        Col<T1> XformedData(dataLength);
+        Col<T1> XformedData(n1);
         XformedData.set_real(realXformedData);
         XformedData.set_imag(imagXformedData);
         

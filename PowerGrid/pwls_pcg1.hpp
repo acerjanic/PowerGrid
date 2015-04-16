@@ -82,7 +82,7 @@ Col<T1> pwls_pcg1(Col<T1>& x, Tobj const& A,Mat<T1> const& W, Col<T1> const& yi,
         oldinprod = newinprod;
         
         // Check if descent direction
-        if (real(dot_double(ddir, ngrad)) <0) {
+        if (real(dot_double(ddir, ngrad)) < 0) {
             cout << " Warning descent direction not negative" << endl;
             return x;
         }
@@ -96,7 +96,7 @@ Col<T1> pwls_pcg1(Col<T1>& x, Tobj const& A,Mat<T1> const& W, Col<T1> const& yi,
         dAWr = conv_to<double>::from(real(proj).eval());
         step = 0.0;
         
-        for (unsigned int j =0; j<2; j++)
+        for (unsigned int j = 0; j < 2; j++)
         {
             pdenom = real(dot_double(pow(abs(ddir),2.0).eval(), R.Denom(x + step*ddir)));
             denom = dAWAd + pdenom;
@@ -107,14 +107,14 @@ Col<T1> pwls_pcg1(Col<T1>& x, Tobj const& A,Mat<T1> const& W, Col<T1> const& yi,
                   return x;
               }
               else {
-                cout << "0 or inf denom" << endl;
+                cout << "inf denom" << endl;
                 return x;
               }
             }
 
             pgrad = R.Gradient(x+step*ddir);
             pdot = real(dot_double(conj(ddir),pgrad));
-            cout << denom << endl;
+
             stepIntermediate = (-dAWr + step * dAWAd + pdot) / denom;
             step = step - conv_to<double>::from(stepIntermediate.eval());
         }

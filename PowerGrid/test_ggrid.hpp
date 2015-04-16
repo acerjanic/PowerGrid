@@ -42,12 +42,12 @@ Col<T1> test_ggrid(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<
     cout << "About to run forward transform" << endl;
     Col<cx_double> TestForward;
     TestForward = G * vectorise(conv_to<Mat<cx_double>>::from(d));
-    savemat("/Users/alexcerjanic/Developer/PG/Resources/testGdftForward.mat","testGdftForward",TestForward);
+    savemat("/Users/alexcerjanic/Developer/PG/Resources/testGgridForward.mat","testGgridForward",TestForward);
     cout << "About to run adjoint transform" << endl;
 
     Col<cx_double> TestAdjoint;
     TestAdjoint = G / TestForward;
-    savemat("/Users/alexcerjanic/Developer/PG/Resources/testGdftAdjoint.mat","testGdftAdjoint",TestAdjoint);
+    savemat("/Users/alexcerjanic/Developer/PG/Resources/testGgridAdjoint.mat","testGgridAdjoint",TestAdjoint);
 
     // Variables needed for the recon: Penalty object, num of iterations
     umat ReconMask;

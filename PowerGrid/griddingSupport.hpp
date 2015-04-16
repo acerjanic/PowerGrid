@@ -571,6 +571,54 @@ cuda_fft3shift_grid(
     (src, dst, pivotY, pivotX, pivotZ, dimX, dimZ);
 }
 */
+
+template<typename T>
+void circshift2(T *out, const T *in, int xdim, int ydim, int xshift, int yshift) {
+	int ii, jj, kk;
+	for (int x = 0; x < xdim; x++) {
+		ii = (x + xshift) % xdim;
+		for (int y = 0; y < ydim; y++) {
+			jj = (y + yshift) % ydim;
+			out[ii + jj * xdim] = in[x + y * xdim];
+		}
+	}
+}
+
+
+template<typename T>
+void circshift3(T *out, const T *in, int xdim, int ydim, int zdim, int xshift, int yshift, int zshift) {
+	int ii, jj, kk;
+	for (int x = 0; x < xdim; x++) {
+		ii = (x + xshift) % xdim;
+		for (int y = 0; y < ydim; y++) {
+			jj = (y + yshift) % ydim;
+			for (int z = 0; z < zdim; z++) {
+				kk = (z + zshift) % zdim;
+				out[ii + jj * xdim + kk * xdim * ydim] = in[x + y * xdim + z * xdim * ydim];
+			}
+		}
+	}
+}
+
+template<typename T>
+void fftshift2(T *out, const T *in, int xdim, int ydim) {
+	circshift2(out, in, xdim, ydim, std::floor(xdim/2.0),std::floor(ydim/2.0));
+}
+
+	template<typename T>
+	void ifftshift2(T *out, const T *in, int xdim, int ydim) {
+		circshift2(out, in, xdim, ydim, std::ceil(xdim/2.0),std::ceil(ydim/2.0));
+	}
+
+	template<typename T>
+	void fftshift3(T *out, const T *in, int xdim, int ydim, int zdim) {
+		circshift3(out, in, xdim, ydim, zdim, std::floor(xdim/2.0), std::floor(ydim/2.0), std::floor(zdim/2.0));
+	}
+
+	template<typename T>
+	void ifftshift3(T *out, const T *in, int xdim, int ydim, int zdim) {
+		circshift3(out, in, xdim, ydim, zdim, std::ceil(xdim/2.0), std::ceil(ydim/2.0), std::floor(zdim/2.0));
+	}
 template<typename T1>
 void
 fft2shift_grid(
@@ -584,7 +632,7 @@ fft2shift_grid(
 		for (int dX_dst = 0; dX_dst < dimX; dX_dst++)
 		{
 			common_index_dst = dY_dst*dimX + dX_dst;
-			src[common_index_dst] = std::pow(-1.0,dY_dst+dX_dst)*src[common_index_dst];
+			src[common_index_dst] = std::pow(-1.0,(T1)(dY_dst+dX_dst))*src[common_index_dst];
 		}
 	}
 
@@ -604,7 +652,7 @@ fft3shift_grid(
 		for (int dX_dst = 0; dX_dst < dimX; dX_dst++) {
 			for (int dZ_dst = 0; dZ_dst < dimZ; dZ_dst++) {
 				common_index_dst = dY_dst * dimX * dimZ + dX_dst * dimZ + dZ_dst;
-				src[common_index_dst] = std::pow(-1.0, dY_dst + dX_dst + dZ_dst) * src[common_index_dst];
+				src[common_index_dst] = std::pow(-1.0,(T1)(dY_dst + dX_dst + dZ_dst)) * src[common_index_dst];
 			}
 		}
 	}

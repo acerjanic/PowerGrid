@@ -114,12 +114,13 @@ public:
         T2* imagXformedDataPtr = imagXformedData.memptr();
         //Process data here, like calling a brute force transform, dft...
         // I assume you create the pointers to the arrays where the transformed data will be stored
+
         // realXformedDataPtr and imagXformedDataPtr and they are of type float*
         iftCpu<T2>(realXformedDataPtr,imagXformedDataPtr,
                   realDataPtr, imagDataPtr, kx.memptr(),
                   ky.memptr(), kz.memptr(),
                   ix.memptr(), iy.memptr(), iz.memptr(),
-                   FM.memptr(), t.memptr(),
+                  FM.memptr(), t.memptr(),
                   this->n1, this->n2
                   );
         
