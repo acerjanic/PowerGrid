@@ -14,6 +14,7 @@ using namespace std; //where to put?
 
 
 ///*From Numerical Recipes in C, 2nd Edition
+//Just a vanilla I(0,x) function appoximation
 template<typename T1>
 static T1 bessi0(T1 x)
 {
@@ -61,6 +62,7 @@ static T1 bessi0(T1 x)
 //    Deinterleave_data2d_kernel<<<blocks,threads>>>
 //    (src,outR_d,outI_d,imageX,imageY);
 //}
+//We use this lookup table as a faster way to calculate the Kasier-Bessel window
 template<typename T1>
 void calculateLUT(T1 beta, T1 width, T1* LUT, unsigned int& sizeLUT){
 	T1 v;
@@ -198,6 +200,7 @@ deinterleave_data3d(
 //    }
 //}
 
+//Deapodizes 2d data by FT of the Kasier-Bessel kernel
 template <typename T1>
 void
 deapodization2d(
@@ -321,7 +324,7 @@ deapodization2d(
 //        dst[common_index] IMAG = (src[common_index]IMAG) / gridKernel * (1.0f / gridOS3);
 //    }
 //}
-
+//Deapodizes 3d data by FT of the Kasier-Bessel kernel
 template <typename T1>
 void
 deapodization3d(
@@ -415,6 +418,8 @@ deapodization3d(
 //    dst[common_index_dst] REAL = src[common_index_src] REAL;
 //    dst[common_index_dst] IMAG = src[common_index_src] IMAG;
 //}
+
+//We oversample the FFT by zeropadding so now we need to crop
 template <typename T1>
 void
 crop_center_region2d(
@@ -475,7 +480,7 @@ crop_center_region2d(
 //    dst[common_index_dst] REAL = src[common_index_src] REAL;
 //    dst[common_index_dst] IMAG = src[common_index_src] IMAG;
 //}
-
+// We oversample the FFT so now we need to crop
 template <typename T1>
 void
 crop_center_region3d(
@@ -519,6 +524,7 @@ crop_center_region3d(
     	}
     }
 }
+//We need to oversample the FFT for gridding to work so we need to zero pad
 template <typename T1>
 void
 zero_pad2d(
@@ -555,7 +561,7 @@ zero_pad2d(
 
 }
 
-
+//We need to oversample the FFT for gridding to work so we need to zero pad
 template <typename T1>
 void
 zero_pad3d(
@@ -652,6 +658,8 @@ cuda_fft3shift_grid(
 }
 */
 
+
+//Circshift routines for fftshift.
 template<typename T>
 void circshift2(T *out, const T *in, int xdim, int ydim, int xshift, int yshift) {
 	int ii, jj, kk;
@@ -680,6 +688,8 @@ void circshift3(T *out, const T *in, int xdim, int ydim, int zdim, int xshift, i
 	}
 }
 
+//We need to fftshift to move the DC point to the center of the array. We could use (-1)^(i+j+k)
+//but then we have a problem with the fftshift and ifftshift for odd matrix sizes
 template<typename T>
 void fftshift2(T *out, const T *in, int xdim, int ydim) {
 	circshift2(out, in, xdim, ydim, std::floor(xdim/2.0),std::floor(ydim/2.0));

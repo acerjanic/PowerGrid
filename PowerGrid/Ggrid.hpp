@@ -46,7 +46,7 @@ public:
     Col<T2> iz;
     
     //Overloaded methods for forward and adjoint transform
-    //Forward transform operation
+    //Forward transform operation using gridding
     Col<T1> operator*(const Col<T1>& d) const//Don't change these arguments
     {
         //This is just specifying size assuming things are the same size, change as necessary
@@ -102,7 +102,7 @@ public:
         
     }
     
-    //Adjoint transform operation - starting here with gridding...
+    //Adjoint transform operation
     Col<T1> operator/(const Col<T1>& d) const
     {
         

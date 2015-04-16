@@ -39,6 +39,7 @@ public:
 
       Mat<T1> outData = zeros<Mat<T1>>(this->n2,this->nc);
 
+        //In SENSE we store coil data using the columns of the data matrix, and we weight the data by the coil sensitivies from the SENSE map
       for (unsigned int ii=0; ii < this->nc; ii++) {
         Col<T1> data = d%(this->SMap.col(ii));
 
@@ -49,7 +50,7 @@ public:
       //equivalent to returning col(output) in MATLAB with IRT
       return vectorise(outData);
     }
-    
+    //For the adjoint operation, we have to weight the adjoint transform of the coil data by the SENSE map.
     Col<T1> operator/(const Col<T1>& d) const {
 
       Mat<T1> inData = reshape(d,this->n2,this->nc);

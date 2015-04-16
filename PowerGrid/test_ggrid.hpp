@@ -12,6 +12,7 @@
 #include "PowerGrid.h"
 
 using namespace arma;
+// Test function for Ggrid that uses gridding on the CPU (for now) to approximate the forward and adjoint Fourier Transforms
 
 template<typename T1,typename T2>
 Col<T1> test_ggrid(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T2> kz)

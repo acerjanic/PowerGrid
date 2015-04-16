@@ -14,7 +14,7 @@
 using namespace arma;
 
 
-// 2D gold gridding on CPU
+// 2D adjoint gridding on CPU
 template<typename T1>
 int
 gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionSample<T1>* sample,
@@ -134,7 +134,7 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
 }
 
 
-// 3D gold gridding on CPU
+// 3D adjoint gridding on CPU
 template<typename T1>
 int
 gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSample<T1>* sample,
@@ -267,7 +267,7 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
     return 1;
 }
 
-// 2D gold gridding on CPU
+// 2D adjoint gridding on CPU
 template<typename T1>
 int
 gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1 *ky, T1 beta, complex<T1>* sample,
@@ -388,7 +388,7 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
 }
 
 
-// 3D gold gridding on CPU
+// 3D forward gridding on CPU
 template<typename T1>
 int
 gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1 *ky, const T1 *kz, T1 beta, complex<T1>* sample,
@@ -521,7 +521,7 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
     return 1;
 }
 
-
+// Calculates the gridded adjoint transform
 template<typename T1>
 void
 computeFH_CPU_Grid(
@@ -740,7 +740,7 @@ computeFH_CPU_Grid(
     delete(sampleDensity);
     delete(gridData_crop_d);
 }
-
+//Calculates the gridded forward fourier transform
 template<typename T1>
 void
 computeFd_CPU_Grid(

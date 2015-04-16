@@ -12,7 +12,7 @@
 #include "PowerGrid.h"
 
 using namespace arma;
-
+//We use the two objects to capture the complex<T2> as T1 and T2 as the real (double or float) data type. This can be simplified a bit...
 template<typename T1,typename T2>
 Col<T1> test_gdft(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T2> kz)
 {
@@ -35,7 +35,7 @@ Col<T1> test_gdft(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T
     }
     savemat("/Users/alexcerjanic/Developer/PG/Resources/ix.mat","ix",ix);
     savemat("/Users/alexcerjanic/Developer/PG/Resources/iy.mat","iy",iy);
-    // Forward operator
+    // Forward operator, we declare our operator here. 4010 is the length of the data vector, and 64 is the matrix base resolution size
     Gdft<T1,T2> G(4010,64*64,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM),vectorise(t));
     
     Col<cx_double> TestForward;
@@ -47,17 +47,22 @@ Col<T1> test_gdft(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T
     savemat("/Users/alexcerjanic/Developer/PG/Resources/testGdftAdjoint.mat","testGdftAdjoint",TestAdjoint);
 
     // Variables needed for the recon: Penalty object, num of iterations
+    //Recon mask is used to limit the support of the object. Very useful for SENSE recons.
     umat ReconMask;
     ReconMask.ones(64,64);
     
     QuadPenalty<T1>R(64,64,1,ReconMask);
     
     uword niter = 20;
-    Col<T1> xinit = zeros<Col<cx_double>>(64*64); // initial estimate of x
+    Col<T1> xinit = zeros<Col<cx_double>>(64*64); // initial estimate of x, zeros for simplicity
     Mat<T1> W;
-    W = eye<Mat<T1>>(G.n2,G.n2); // Should be the size of k-space data: Is it right?
+    W = eye<Mat<T1>>(G.n2,G.n2); // W is the weighting matrix. Sometimes we might want to weight the data inside of pwls,
+    //  we don't really use it much at the moment.
 
     Col<T1> x_t;
+    //We call pwls_pcg as our nonlinear solver to minmize our cost function to find the image.
+    //pwls_pcg has an implict cost function of C = G'(y - G*x) + R(x), where G is the forward transform, G' the adjoint transform, R(x) (QuadPenalty for now) the regularization penalty for image roughness,
+    // y is the measured data, and x the image.
     x_t = pwls_pcg1<T1,Gdft<T1,T2>,QuadPenalty<T1>>(xinit, G, W, TestForward, R, niter);
     
     return x_t;

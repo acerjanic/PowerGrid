@@ -19,7 +19,8 @@
 #include "impatientTypes.h"
 #include "fftw3.h" //for fft library
 
-
+// I throw everything into namespace arma to use the Armadillo objects and functions without arma:: everywhere
+// Maybe I should reevaluate this later...
 namespace arma {
 #include "op_circshift_bones.hpp"
 #include "op_circshift_meat.hpp"
