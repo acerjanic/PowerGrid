@@ -6,11 +6,13 @@ using namespace arma;
 Mat<cx_double> test_pwls_pcg()
 {
 
+	string testPath = "/shared/mrfil-data/jholtrop/repos/PowerGrid/Resources/";
+
    // Load real data
    Mat<double> test;
 
    //Load our read double matrix object. (You need to match type to avoide mangling the data.)
-   loadmat("/Users/alexcerjanic/Developer/PG/Resources/test.mat","test",&test);
+   loadmat(testPath+"test.mat","test",&test);
 
    // Formard operator
    Gfft<cx_double> G(64,64);

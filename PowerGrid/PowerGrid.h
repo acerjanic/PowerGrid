@@ -37,6 +37,8 @@ namespace arma {
 #include "gridding.hpp"
 #include "Ggrid.hpp"
 #include "test_ggrid.hpp"
+#include "FieldCorrection.hpp"
+#include "test_FieldCorrection.hpp"
 
 }
 

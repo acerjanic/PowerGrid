@@ -1,14 +1,14 @@
 //
-//  test_pwls_pcg.h
+//  test_FieldCorrection.h
 //  PowerGrid
 //
-//  Created by Alex Cerjanic on 4/5/15.
+//  Created by Joe Holtrop on 4/13/15.
 //  Copyright (c) 2015 MRFIL. All rights reserved.
 //
 
-#ifndef PowerGrid_test_pwls_pcg_h
-#define PowerGrid_test_pwls_pcg_h
+#ifndef PowerGrid_test_FieldCorrection_h
+#define PowerGrid_test_fieldCorrection_h
 
-arma::Mat<arma::cx_double> test_pwls_pcg();
+arma::Mat<arma::cx_double> test_FieldCorrection();
 
 #endif
