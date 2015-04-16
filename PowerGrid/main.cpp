@@ -18,7 +18,7 @@ int main(int argc, char** argv)
 {
     //Create an empty unsized matrix of type real double
     Mat<double> test;
-    string testPath = "/shared/mrfil-data/jholtrop/repos/PowerGrid/Resources/";
+    string testPath = "/Users/alexcerjanic/Developer/PG/Resources/";
 
     //Mat<cx_double> testComplex;
     //Load our read double matrix object. (You need to match type to avoide mangling the data.)

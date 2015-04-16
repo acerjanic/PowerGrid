@@ -16,7 +16,7 @@ using namespace arma;
 template<typename T1,typename T2>
 Col<T1> test_FieldCorrection()
 {
-	 string testPath = "/shared/mrfil-data/jholtrop/repos/PowerGrid/Resources/";
+	 string testPath = "/Users/alexcerjanic/Developer/PG/Resources/";
 
     //Setup image space coordinates/trajectory
     Mat<T2> ix(64,64);
@@ -31,8 +31,8 @@ Col<T1> test_FieldCorrection()
     
     //generate the image space cordinates of the voxels we want to reconstruct
     // after vectorizing ix and iy the image coordinates must match the Field and SENSe map image coordinates
-    for(uword ii = 0; ii < 64; ii++) {
-        for (uword jj = 0; jj < 64; jj++) {
+    for(uword ii = 0; ii < 64; ii++) { //y
+        for (uword jj = 0; jj < 64; jj++) { //x
             ix(ii,jj) = ((T2)jj-32.0)/64.0;
             iy(ii,jj) = ((T2)ii-32.0)/64.0;
         }
@@ -67,11 +67,11 @@ Col<T1> test_FieldCorrection()
    tvec = tvec*tsamp;
 
     // Forward operator
-    Gdft<T1,T2> G(nro,64*64,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM_gdft),vectorise(tvec_gdft));
+    Ggrid<T1,T2> G(nro,64,64,1,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
 
    //cout << "min tvec = " << tvec.min() << endl;
 
-    FieldCorrection<T1, T2, Gdft<T1,T2>> A(G,vectorise(FM),vectorise(tvec),nro,64*64,L);
+    FieldCorrection<T1, T2, Ggrid<T1,T2>> A(G,vectorise(FM),vectorise(tvec),nro,64*64,L);
 
     // Variables needed for the recon: Penalty object, num of iterations
     umat ReconMask;
@@ -89,7 +89,7 @@ Col<T1> test_FieldCorrection()
 
 
     Col<T1> x_t;
-    x_t = pwls_pcg1<T1,FieldCorrection<T1,T2,Gdft<T1,T2>>,QuadPenalty<T1>>(xinit, A, W, data, R, niter);
+    x_t = pwls_pcg1<T1,FieldCorrection<T1,T2,Ggrid<T1,T2>>,QuadPenalty<T1>>(xinit, A, W, data, R, niter);
     
     return x_t;
     
