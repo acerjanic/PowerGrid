@@ -52,7 +52,7 @@ public:
         //This is just specifying size assuming things are the same size, change as necessary
         //uword dataLength = d.n_rows;
         Col<T2> FM(ix.n_rows*iy.n_rows);
-        Col<T2> t(ix.n_rows*iy.n_rows);
+        Col<T2> t(n2);
         FM.zeros();
         t.zeros();
         Col<T2> realData = real(d);
@@ -81,12 +81,12 @@ public:
                   FM.memptr(), t.memptr(),
                   this->n2, this->n1
         );
-         */
+        */
         T2 gridOS = 2.0;
         computeFd_CPU_Grid<T2>(n2, kx.memptr(),  ky.memptr(),  kz.memptr(),
                                realDataPtr, imagDataPtr, Nx, Ny, Nz,
                                gridOS, realXformedDataPtr, imagXformedDataPtr);
-        
+
         //To return data, we need to put our data back into Armadillo objects
         //We are telling the object how long it is because it will copy the data back into managed memory
         //realXformedData(realXformedDataPtr, dataLength);
@@ -107,7 +107,10 @@ public:
     {
         
         uword dataLength = n2;
-        
+        Col<T2> FM(ix.n_rows*iy.n_rows);
+        Col<T2> t(n2);
+        FM.zeros();
+        t.zeros();
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
         
@@ -125,8 +128,9 @@ public:
         //Process data here, like calling a brute force transform, dft...
         // I assume you create the pointers to the arrays where the transformed data will be stored
         // realXformedDataPtr and imagXformedDataPtr and they are of type float*
-        
+
         T2 gridOS = 2.0;
+
         computeFH_CPU_Grid<T2>(dataLength, kx.memptr(),  ky.memptr(),  kz.memptr(),
                            realDataPtr, imagDataPtr, Nx, Ny, Nz,
                            gridOS, realXformedDataPtr, imagXformedDataPtr);
@@ -135,7 +139,8 @@ public:
                    realDataPtr, imagDataPtr, kx.memptr(),
                    ky.memptr(), kz.memptr(),
                    ix.memptr(), iy.memptr(), iz.memptr(),
-                   this->n1, this->n2
+                   FM.memptr(), t.memptr(),
+                   this->n2, this->n1
                    );
         */
         //realXformedData(realXformedDataPtr, dataLength);

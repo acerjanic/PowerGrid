@@ -95,11 +95,11 @@ deinterleave_data2d( ///NAIVE
                     int imageX, int imageY)
 {
     int lIndex;
-    for(int Y=0; Y<imageY; Y++)
+    for(int X=0; X<imageX; X++)
     {
-    	for(int X=0; X<imageX; X++)
+    	for(int Y=0; Y<imageY; Y++)
     	{
-    		lIndex = X+Y*imageX;
+    		lIndex = Y +X*imageY;
     		outR_d[lIndex] = src[lIndex].real();
     		outI_d[lIndex] = src[lIndex].imag();
     	}
@@ -130,13 +130,14 @@ deinterleave_data3d(
                     int imageX, int imageY, int imageZ)
 {
     int lIndex,X,Y,Z;
-    for(Y=0; Y<imageY; Y++)
-    {
+	for(Z=0; Z<imageZ; Z++)
+	{
+
     	for(X=0; X<imageX; X++)
 		{
-			for(Z=0; Z<imageZ; Z++)
+			for(Y=0; Y<imageY; Y++)
 			{
-				lIndex = Z + X*imageZ + Y*imageZ*imageX;
+				lIndex = Y + Y*imageX + Z*imageY*imageX;
 				outR_d[lIndex] = src[lIndex].real();
 				outI_d[lIndex] = src[lIndex].imag();
 			}
@@ -228,10 +229,11 @@ deapodization2d(
 	int common_index;
 	T1 gridOS2;
 
+	for(X=0; X<imageX; X++)
+	{
 	for(Y=0; Y<imageY; Y++)
 	{
-		for(X=0; X<imageX; X++)
-		{
+
 				gridKernelY = T1(Y - (imageY/2)) / (T1)imageY;
 			    gridKernelX = T1(X - (imageX/2)) / (T1)imageX;
 
@@ -252,7 +254,7 @@ deapodization2d(
 
 			    if(gridKernel==gridKernel) //???
 			    {
-			        common_index = X + Y*imageX;
+			        common_index = Y + X*imageY;
 			        gridOS2 = gridOS * gridOS;
 			        dst[common_index] = (src[common_index]) / gridKernel * (1.0 / gridOS2); //???
 //			        dst[common_index] = (src[common_index].real()) / gridKernel * (1.0f / gridOS2);
@@ -353,12 +355,13 @@ deapodization3d(
 
 	T1 gridOS3;
 	int common_index;
-    for (X=0;X<imageX;X++)
+    for (Z=0;Z<imageZ;Z++)
     {
+		for (X=0;X<imageX;X++)
+		{
     	for (Y=0;Y<imageY;Y++)
     	{
-    		for (Z=0;Z<imageZ;Z++)
-    		{
+
     			gridKernelZ = (T1(Z) - ((T1)imageZ/2.0f)) / (T1)imageZ;
     		    gridKernelY = (T1(Y) - ((T1)imageY/2.0f)) / (T1)imageY;
     		    gridKernelX = (T1(X) - ((T1)imageX/2.0f)) / (T1)imageX;
@@ -386,7 +389,7 @@ deapodization3d(
 
     		    if(gridKernel==gridKernel) //?
     		    {
-    		        int common_index = Z + X*imageZ + Y*imageZ*imageX;
+    		        int common_index = Z*imageY*imageX + X*imageY + Y;
     		        gridOS3 = gridOS * gridOS * gridOS;
     		        dst[common_index] = (src[common_index]) / gridKernel * (1.0 / gridOS3);
 //    		        dst[common_index] = (src[common_index].real()) / gridKernel * (1.0f / gridOS3);
@@ -437,18 +440,19 @@ crop_center_region2d(
     int dX_src;
     int common_index_dst;
     int common_index_src;
+	for (int dX_dst=0;dX_dst<imageSizeX;dX_dst++)
+	{
     for (int dY_dst=0;dY_dst<imageSizeY;dY_dst++)
     {
-    	for (int dX_dst=0;dX_dst<imageSizeX;dX_dst++)
-    	{
+
     	    offsetY = (int)(((float)gridSizeY / 2.0f) - ((float)imageSizeY / 2.0f));
     	    offsetX = (int)(((float)gridSizeX / 2.0f) - ((float)imageSizeX / 2.0f));
 
     	    dY_src = dY_dst + offsetY;
     	    dX_src = dX_dst + offsetX;
 
-    	    common_index_dst = dY_dst*imageSizeX + dX_dst;
-    	    common_index_src = dY_src*gridSizeX  + dX_src;
+    	    common_index_dst = dX_dst*imageSizeY + dY_dst;
+    	    common_index_src = dX_src*gridSizeY  + dY_src;
 
     	    dst[common_index_dst] = src[common_index_src];
     	}
@@ -501,13 +505,14 @@ crop_center_region3d(
 	int dZ_src;
 	int common_index_dst;
 	int common_index_src;
-
+	for (int dZ_dst = 0; dZ_dst < imageSizeZ; dZ_dst++)
+	{
+		for (int dX_dst = 0; dX_dst < imageSizeX; dX_dst++)
+		{
     for (int dY_dst = 0; dY_dst < imageSizeY; dY_dst++)
     {
-    	for (int dX_dst = 0; dX_dst < imageSizeX; dX_dst++)
-    	{
-    		for (int dZ_dst = 0; dZ_dst < imageSizeZ; dZ_dst++)
-    		{
+
+
     		    offsetY = (int)(((float)gridSizeY / 2.0f) - ((float)imageSizeY / 2.0f));
     		    offsetX = (int)(((float)gridSizeX / 2.0f) - ((float)imageSizeX / 2.0f));
     		    offsetZ = (int)(((float)gridSizeZ / 2.0f) - ((float)imageSizeZ / 2.0f));
@@ -516,8 +521,8 @@ crop_center_region3d(
     		    dX_src = dX_dst + offsetX;
     		    dZ_src = dZ_dst + offsetZ;
 
-    		    common_index_dst = dY_dst*imageSizeX*imageSizeZ + dX_dst*imageSizeZ + dZ_dst;
-    		    common_index_src = dY_src*gridSizeX*gridSizeZ   + dX_src*gridSizeZ  + dZ_src;
+    		    common_index_dst = dZ_dst*imageSizeX*imageSizeY + dX_dst*imageSizeY + dY_dst;
+    		    common_index_src = dZ_src*gridSizeX*gridSizeY   + dX_src*gridSizeY  + dY_src;
 
     		    dst[common_index_dst]= src[common_index_src];
     		}

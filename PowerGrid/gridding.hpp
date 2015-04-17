@@ -76,21 +76,23 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
         
         //NzL = (int)(fmax(0.0f,ceil(shiftedKz - kernelWidth*((float)gridOS)/2)));
         //NzH = (int)(fmin((float)(gridOS*Nz-1),floor(shiftedKz + kernelWidth*((float)gridOS)/2)));
-        
-        for(ny=NyL; ny<=NyH; ++ny)
+
+
+        for(nx=NxL; nx<=NxH; ++nx)
         {
-            distY = fabs(shiftedKy - ((T1)ny))/(gridOS);
-            kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
-            if (kbY!=kbY)//if kbY = NaN
-                kbY=0;
-            
-            for(nx=NxL; nx<=NxH; ++nx)
+            distX = fabs(shiftedKx - ((T1)nx))/(gridOS);
+            kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
+            if (kbX!=kbX)//if kbX = NaN
+                kbX=0;
+
+
+            for(ny=NyL; ny<=NyH; ++ny)
             {
-                distX = fabs(shiftedKx - ((T1)nx))/(gridOS);
-                kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
-                if (kbX!=kbX)//if kbX = NaN
-                    kbX=0;
-                
+                distY = fabs(shiftedKy - ((T1)ny))/(gridOS);
+                kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
+                if (kbY!=kbY)//if kbY = NaN
+                    kbY=0;
+
                 /* kernel weighting value */
                 if (params.useLUT){
                     w = kbX * kbY;
@@ -98,7 +100,7 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
                     w = kbX * kbY;
                 }
                 /* grid data */
-                idx = nx + (ny)*params.gridSize[0]/* + (nz)*gridOS*Nx*gridOS*Ny*/;
+                idx = ny + (nx)*params.gridSize[1]/* + (nz)*gridOS*Nx*gridOS*Ny*/;
                 //gridData[idx].x += (w*pt.real*atm);
                 //gridData[idx].y += (w*pt.imag*atm);
                 gridData[idx].real(gridData[idx].real()+w*pt.real);
@@ -112,7 +114,7 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
     // re-arrange dimensions and output
     // Nady uses: x->y->z
     // IMPATIENT uses: z->x->y
-    // PowerGrid uses: x->y->z because we are column major same as Nady...
+    // PowerGrid uses: y->x->z because we are column major same as MATLAB...
     // Nope! XX So we need to convert from (x->y->z)-order to (z->x->y)-order
     //int gridNumElems = params.gridSize[0] * params.gridSize[1];
 
@@ -207,20 +209,20 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
             kbZ = bessi0(beta*std::sqrt(1.0-(2.0*distZ/kernelWidth)*(2.0*distZ/kernelWidth)))/kernelWidth;
             if (kbZ!=kbZ)//if kbZ = NaN
                 kbZ=0;
-            
-            for(ny=NyL; ny<=NyH; ++ny)
+            for(nx=NxL; nx<=NxH; ++nx)
             {
-                distY = std::abs(shiftedKy - ((T1)ny))/(gridOS);
-                kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
-                if (kbY!=kbY)//if kbY = NaN
-                    kbY=0;
-                
-                for(nx=NxL; nx<=NxH; ++nx)
+                distX = std::abs(shiftedKx - ((T1)nx))/(gridOS);
+                kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
+                if (kbX!=kbX)//if kbX = NaN
+                    kbX=0;
+
+                for(ny=NyL; ny<=NyH; ++ny)
                 {
-                    distX = std::abs(shiftedKx - ((T1)nx))/(gridOS);
-                    kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
-                    if (kbX!=kbX)//if kbX = NaN
-                        kbX=0;
+                    distY = std::abs(shiftedKy - ((T1)ny))/(gridOS);
+                    kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
+                    if (kbY!=kbY)//if kbY = NaN
+                        kbY=0;
+
                     
                     /* kernel weighting value */
                     if (params.useLUT){
@@ -229,7 +231,7 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
                         w = kbX * kbY * kbZ;
                     }
                     /* grid data */
-                    idx = nx + (ny)*params.gridSize[0] + (nz)*params.gridSize[0]*params.gridSize[1];
+                    idx = ny + (nx)*params.gridSize[0] + (nz)*params.gridSize[0]*params.gridSize[1];
                     //gridData[idx].x += (w*pt.real*atm);
                     //gridData[idx].y += (w*pt.imag*atm);
                     gridData[idx].real(gridData[idx].real()+w*pt.real);
@@ -331,19 +333,19 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
         //NzL = (int)(fmax(0.0f,ceil(shiftedKz - kernelWidth*((float)gridOS)/2)));
         //NzH = (int)(fmin((float)(gridOS*Nz-1),floor(shiftedKz + kernelWidth*((float)gridOS)/2)));
 
-        for(ny=NyL; ny<=NyH; ++ny)
+        for(nx=NxL; nx<=NxH; ++nx)
         {
-            distY = fabs(shiftedKy - ((T1)ny))/(gridOS);
-            kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
-            if (kbY!=kbY)//if kbY = NaN
-                kbY=0;
+            distX = fabs(shiftedKx - ((T1)nx))/(gridOS);
+            kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
+            if (kbX!=kbX)//if kbX = NaN
+                kbX=0;
 
-            for(nx=NxL; nx<=NxH; ++nx)
+            for(ny=NyL; ny<=NyH; ++ny)
             {
-                distX = fabs(shiftedKx - ((T1)nx))/(gridOS);
-                kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
-                if (kbX!=kbX)//if kbX = NaN
-                    kbX=0;
+                distY = fabs(shiftedKy - ((T1)ny))/(gridOS);
+                kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
+                if (kbY!=kbY)//if kbY = NaN
+                    kbY=0;
 
                 /* kernel weighting value */
                 if (params.useLUT){
@@ -352,7 +354,7 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
                     w = kbX * kbY;
                 }
                 /* grid data */
-                idx = nx + (ny)*params.gridSize[0]/* + (nz)*gridOS*Nx*gridOS*Ny*/;
+                idx = ny + (nx)*params.gridSize[1]/* + (nz)*gridOS*Nx*gridOS*Ny*/;
                 //gridData[idx].x += (w*pt.real*atm);
                 //gridData[idx].y += (w*pt.imag*atm);
                 sample[i].real(sample[i].real()+w*gridData[idx].real());
@@ -461,20 +463,20 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
             kbZ = bessi0(beta*std::sqrt(1.0-(2.0*distZ/kernelWidth)*(2.0*distZ/kernelWidth)))/kernelWidth;
             if (kbZ!=kbZ)//if kbZ = NaN
                 kbZ=0;
-
-            for(ny=NyL; ny<=NyH; ++ny)
+            for(nx=NxL; nx<=NxH; ++nx)
             {
-                distY = std::abs(shiftedKy - ((T1)ny))/(gridOS);
-                kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
-                if (kbY!=kbY)//if kbY = NaN
-                    kbY=0;
+                distX = std::abs(shiftedKx - ((T1)nx))/(gridOS);
+                kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
+                if (kbX!=kbX)//if kbX = NaN
+                    kbX=0;
 
-                for(nx=NxL; nx<=NxH; ++nx)
+                for(ny=NyL; ny<=NyH; ++ny)
                 {
-                    distX = std::abs(shiftedKx - ((T1)nx))/(gridOS);
-                    kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
-                    if (kbX!=kbX)//if kbX = NaN
-                        kbX=0;
+                    distY = std::abs(shiftedKy - ((T1)ny))/(gridOS);
+                    kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
+                    if (kbY!=kbY)//if kbY = NaN
+                        kbY=0;
+
 
                     /* kernel weighting value */
                     if (params.useLUT){
@@ -483,7 +485,7 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
                         w = kbX * kbY * kbZ;
                     }
                     /* grid data */
-                    idx = nx + (ny)*params.gridSize[0] + (nz)*params.gridSize[0]*params.gridSize[1];
+                    idx = ny + (nx)*params.gridSize[1] + (nz)*params.gridSize[0]*params.gridSize[1];
                     //gridData[idx].x += (w*pt.real*atm);
                     //gridData[idx].y += (w*pt.imag*atm);
                     sample[i].real(sample[i].real()+w*gridData[idx].real());
@@ -651,7 +653,8 @@ computeFH_CPU_Grid(
         gridding_Gold_3D<T1>(n, params, beta, samples, LUT, sizeLUT,
                          gridData, sampleDensity);
     }
-
+    cx_vec temp(gridData,gridNumElems);
+    savemat("/Users/alexcerjanic/Developer/PG/Resources/testFFT.mat","testfft",temp);
 
     complex<T1> *gridData_d = new complex<T1>[gridNumElems];
     memcpy(gridData_d,gridData,gridNumElems*sizeof(complex<T1>));
@@ -678,6 +681,7 @@ computeFH_CPU_Grid(
         plan = fftw_plan_dft_3d(params.gridSize[0],
                                 params.gridSize[1], params.gridSize[2], (fftw_complex *)gridData_d, (fftw_complex *)gridData_d, FFTW_BACKWARD, FFTW_ESTIMATE);
     }
+
     /* Inverse transform 'gridData_d' in place. */
     fftw_execute(plan);
     fftw_destroy_plan(plan);
@@ -724,6 +728,8 @@ computeFH_CPU_Grid(
     // Copy results from gridData_crop_d to outR_d and outI_d
     // gridData_crop_d is cufftComplex, interleaving
     // De-interleaving the data from cufftComplex to outR_d-and-outI_d
+
+
     if(Nz==1)
     {
         deinterleave_data2d(gridData_crop_d, outR_d, outI_d, Nx, Ny);
@@ -873,6 +879,7 @@ computeFd_CPU_Grid(
         deapodization3d(gridData_d, gridData,
                         Nx, Ny, Nz, kernelWidth, beta, params.gridOS);
     }
+
     complex<T1> *gridData_os = new complex<T1>[gridNumElems];
 
     //zero pad
@@ -884,11 +891,11 @@ computeFd_CPU_Grid(
     else
     {
         zero_pad3d(gridData_os, gridData_d,
-                   Nx, Ny, Nz,params.gridOS);
+                   Nx, Ny, Nz, params.gridOS);
     }
 
     complex<T1> *gridData_os_d = new complex<T1>[gridNumElems];
-    memcpy(gridData_os_d,gridData_os,gridNumElems*sizeof(complex<T1>));
+    memcpy(gridData_os_d, gridData_os, gridNumElems*sizeof(complex<T1>));
     // fftshift(gridData):
 
     if(Nz==1)
@@ -896,7 +903,8 @@ computeFd_CPU_Grid(
         fftshift2(gridData_os_d, gridData_os,params.gridSize[0],
                   params.gridSize[1]);
     }
-    else {
+    else
+    {
         fftshift3(gridData_os_d, gridData_os, params.gridSize[0],
                   params.gridSize[1], params.gridSize[2]);
     }
@@ -921,18 +929,18 @@ computeFd_CPU_Grid(
     // ifftshift(gridData):
     if(Nz==1)
     {
-        ifftshift2(gridData_os,gridData_os_d,params.gridSize[0], params.gridSize[1]);
+        ifftshift2(gridData_os, gridData_os_d, params.gridSize[0], params.gridSize[1]);
     }
     else
     {
-        ifftshift3(gridData_os,gridData_os_d,params.gridSize[0],params.gridSize[1],params.gridSize[2]);
+        ifftshift3(gridData_os, gridData_os_d, params.gridSize[0], params.gridSize[1], params.gridSize[2]);
     }
 
 
     // Gridding with CPU - gold
     if(Nz==1)
     {
-        gridding_Silver_2D<T1>(n, params,kx,ky, beta, samples, LUT, sizeLUT,
+        gridding_Silver_2D<T1>(n, params, kx, ky, beta, samples, LUT, sizeLUT,
                                gridData_os, sampleDensity);
     }
     else
@@ -941,8 +949,7 @@ computeFd_CPU_Grid(
                                gridData_os, sampleDensity);
     }
 
-    //cx_vec temp(samples,n);
-    //savemat("/Users/alexcerjanic/Developer/PG/Resources/testFFT.mat","testfft",temp);
+
     /*
     // crop the center region of the "image".
     if(Nz==1)

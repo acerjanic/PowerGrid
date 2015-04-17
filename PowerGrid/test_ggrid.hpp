@@ -17,6 +17,7 @@ using namespace arma;
 template<typename T1,typename T2>
 Col<T1> test_ggrid(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T2> kz)
 {
+    string testPath = "/Users/alexcerjanic/Developer/PG/Resources/";
     cout << "Entered test_ggrid" << endl;
     //Setup image space coordinates/trajectory
     Mat<T2> ix(64,64);
@@ -36,19 +37,21 @@ Col<T1> test_ggrid(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<
         }
     }
     cout << "Saving some data" << endl;
-    savemat("/Users/alexcerjanic/Developer/PG/Resources/ix.mat","ix",ix);
-    savemat("/Users/alexcerjanic/Developer/PG/Resources/iy.mat","iy",iy);
+    savemat(testPath+"ix.mat","ix",ix);
+    savemat(testPath+"iy.mat","iy",iy);
     // Forward operator
     Ggrid<T1,T2> G(4010,64,64,1,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
     cout << "About to run forward transform" << endl;
     Col<cx_double> TestForward;
     TestForward = G * vectorise(conv_to<Mat<cx_double>>::from(d));
-    savemat("/Users/alexcerjanic/Developer/PG/Resources/testGgridForward.mat","testGgridForward",TestForward);
+    savemat(testPath+"testGgridForward.mat","testGgridForward",TestForward);
     cout << "About to run adjoint transform" << endl;
 
     Col<cx_double> TestAdjoint;
     TestAdjoint = G / TestForward;
-    savemat("/Users/alexcerjanic/Developer/PG/Resources/testGgridAdjoint.mat","testGgridAdjoint",TestAdjoint);
+    savemat(testPath+"testGgridAdjoint.mat","testGgridAdjoint",TestAdjoint);
+
+
 
     // Variables needed for the recon: Penalty object, num of iterations
     umat ReconMask;
