@@ -16,7 +16,8 @@ using namespace std; //where to put?
 ///*From Numerical Recipes in C, 2nd Edition
 //Just a vanilla I(0,x) function appoximation
 template<typename T1>
-static T1 bessi0(T1 x)
+inline
+T1 bessi0(T1 x)
 {
 	T1 ax,ans;
 	T1 y;
@@ -81,17 +82,28 @@ void calculateLUT(T1 beta, T1 width, T1* LUT, unsigned int& sizeLUT){
 			v = static_cast<T1>(k)/static_cast<T1>(sizeLUT)*_width2_4;
 
 			// compute kernel value and store
-			LUT[k] = bessi0(beta*std::sqrt(1.0-(v/_width2_4)));
+			LUT[k] = bessi0(beta*std::sqrt(1.0-(std::pow(v,2.0)/_width2_4)));
 		}
 	}
 }
-
+template<typename T1>
+inline
+T1 kernel_value_LUT(T1 v, const T1* LUT, int sizeLUT, T1 width)
+{	//v is between [0,width]
+	unsigned int k0;
+	T1 v0;
+	T1 _1_width2_4 = 4.0/(width*width); //Reciprocal of _width2_4 from calculateLUT function
+	v *= (T1)sizeLUT;
+	k0=(unsigned int)(v*_1_width2_4);
+	v0 = ((T1)k0)/_1_width2_4;
+	return  LUT[k0] + ((v-v0)*(LUT[k0+1]-LUT[k0])/_1_width2_4);
+}
 // */
 
 template <typename T1>
 void
 deinterleave_data2d( ///NAIVE
-                    std::complex<T1> *src, T1 *outR_d, T1 *outI_d,
+                    std::complex<T1> *__restrict src, T1 *__restrict outR_d, T1 *outI_d,
                     int imageX, int imageY)
 {
     int lIndex;
@@ -126,7 +138,7 @@ deinterleave_data2d( ///NAIVE
 template <typename T1>
 void
 deinterleave_data3d(
-					std::complex<T1> *src, T1 *outR_d, T1 *outI_d,
+					std::complex<T1> *__restrict src, T1 *__restrict outR_d, T1 *__restrict outI_d,
                     int imageX, int imageY, int imageZ)
 {
     int lIndex,X,Y,Z;
@@ -205,7 +217,7 @@ deinterleave_data3d(
 template <typename T1>
 void
 deapodization2d(
-				std::complex<T1> *dst,std::complex<T1> *src,
+				std::complex<T1>  *__restrict dst,std::complex<T1> *__restrict src,
                 int imageX, int imageY,
                T1 kernelWidth, T1 beta, T1 gridOS)
 {
@@ -330,7 +342,7 @@ deapodization2d(
 template <typename T1>
 void
 deapodization3d(
-				std::complex<T1> *dst,std::complex<T1> *src,
+				std::complex<T1> *__restrict dst,std::complex<T1> *__restrict src,
                 int imageX, int imageY, int imageZ,
                 float kernelWidth, float beta, float gridOS)
 {
@@ -426,7 +438,7 @@ deapodization3d(
 template <typename T1>
 void
 crop_center_region2d(
-					std::complex<T1> *dst,std::complex<T1> *src,
+					std::complex<T1> *__restrict dst,std::complex<T1> *__restrict src,
                      int imageSizeX, int imageSizeY,
                      int gridSizeX, int gridSizeY)
 {
@@ -488,7 +500,7 @@ crop_center_region2d(
 template <typename T1>
 void
 crop_center_region3d(
-					 std::complex<T1> *dst,std::complex<T1> *src,
+					 std::complex<T1> *__restrict dst,std::complex<T1> *__restrict src,
                      int imageSizeX, int imageSizeY, int imageSizeZ,
                      int gridSizeX, int gridSizeY, int gridSizeZ)
 {
@@ -533,7 +545,7 @@ crop_center_region3d(
 template <typename T1>
 void
 zero_pad2d(
-		std::complex<T1> *dst,std::complex<T1> *src,
+		std::complex<T1> *__restrict dst,std::complex<T1> *__restrict src,
 		int imageSizeX, int imageSizeY,
 		T1 gridOS)
 {
@@ -570,7 +582,7 @@ zero_pad2d(
 template <typename T1>
 void
 zero_pad3d(
-		std::complex<T1> *dst,std::complex<T1> *src,
+		std::complex<T1> *__restrict dst,std::complex<T1> *__restrict src,
 		int imageSizeX, int imageSizeY, int imageSizeZ,
 		T1 gridOS)
 {
@@ -666,7 +678,7 @@ cuda_fft3shift_grid(
 
 //Circshift routines for fftshift.
 template<typename T>
-void circshift2(T *out, const T *in, int xdim, int ydim, int xshift, int yshift) {
+void circshift2(T *__restrict out, const T *__restrict in, int xdim, int ydim, int xshift, int yshift) {
 	int ii, jj, kk;
 	for (int x = 0; x < xdim; x++) {
 		ii = (x + xshift) % xdim;
@@ -679,7 +691,7 @@ void circshift2(T *out, const T *in, int xdim, int ydim, int xshift, int yshift)
 
 
 template<typename T>
-void circshift3(T *out, const T *in, int xdim, int ydim, int zdim, int xshift, int yshift, int zshift) {
+void circshift3(T *__restrict out, const T *__restrict in, int xdim, int ydim, int zdim, int xshift, int yshift, int zshift) {
 	int ii, jj, kk;
 	for (int x = 0; x < xdim; x++) {
 		ii = (x + xshift) % xdim;
@@ -696,28 +708,28 @@ void circshift3(T *out, const T *in, int xdim, int ydim, int zdim, int xshift, i
 //We need to fftshift to move the DC point to the center of the array. We could use (-1)^(i+j+k)
 //but then we have a problem with the fftshift and ifftshift for odd matrix sizes
 template<typename T>
-void fftshift2(T *out, const T *in, int xdim, int ydim) {
+void fftshift2(T *__restrict out, const T *__restrict in, int xdim, int ydim) {
 	circshift2(out, in, xdim, ydim, std::floor(xdim/2.0),std::floor(ydim/2.0));
 }
 
 	template<typename T>
-	void ifftshift2(T *out, const T *in, int xdim, int ydim) {
+	void ifftshift2(T *__restrict out, const T *__restrict in, int xdim, int ydim) {
 		circshift2(out, in, xdim, ydim, std::ceil(xdim/2.0),std::ceil(ydim/2.0));
 	}
 
 	template<typename T>
-	void fftshift3(T *out, const T *in, int xdim, int ydim, int zdim) {
+	void fftshift3(T *__restrict out, const T *__restrict in, int xdim, int ydim, int zdim) {
 		circshift3(out, in, xdim, ydim, zdim, std::floor(xdim/2.0), std::floor(ydim/2.0), std::floor(zdim/2.0));
 	}
 
 	template<typename T>
-	void ifftshift3(T *out, const T *in, int xdim, int ydim, int zdim) {
+	void ifftshift3(T *__restrict out, const T *__restrict in, int xdim, int ydim, int zdim) {
 		circshift3(out, in, xdim, ydim, zdim, std::ceil(xdim/2.0), std::ceil(ydim/2.0), std::floor(zdim/2.0));
 	}
 template<typename T1>
 void
 fft2shift_grid(
-		complex<T1> *src,
+		complex<T1> *__restrict src,
 		int dimY, int dimX)
 {
 	//(dimX,dimY) is the size of 'src'
@@ -736,7 +748,7 @@ fft2shift_grid(
 template<typename T1>
 void
 fft3shift_grid(
-		complex<T1> *src,
+		complex<T1> *__restrict src,
 		int dimY, int dimX, int dimZ)
 {
 	//(dimX,dimY,dimZ) is the size of 'src'

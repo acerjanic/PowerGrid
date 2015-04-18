@@ -86,8 +86,16 @@ Col<T1> test_FieldCorrection()
 
     Col<T1> data;
     loadmat(testPath+"data_onecoil_FM.mat","data",&data);
-
-
+    /*
+    Col<cx_double> TestAdjoint;
+    TestAdjoint = G / data;
+    savemat(testPath+"testGgridAdjoint.mat","testGgridAdjoint",TestAdjoint);
+    Col<cx_double> TestForward;
+    TestForward = G * TestAdjoint;
+    savemat(testPath+"testGgridForward.mat","testGgridForward",TestForward);
+    TestAdjoint = G / TestForward;
+    savemat(testPath+"testGgridAdjoint2.mat","testGgridAdjoint2",TestAdjoint);
+*/
     Col<T1> x_t;
     x_t = pwls_pcg1<T1,FieldCorrection<T1,T2,Ggrid<T1,T2>>,QuadPenalty<T1>>(xinit, A, W, data, R, niter);
     

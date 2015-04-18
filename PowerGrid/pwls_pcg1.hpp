@@ -11,26 +11,29 @@
 using namespace arma;
 
 template<typename T1,typename T2>
-complex<double> dot_double(T1 A, T2 B)
+inline
+complex<double> dot_double(const T1 &A, const T2  &B)
 {
     complex<double> sumReturn = sum(A % B);
     return sumReturn;
 }
 
 template<typename T1>
-double norm_grad(T1 g,T1 yi,Mat<cx_double> W)
+inline
+double norm_grad(const T1 &g,const T1 &yi,const Mat<cx_double> &W)
 {
     double normGrad = conv_to<double>::from(norm(g) / real(trans(yi) * (W * yi)));
     return normGrad;
 }
 
 template<typename T1, typename Tobj, typename Robj>
-Col<T1> pwls_pcg1(Col<T1>& x, Tobj const& A,Mat<T1> const& W, Col<T1> const& yi, Robj const& R, uword niter)
+Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,Mat<T1> const& W, Col<T1> const& yi, Robj const& R, uword niter)
 {
     
     // Initialize projection
     
-    Col<T1> Ax = A*x;
+    Col<T1> Ax = A*xInitial;
+    Col<T1> x = xInitial;
     double oldinprod = 0;
     double gamma = 0.0;
     Col<T1> ddir;
@@ -49,6 +52,7 @@ Col<T1> pwls_pcg1(Col<T1>& x, Tobj const& A,Mat<T1> const& W, Col<T1> const& yi,
     Col<T1> stepIntermediate;
     double step;
     T1 rdenom;
+    double newinprod;
     for (unsigned int ii = 0; ii < niter; ii++)
     {
         // Compute negative gradient
@@ -61,7 +65,7 @@ Col<T1> pwls_pcg1(Col<T1>& x, Tobj const& A,Mat<T1> const& W, Col<T1> const& yi,
         ngrad = ngrad - pgrad;
         // Direction
         cngrad = conj(ngrad);
-        double newinprod = real(dot_double(cngrad, ngrad));
+        newinprod = real(dot_double(cngrad, ngrad));
         
         if (ii == 0) {
             ddir = ngrad;

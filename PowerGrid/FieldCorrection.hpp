@@ -39,7 +39,7 @@ public:
       obj = &G;
       fieldMap = map_in;
       timeVec = timeVec_in;
-      AA.zeros(n1,L); //time segments weights
+      AA.set_size(n1,L); //time segments weights
       T2 T_min = timeVec.min();
       T2 rangt = timeVec.max()-T_min;
       tau = (rangt+datum::eps)/(L-1);
@@ -51,7 +51,9 @@ public:
 			for (unsigned int jj=0; jj < n1; jj++) {
 			  if ((fabs(timeVec(jj)-((ii)*tau)))<=tau){
 				AA(jj,ii) = 0.5 + 0.5*std::cos((datum::pi)*(timeVec(jj)-((ii)*tau))/tau);
-			  }
+			  } else {
+                AA(jj,ii) = 0.0;
+              }
 			}
 		  }
       }

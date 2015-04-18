@@ -8,7 +8,7 @@
 
 #ifndef PowerGrid_PowerGrid_h
 #define PowerGrid_PowerGrid_h
-
+#define ARMA_NO_DEBUG
 #include <iostream>
 #include <cmath>
 #include "armadillo"

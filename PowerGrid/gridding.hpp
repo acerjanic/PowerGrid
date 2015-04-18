@@ -17,9 +17,9 @@ using namespace arma;
 // 2D adjoint gridding on CPU
 template<typename T1>
 int
-gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionSample<T1>* sample,
+gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionSample<T1> *__restrict sample,
                  T1* LUT, unsigned int sizeLUT,
-                 complex<T1>* gridData, T1* sampleDensity)
+                 complex<T1> *__restrict gridData, T1 *__restrict sampleDensity)
 {
     unsigned int NxL, NxH;
     unsigned int NyL, NyH;
@@ -139,9 +139,9 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
 // 3D adjoint gridding on CPU
 template<typename T1>
 int
-gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSample<T1>* sample,
+gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSample<T1> *__restrict  sample,
                  T1* LUT, unsigned int sizeLUT,
-                 complex<T1>* gridData, T1* sampleDensity)
+                 complex<T1> *__restrict  gridData, T1 *__restrict  sampleDensity)
 {
     unsigned int NxL, NxH;
     unsigned int NyL, NyH;
@@ -272,9 +272,9 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
 // 2D adjoint gridding on CPU
 template<typename T1>
 int
-gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1 *ky, T1 beta, complex<T1>* sample,
+gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1 *ky, T1 beta, complex<T1> *__restrict sample,
                  T1* LUT, unsigned int sizeLUT,
-                 complex<T1>* gridData, T1* sampleDensity)
+                 complex<T1> * __restrict gridData, T1 *__restrict sampleDensity)
 {
     unsigned int NxL, NxH;
     unsigned int NyL, NyH;
@@ -336,23 +336,33 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
         for(nx=NxL; nx<=NxH; ++nx)
         {
             distX = fabs(shiftedKx - ((T1)nx))/(gridOS);
-            kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
+            if (params.useLUT){
+                kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
+            } else {
+                kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
+            }
+
             if (kbX!=kbX)//if kbX = NaN
                 kbX=0;
 
             for(ny=NyL; ny<=NyH; ++ny)
             {
                 distY = fabs(shiftedKy - ((T1)ny))/(gridOS);
-                kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
+                if (params.useLUT){
+                    kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
+                } else {
+                    kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
+                }
+
                 if (kbY!=kbY)//if kbY = NaN
                     kbY=0;
 
                 /* kernel weighting value */
-                if (params.useLUT){
+                //if (params.useLUT){
+                //    w = kbX * kbY;
+                //} else {
                     w = kbX * kbY;
-                } else {
-                    w = kbX * kbY;
-                }
+                //}
                 /* grid data */
                 idx = ny + (nx)*params.gridSize[1]/* + (nz)*gridOS*Nx*gridOS*Ny*/;
                 //gridData[idx].x += (w*pt.real*atm);
@@ -393,9 +403,9 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
 // 3D forward gridding on CPU
 template<typename T1>
 int
-gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1 *ky, const T1 *kz, T1 beta, complex<T1>* sample,
+gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1 *ky, const T1 *kz, T1 beta, complex<T1> *__restrict  sample,
                  T1* LUT, unsigned int sizeLUT,
-                 complex<T1>* gridData, T1* sampleDensity)
+                 complex<T1> *__restrict  gridData, T1 *__restrict  sampleDensity)
 {
     unsigned int NxL, NxH;
     unsigned int NyL, NyH;
@@ -527,9 +537,9 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
 template<typename T1>
 void
 computeFH_CPU_Grid(
-                   int numK_per_coil, const T1  *kx, const T1 *ky, const T1 *kz,
-                   const T1 *dR, const T1 *dI, int Nx, int Ny, int Nz,
-                   T1 gridOS, T1 *outR_d, T1 *outI_d)
+                   int numK_per_coil, const T1  *__restrict kx, const T1 *__restrict ky, const T1 *__restrict kz,
+                   const T1 *__restrict dR, const T1 *__restrict dI, int Nx, int Ny, int Nz,
+                   T1 gridOS, T1 *__restrict outR_d, T1 *__restrict outI_d)
 {
     
     /*
@@ -566,9 +576,9 @@ computeFH_CPU_Grid(
 
     T1 *sampleDensity;
     T1 *LUT; //use look-up table for faster execution on CPU (intermediate data)
-    unsigned int sizeLUT; //set in the function calculateLUT (intermediate data)
+    unsigned int sizeLUT =0; //set in the function calculateLUT (intermediate data)
     //Generating Look-Up Table
-    calculateLUT(beta, params.kernelWidth, LUT, sizeLUT);
+    //calculateLUT  (beta, params.kernelWidth, LUT, sizeLUT);
 
 
     ReconstructionSample<T1>* samples; //Input Data
@@ -654,10 +664,9 @@ computeFH_CPU_Grid(
                          gridData, sampleDensity);
     }
     cx_vec temp(gridData,gridNumElems);
-    savemat("/Users/alexcerjanic/Developer/PG/Resources/testFFT.mat","testfft",temp);
 
     complex<T1> *gridData_d = new complex<T1>[gridNumElems];
-    memcpy(gridData_d,gridData,gridNumElems*sizeof(complex<T1>));
+    //memcpy(gridData_d,gridData,gridNumElems*sizeof(complex<T1>));
 
     // ifftshift(gridData):
     if(Nz==1)
@@ -699,7 +708,7 @@ computeFH_CPU_Grid(
     }
 
     complex<T1> *gridData_crop_d = new complex<T1>[gridNumElems];
-    memcpy(gridData_crop_d,gridData_d,gridNumElems*sizeof(complex<T1>));
+    //memcpy(gridData_crop_d,gridData_d,gridNumElems*sizeof(complex<T1>));
     // crop the center region of the "image".
     if(Nz==1)
     {
@@ -750,9 +759,9 @@ computeFH_CPU_Grid(
 template<typename T1>
 void
 computeFd_CPU_Grid(
-        int numK_per_coil, const T1  *kx, const T1 *ky, const T1 *kz,
-        const T1 *dR, const T1 *dI, int Nx, int Ny, int Nz,
-        T1 gridOS, T1 *outR_d, T1 *outI_d)
+        int numK_per_coil, const T1  *__restrict kx, const T1 *__restrict ky, const T1 *__restrict kz,
+        const T1 *__restrict dR, const T1 *__restrict dI, int Nx, int Ny, int Nz,
+        T1 gridOS, T1 *__restrict outR_d, T1 *__restrict outI_d)
 {
 
     /*
@@ -789,9 +798,9 @@ computeFd_CPU_Grid(
 
     T1 *sampleDensity;
     T1 *LUT; //use look-up table for faster execution on CPU (intermediate data)
-    unsigned int sizeLUT; //set in the function calculateLUT (intermediate data)
+    unsigned int sizeLUT = 0; //set in the function calculateLUT (intermediate data)
     //Generating Look-Up Table
-    calculateLUT(beta, params.kernelWidth, LUT, sizeLUT);
+    //calculateLUT(beta, params.kernelWidth, LUT, sizeLUT);
 
 
     complex<T1>* samples; //Input Data
@@ -866,7 +875,7 @@ computeFd_CPU_Grid(
     }
 
     complex<T1> *gridData_d = new complex<T1>[imageNumElems];
-    memcpy(gridData_d,gridData,imageNumElems*sizeof(complex<T1>));
+    //memcpy(gridData_d,gridData,imageNumElems*sizeof(complex<T1>));
 
     // deapodization
     if(Nz==1)
@@ -895,7 +904,7 @@ computeFd_CPU_Grid(
     }
 
     complex<T1> *gridData_os_d = new complex<T1>[gridNumElems];
-    memcpy(gridData_os_d, gridData_os, gridNumElems*sizeof(complex<T1>));
+    //memcpy(gridData_os_d, gridData_os, gridNumElems*sizeof(complex<T1>));
     // fftshift(gridData):
 
     if(Nz==1)

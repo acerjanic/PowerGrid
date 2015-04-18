@@ -9,6 +9,8 @@
 #ifndef PowerGrid_QuadPenalty_hpp
 #define PowerGrid_QuadPenalty_hpp
 
+#include <armadillo>
+
 using namespace arma;
 
 template <typename T1>
@@ -43,23 +45,43 @@ public:
         mat DenseX;
         mat DenseY;
         
-        this->C1 = arma::kron(DenseX.eye(Nx,Nx), DenseY.eye(Ny,Ny) - circshift(DenseY.eye(Ny,Ny), 1,0));
-        this->C2 = arma::kron(DenseX.eye(Nx,Nx) - circshift(DenseX.eye(Nx,Nx), 1,0),DenseY.eye(Ny,Ny));
+        //this->C1 = arma::kron(DenseX.eye(Nx,Nx), DenseY.eye(Ny,Ny) - circshift(DenseY.eye(Ny,Ny), 1,0));
+        //this->C2 = arma::kron(DenseX.eye(Nx,Nx) - circshift(DenseX.eye(Nx,Nx), 1,0),DenseY.eye(Ny,Ny));
        
     }
     
     //Class Methods
-    double Penalty(const Col<T1>& d) const
+
+
+    Col<T1>Cd(const Col<T1>& d) const
     {
-        return this->Beta*(pow(C1*d,2.0)+pow(C2*d,2.0))*(this->DeltaX*this->DeltaY);
+       //Only 2D for the moment.
+        Col<T1> out(Nx*Ny);
+        uword offset;
+        for(uword  ll = 0; ll < 2; ll++) {
+            for( uword jj =0; jj < 2; jj++) {
+                offset = ll + jj*Ny;
+                for(uword ii = offset; ii < Ny*Nx; ii++) {
+                    out(ii) = d(ii) - d(ii - offset);
+                }
+            }
+        }
+
+
+        return out;
     }
-    
+
+    double Penalty(const Col<T1>& d) const
+    {   Col<T1> x = Cd(d);
+        return this->Beta*(pow(this->Cd,2.0))*(this->DeltaX*this->DeltaY);
+    }
+
     Col<T1> Gradient(const Col<T1>& d) const
     {
-        return (C1*d+C2*d)*(this->DeltaX*this->DeltaY);
+        return this->Cd(d)*(this->DeltaX*this->DeltaY);
     }
-    
-    
+
+
     Col<T1> Denom(const Col<T1>& d) const
     {
         //mat C = join_vert(C1,C2);

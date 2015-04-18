@@ -51,10 +51,12 @@ public:
     {
         //This is just specifying size assuming things are the same size, change as necessary
         //uword dataLength = d.n_rows;
+        /*
         Col<T2> FM(ix.n_rows*iy.n_rows);
         Col<T2> t(n2);
         FM.zeros();
         t.zeros();
+         */
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
         //Now we grab the data out of armadillo with the memptr() function
@@ -65,8 +67,8 @@ public:
         
         Col<T2> realXformedData(this->n2);
         Col<T2> imagXformedData(this->n2);
-        realXformedData.zeros();
-        imagXformedData.zeros();
+        //realXformedData.zeros();
+        //imagXformedData.zeros();
         
         T2* realXformedDataPtr = realXformedData.memptr();
         T2* imagXformedDataPtr = imagXformedData.memptr();
@@ -107,10 +109,12 @@ public:
     {
         
         uword dataLength = n2;
+        /*
         Col<T2> FM(ix.n_rows*iy.n_rows);
         Col<T2> t(n2);
         FM.zeros();
         t.zeros();
+        */
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
         
@@ -120,8 +124,8 @@ public:
         Col<T2> realXformedData(n1);
         Col<T2> imagXformedData(n1);
 
-        realXformedData.zeros();
-        imagXformedData.zeros();
+        //realXformedData.zeros();
+        //imagXformedData.zeros();
         
         T2* realXformedDataPtr = realXformedData.memptr();
         T2* imagXformedDataPtr = imagXformedData.memptr();
