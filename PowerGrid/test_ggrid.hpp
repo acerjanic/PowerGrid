@@ -17,7 +17,7 @@ using namespace arma;
 template<typename T1,typename T2>
 Col<T1> test_ggrid(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T2> kz)
 {
-    string testPath = "/Users/alexcerjanic/Developer/PG/Resources/";
+    string testPath = "/shared/mrfil-data/jholtrop/repos/PowerGrid/Resources/";
     cout << "Entered test_ggrid" << endl;
     //Setup image space coordinates/trajectory
     Mat<T2> ix(64,64);

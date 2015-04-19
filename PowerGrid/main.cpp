@@ -16,9 +16,11 @@ using namespace std; //complex type comes from the STL
 
 int main(int argc, char** argv)
 {
-    string testPath = "/Users/alexcerjanic/Developer/PG/Resources/";
-
     /*
+
+    string testPath = "/shared/mrfil-data/jholtrop/repos/PowerGrid/Resources/";
+
+
     //Create an empty unsized matrix of type real double
     Mat<double> test;
 
@@ -91,9 +93,12 @@ int main(int argc, char** argv)
     kz.zeros();
     //Col<cx_double> out = test_ggrid<cx_double,double>(conv_to<Col<cx_double>>::from(test),kx,ky,kz);
     //savemat(testPath+"testGdft.mat","testGdft",out);
-    */
+
     Col<cx_double> out_FieldCorrected = test_FieldCorrection<cx_double,double>();
     savemat(testPath+"test_FieldCorrection.mat","test_FieldCorrection",out_FieldCorrected);
+    */
+
+    test_FieldCorrection<cx_double,double>("/shared/mrfil-data/dataPowerGridTest/64_64_16_4coils/");
 
     return 0;
 }
