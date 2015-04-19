@@ -65,38 +65,44 @@ T1 bessi0(T1 x)
 //}
 //We use this lookup table as a faster way to calculate the Kasier-Bessel window
 template<typename T1>
-void calculateLUT(T1 beta, T1 width, T1* LUT, unsigned int& sizeLUT){
+void calculateLUT(T1 beta, T1 width, T1 *&LUT, uword &sizeLUT) {
 	T1 v;
 	T1 _width2_4 = (width*width)/4.0;
 
 	if(width > 0){
 		// compute size of LUT based on kernel width
-		sizeLUT = (unsigned int)(10000*width);
-
+		sizeLUT = (uword)(10000 * width);
 		// allocate memory
 		LUT = (T1*) malloc (sizeLUT*sizeof(T1));
 
 		for(unsigned int k=0; k<sizeLUT; ++k){
 			// compute value to evaluate kernel at
 			// v in the range 0:(_width/2)^2
-			v = static_cast<T1>(k)/static_cast<T1>(sizeLUT)*_width2_4;
+			v = static_cast<T1>(k) / static_cast<T1>(sizeLUT);
 
 			// compute kernel value and store
-			LUT[k] = bessi0(beta*std::sqrt(1.0-(std::pow(v,2.0)/_width2_4)));
+			LUT[k] = bessi0(beta * std::sqrt(1.0 - (v))) / width;
+
 		}
 	}
 }
+
 template<typename T1>
-inline
-T1 kernel_value_LUT(T1 v, const T1* LUT, int sizeLUT, T1 width)
-{	//v is between [0,width]
-	unsigned int k0;
+T1 kernel_value_LUT(T1 dist, const T1 *LUT, uword sizeLUT, T1 width) {    //v is between [0,width/2.0]
+	uword k0;
 	T1 v0;
-	T1 _1_width2_4 = 4.0/(width*width); //Reciprocal of _width2_4 from calculateLUT function
-	v *= (T1)sizeLUT;
-	k0=(unsigned int)(v*_1_width2_4);
-	v0 = ((T1)k0)/_1_width2_4;
-	return  LUT[k0] + ((v-v0)*(LUT[k0+1]-LUT[k0])/_1_width2_4);
+	T1 _width2_4 = 4.0 / (width * width); //Reciprocal of _width2_4 from calculateLUT function
+
+	k0 = (uword)((dist * dist * _width2_4) * (T1) sizeLUT);
+
+	//cout << "dist = " << dist << " k0 =" << k0 << endl;
+
+	if (k0 >= sizeLUT) {
+		return 0;
+	} else {
+		//cout << "about to access the look up table" << endl;
+		return LUT[k0];
+	}
 }
 // */
 

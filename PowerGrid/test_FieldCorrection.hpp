@@ -67,7 +67,7 @@ Col<T1> test_FieldCorrection()
    tvec = tvec*tsamp;
 
     // Forward operator
-    Ggrid<T1,T2> G(nro,64,64,1,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
+    Ggrid<T1, T2> G(nro, 4.0, 64, 64, 1, kx, ky, kz, vectorise(ix), vectorise(iy), vectorise(iz));
 
    //cout << "min tvec = " << tvec.min() << endl;
 
@@ -76,8 +76,8 @@ Col<T1> test_FieldCorrection()
     // Variables needed for the recon: Penalty object, num of iterations
     umat ReconMask;
     ReconMask.ones(64,64);
-    
-    QuadPenalty<T1>R(64,64,0,ReconMask);
+
+    QuadPenalty<T1> R(64, 64, 1, 0, ReconMask);
     
     uword niter = 10;
     Col<T1> xinit = zeros<Col<cx_double>>(64*64); // initial estimate of x

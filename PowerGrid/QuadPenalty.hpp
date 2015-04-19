@@ -9,7 +9,7 @@
 #ifndef PowerGrid_QuadPenalty_hpp
 #define PowerGrid_QuadPenalty_hpp
 
-#include <armadillo>
+#include "armadillo"
 
 using namespace arma;
 
@@ -18,12 +18,14 @@ class QuadPenalty
 {
 public:
     QuadPenalty();
-    
+
     //Class members
     uword Nx;
     uword Ny;
+    uword Nz;
     double DeltaX;
     double DeltaY;
+    double DeltaZ;
     double Beta;
     Mat<uword> ReconMask;
     
@@ -32,22 +34,18 @@ public:
     
     
     //Custom Class Constructor
-    QuadPenalty(uword Nx,uword Ny,double Beta,Mat<uword> ReconMask)
+    QuadPenalty(uword Nx, uword Ny, uword Nz, double Beta, Mat<uword> ReconMask)
     {
         //Set Class Memebers
         this->Nx = Nx;
         this->Ny = Ny;
+        this->Nz = Nz;
         this->DeltaX = 1.0/(double)Nx;
-        this->DeltaX = 1.0/(double)Ny;
+        this->DeltaY = 1.0 / (double) Ny;
+        this->DeltaZ = 1.0 / (double) Nz;
+
         this->ReconMask = ReconMask;
-        
-        //Create Sparse Differencing Matricies
-        mat DenseX;
-        mat DenseY;
-        
-        //this->C1 = arma::kron(DenseX.eye(Nx,Nx), DenseY.eye(Ny,Ny) - circshift(DenseY.eye(Ny,Ny), 1,0));
-        //this->C2 = arma::kron(DenseX.eye(Nx,Nx) - circshift(DenseX.eye(Nx,Nx), 1,0),DenseY.eye(Ny,Ny));
-       
+
     }
     
     //Class Methods
@@ -55,14 +53,16 @@ public:
 
     Col<T1>Cd(const Col<T1>& d) const
     {
-       //Only 2D for the moment.
+
         Col<T1> out(Nx*Ny);
         uword offset;
         for(uword  ll = 0; ll < 2; ll++) {
             for( uword jj =0; jj < 2; jj++) {
-                offset = ll + jj*Ny;
-                for(uword ii = offset; ii < Ny*Nx; ii++) {
-                    out(ii) = d(ii) - d(ii - offset);
+                for (uword kk = 0; kk < 2; kk++) {
+                    offset = ll + jj * Ny + kk * Nx * Ny;
+                    for (uword ii = offset; ii < Ny * Nx * Nz; ii++) {
+                        out(ii) = d(ii) - d(ii - offset);
+                    }
                 }
             }
         }
@@ -73,12 +73,12 @@ public:
 
     double Penalty(const Col<T1>& d) const
     {   Col<T1> x = Cd(d);
-        return this->Beta*(pow(this->Cd,2.0))*(this->DeltaX*this->DeltaY);
+        return this->Beta * (pow(this->Cd, 2.0)) * (this->DeltaX * this->DeltaY * this->DeltaX);
     }
 
     Col<T1> Gradient(const Col<T1>& d) const
     {
-        return this->Cd(d)*(this->DeltaX*this->DeltaY);
+        return this->Cd(d) * (this->DeltaX * this->DeltaY * this->DeltaZ);
     }
 
 

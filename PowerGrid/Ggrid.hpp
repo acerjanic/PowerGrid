@@ -15,8 +15,12 @@ public:
     
     //Default Class Constructor and Destructor
     Ggrid();
+
+    //~Ggrid();
     //Class Constructor
-    Ggrid(uword dataLength, uword nx, uword ny, uword nz, const Col<T2> &k1, const Col<T2> &k2, const Col<T2> &k3, const Col<T2> &i1, const Col<T2> &i2, const Col<T2> &i3) //Change these argumenst as you need to setup the object
+    Ggrid(uword dataLength, T2 gridos, uword nx, uword ny, uword nz, const Col <T2> &k1, const Col <T2> &k2,
+          const Col <T2> &k3, const Col <T2> &i1, const Col <T2> &i2,
+          const Col <T2> &i3) //Change these argumenst as you need to setup the object
     {
         n1 = nx*ny*nz;
         n2 = dataLength;
@@ -29,6 +33,24 @@ public:
         kx = k1;
         ky = k2;
         kz = k3;
+        gridOS = gridos;
+        //Set Beta
+        kernelWidth = 4.0;
+        beta = MRI_PI * std::sqrt((gridOS - 0.5) * (gridOS - 0.5) *
+                                  (kernelWidth * kernelWidth * 4.0) /
+                                  (gridOS * gridOS) - 0.8);
+        //Deal with the LUT
+        //Generating Look-Up Table
+        calculateLUT(beta, kernelWidth, LUT, sizeLUT);
+        cout << "Size LUT = " << sizeLUT << endl;
+        cout << "LUT = " << LUT << endl;
+    }
+
+    //Class destructor to free LUT
+    ~Ggrid() {
+        if (LUT) {
+            free(LUT);
+        }
     }
     
     //Class variables go here. Change as necessary
@@ -44,6 +66,12 @@ public:
     Col<T2> ix; //image space coordinates
     Col<T2> iy;
     Col<T2> iz;
+
+    T2 gridOS; //grid oversampling
+    T2 *LUT = 0; // Lookup table for the gridding operations
+    uword sizeLUT = 0;
+    T2 beta; //beta factor for gridding not the same as beta in regularization!
+    T2 kernelWidth; //Kaiser Bessel Kernel Support
     
     //Overloaded methods for forward and adjoint transform
     //Forward transform operation using gridding
@@ -51,12 +79,12 @@ public:
     {
         //This is just specifying size assuming things are the same size, change as necessary
         //uword dataLength = d.n_rows;
-        /*
+
         Col<T2> FM(ix.n_rows*iy.n_rows);
         Col<T2> t(n2);
         FM.zeros();
         t.zeros();
-         */
+
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
         //Now we grab the data out of armadillo with the memptr() function
@@ -84,10 +112,10 @@ public:
                   this->n2, this->n1
         );
         */
-        T2 gridOS = 2.0;
+        //T2 gridOS = 2.0;
         computeFd_CPU_Grid<T2>(n2, kx.memptr(),  ky.memptr(),  kz.memptr(),
                                realDataPtr, imagDataPtr, Nx, Ny, Nz,
-                               gridOS, realXformedDataPtr, imagXformedDataPtr);
+                               gridOS, realXformedDataPtr, imagXformedDataPtr, kernelWidth, beta, LUT, sizeLUT);
 
         //To return data, we need to put our data back into Armadillo objects
         //We are telling the object how long it is because it will copy the data back into managed memory
@@ -109,12 +137,12 @@ public:
     {
         
         uword dataLength = n2;
-        /*
+
         Col<T2> FM(ix.n_rows*iy.n_rows);
         Col<T2> t(n2);
         FM.zeros();
         t.zeros();
-        */
+
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
         
@@ -133,11 +161,12 @@ public:
         // I assume you create the pointers to the arrays where the transformed data will be stored
         // realXformedDataPtr and imagXformedDataPtr and they are of type float*
 
-        T2 gridOS = 2.0;
+        //T2 gridOS = 2.0;
 
         computeFH_CPU_Grid<T2>(dataLength, kx.memptr(),  ky.memptr(),  kz.memptr(),
                            realDataPtr, imagDataPtr, Nx, Ny, Nz,
-                           gridOS, realXformedDataPtr, imagXformedDataPtr);
+                               gridOS, realXformedDataPtr, imagXformedDataPtr, kernelWidth, beta, LUT, sizeLUT);
+
         /*
         iftCpu<T2>(realXformedDataPtr,imagXformedDataPtr,
                    realDataPtr, imagDataPtr, kx.memptr(),

@@ -7,7 +7,7 @@
 //
 
 #ifndef PowerGrid_test_FieldCorrection_h
-#define PowerGrid_test_fieldCorrection_h
+#define PowerGrid_test_FieldCorrection_h
 
 arma::Mat<arma::cx_double> test_FieldCorrection();
 

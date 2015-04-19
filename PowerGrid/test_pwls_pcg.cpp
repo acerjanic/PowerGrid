@@ -23,7 +23,7 @@ Mat<cx_double> test_pwls_pcg()
    umat ReconMask;
    ReconMask.ones(64,64);
 
-   QuadPenalty<cx_double>R(64,64,1,ReconMask);
+   QuadPenalty<cx_double> R(64, 64, 1, 1, ReconMask);
 
    uword niter = 2;
    Col<cx_double> xinit = zeros<Col<cx_double>>(64*64); // initial estimate of x

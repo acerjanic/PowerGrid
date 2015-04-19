@@ -56,8 +56,8 @@ Col<T1> test_ggrid(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<
     // Variables needed for the recon: Penalty object, num of iterations
     umat ReconMask;
     ReconMask.ones(64,64);
-    
-    QuadPenalty<T1>R(64,64,1,ReconMask);
+
+    QuadPenalty<T1> R(64, 64, 1, 1, ReconMask);
     cout << "Just made the penalty object" << endl;
 
     uword niter = 20;

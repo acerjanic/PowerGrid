@@ -67,8 +67,8 @@ Col<T1> test_gdft(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T
     //Recon mask is used to limit the support of the object. Very useful for SENSE recons.
     umat ReconMask;
     ReconMask.ones(64,64);
-    
-    QuadPenalty<T1>R(64,64,1,ReconMask);
+
+    QuadPenalty<T1> R(64, 64, 1, 1, ReconMask);
     
     uword niter = 20;
     Col<T1> xinit = zeros<Col<cx_double>>(64*64); // initial estimate of x

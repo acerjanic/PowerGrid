@@ -18,9 +18,10 @@ using namespace arma;
 template<typename T1>
 int
 gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionSample<T1> *__restrict sample,
-                 T1* LUT, unsigned int sizeLUT,
+                 const T1 *LUT, const uword sizeLUT,
                  complex<T1> *__restrict gridData, T1 *__restrict sampleDensity)
 {
+
     unsigned int NxL, NxH;
     unsigned int NyL, NyH;
     //unsigned int NzL, NzH;
@@ -81,24 +82,41 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
         for(nx=NxL; nx<=NxH; ++nx)
         {
             distX = fabs(shiftedKx - ((T1)nx))/(gridOS);
-            kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
-            if (kbX!=kbX)//if kbX = NaN
-                kbX=0;
+            if (params.useLUT) {
+                kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
+                //cout << "KBX = " << kbX << endl;
 
+            } else {
+                kbX = bessi0(beta * std::sqrt(1.0 - (2.0 * distX / kernelWidth) * (2.0 * distX / kernelWidth))) /
+                      kernelWidth;
 
+            }
+
+            if (kbX != kbX) {//if kbX = NaN
+                kbX = 0;
+            }
+            
             for(ny=NyL; ny<=NyH; ++ny)
             {
                 distY = fabs(shiftedKy - ((T1)ny))/(gridOS);
-                kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
-                if (kbY!=kbY)//if kbY = NaN
-                    kbY=0;
+                if (params.useLUT){
+                    kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
+                } else {
+                    kbY = bessi0(beta * std::sqrt(1.0 - (2.0 * distY / kernelWidth) * (2.0 * distY / kernelWidth))) /
+                          kernelWidth;
+                }
+
+                if (kbY != kbY) {//if kbY = NaN
+                    kbY = 0;
+                }
 
                 /* kernel weighting value */
-                if (params.useLUT){
-                    w = kbX * kbY;
-                } else {
-                    w = kbX * kbY;
-                }
+                //if (params.useLUT){
+                //    w = kbX * kbY;
+                //} else {
+
+                w = kbX * kbY;
+                
                 /* grid data */
                 idx = ny + (nx)*params.gridSize[1]/* + (nz)*gridOS*Nx*gridOS*Ny*/;
                 //gridData[idx].x += (w*pt.real*atm);
@@ -140,7 +158,7 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
 template<typename T1>
 int
 gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSample<T1> *__restrict  sample,
-                 T1* LUT, unsigned int sizeLUT,
+                 const T1 *LUT, const uword sizeLUT,
                  complex<T1> *__restrict  gridData, T1 *__restrict  sampleDensity)
 {
     unsigned int NxL, NxH;
@@ -202,34 +220,58 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
         
         NzL = (int)(fmax(0.0f,std::ceil(shiftedKz - kernelWidth*(gridOS)/2.0f)));
         NzH = (int)(fmin((gridOS*(T1)Nz-1.0f),std::floor(shiftedKz + kernelWidth*((float)gridOS)/2.0f)));
-        
+
         for(nz=NzL; nz<=NzH; ++nz)
         {
             distZ = fabs(shiftedKz - ((T1)nz))/(gridOS);
-            kbZ = bessi0(beta*std::sqrt(1.0-(2.0*distZ/kernelWidth)*(2.0*distZ/kernelWidth)))/kernelWidth;
-            if (kbZ!=kbZ)//if kbZ = NaN
-                kbZ=0;
+            if (params.useLUT) {
+                kbZ = kernel_value_LUT(distZ, LUT, sizeLUT, kernelWidth);
+                //cout << "KBX = " << kbX << endl;
+
+            } else {
+                kbZ = bessi0(beta * std::sqrt(1.0 - (2.0 * distZ / kernelWidth) * (2.0 * distZ / kernelWidth))) /
+                      kernelWidth;
+
+            }
             for(nx=NxL; nx<=NxH; ++nx)
             {
-                distX = std::abs(shiftedKx - ((T1)nx))/(gridOS);
-                kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
-                if (kbX!=kbX)//if kbX = NaN
-                    kbX=0;
+                distX = fabs(shiftedKx - ((T1) nx)) / (gridOS);
+                if (params.useLUT) {
+                    kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
+                    //cout << "KBX = " << kbX << endl;
+
+                } else {
+                    kbX = bessi0(beta * std::sqrt(1.0 - (2.0 * distX / kernelWidth) * (2.0 * distX / kernelWidth))) /
+                          kernelWidth;
+
+                }
+
+                if (kbX != kbX) {//if kbX = NaN
+                    kbX = 0;
+                }
 
                 for(ny=NyL; ny<=NyH; ++ny)
                 {
-                    distY = std::abs(shiftedKy - ((T1)ny))/(gridOS);
-                    kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
-                    if (kbY!=kbY)//if kbY = NaN
-                        kbY=0;
-
-                    
-                    /* kernel weighting value */
+                    distY = fabs(shiftedKy - ((T1) ny)) / (gridOS);
                     if (params.useLUT){
-                        w = kbX * kbY * kbZ;
+                        kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
                     } else {
-                        w = kbX * kbY * kbZ;
+                        kbY = bessi0(
+                                beta * std::sqrt(1.0 - (2.0 * distY / kernelWidth) * (2.0 * distY / kernelWidth))) /
+                              kernelWidth;
                     }
+
+                    if (kbY != kbY) {//if kbY = NaN
+                        kbY = 0;
+                    }
+
+                    /* kernel weighting value */
+                    //if (params.useLUT){
+                    //    w = kbX * kbY;
+                    //} else {
+
+                    w = kbX * kbY * kbZ;
+
                     /* grid data */
                     idx = ny + (nx)*params.gridSize[0] + (nz)*params.gridSize[0]*params.gridSize[1];
                     //gridData[idx].x += (w*pt.real*atm);
@@ -269,13 +311,14 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
     return 1;
 }
 
-// 2D adjoint gridding on CPU
+// 2D forward gridding on CPU
 template<typename T1>
 int
 gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1 *ky, T1 beta, complex<T1> *__restrict sample,
-                 T1* LUT, unsigned int sizeLUT,
+                   const T1 *LUT, const uword sizeLUT,
                  complex<T1> * __restrict gridData, T1 *__restrict sampleDensity)
 {
+
     unsigned int NxL, NxH;
     unsigned int NyL, NyH;
     //unsigned int NzL, NzH;
@@ -340,22 +383,25 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
                 kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
             } else {
                 kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
+
             }
 
-            if (kbX!=kbX)//if kbX = NaN
-                kbX=0;
+            if (kbX != kbX) {//if kbX = NaN
+                kbX = 0;
+            }
 
             for(ny=NyL; ny<=NyH; ++ny)
             {
                 distY = fabs(shiftedKy - ((T1)ny))/(gridOS);
                 if (params.useLUT){
-                    kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
+                    kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
                 } else {
                     kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
                 }
 
-                if (kbY!=kbY)//if kbY = NaN
-                    kbY=0;
+                if (kbY != kbY) {//if kbY = NaN
+                    kbY = 0;
+                }
 
                 /* kernel weighting value */
                 //if (params.useLUT){
@@ -404,7 +450,7 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
 template<typename T1>
 int
 gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1 *ky, const T1 *kz, T1 beta, complex<T1> *__restrict  sample,
-                 T1* LUT, unsigned int sizeLUT,
+                   const T1 *LUT, const uword sizeLUT,
                  complex<T1> *__restrict  gridData, T1 *__restrict  sampleDensity)
 {
     unsigned int NxL, NxH;
@@ -470,30 +516,52 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
         for(nz=NzL; nz<=NzH; ++nz)
         {
             distZ = fabs(shiftedKz - ((T1)nz))/(gridOS);
-            kbZ = bessi0(beta*std::sqrt(1.0-(2.0*distZ/kernelWidth)*(2.0*distZ/kernelWidth)))/kernelWidth;
-            if (kbZ!=kbZ)//if kbZ = NaN
-                kbZ=0;
+            if (params.useLUT) {
+                kbZ = kernel_value_LUT(distZ, LUT, sizeLUT, kernelWidth);
+                //cout << "KBX = " << kbX << endl;
+
+            } else {
+                kbZ = bessi0(beta * std::sqrt(1.0 - (2.0 * distZ / kernelWidth) * (2.0 * distZ / kernelWidth))) /
+                      kernelWidth;
+
+            }
             for(nx=NxL; nx<=NxH; ++nx)
             {
-                distX = std::abs(shiftedKx - ((T1)nx))/(gridOS);
-                kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
-                if (kbX!=kbX)//if kbX = NaN
-                    kbX=0;
+                distX = fabs(shiftedKx - ((T1) nx)) / (gridOS);
+                if (params.useLUT) {
+                    kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
+                    //cout << "KBX = " << kbX << endl;
 
-                for(ny=NyL; ny<=NyH; ++ny)
-                {
-                    distY = std::abs(shiftedKy - ((T1)ny))/(gridOS);
-                    kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
-                    if (kbY!=kbY)//if kbY = NaN
-                        kbY=0;
+                } else {
+                    kbX = bessi0(beta * std::sqrt(1.0 - (2.0 * distX / kernelWidth) * (2.0 * distX / kernelWidth))) /
+                          kernelWidth;
 
+                }
 
-                    /* kernel weighting value */
-                    if (params.useLUT){
-                        w = kbX * kbY * kbZ;
+                if (kbX != kbX) {//if kbX = NaN
+                    kbX = 0;
+                }
+
+                for (ny = NyL; ny <= NyH; ++ny) {
+                    distY = fabs(shiftedKy - ((T1) ny)) / (gridOS);
+                    if (params.useLUT) {
+                        kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
                     } else {
-                        w = kbX * kbY * kbZ;
+                        kbY = bessi0(
+                                beta * std::sqrt(1.0 - (2.0 * distY / kernelWidth) * (2.0 * distY / kernelWidth))) /
+                              kernelWidth;
                     }
+
+                    if (kbY != kbY) {//if kbY = NaN
+                        kbY = 0;
+                    }
+                    /* kernel weighting value */
+                    //if (params.useLUT){
+                    //    w = kbX * kbY;
+                    //} else {
+
+                    w = kbX * kbY * kbZ;
+
                     /* grid data */
                     idx = ny + (nx)*params.gridSize[1] + (nz)*params.gridSize[0]*params.gridSize[1];
                     //gridData[idx].x += (w*pt.real*atm);
@@ -539,7 +607,8 @@ void
 computeFH_CPU_Grid(
                    int numK_per_coil, const T1  *__restrict kx, const T1 *__restrict ky, const T1 *__restrict kz,
                    const T1 *__restrict dR, const T1 *__restrict dI, int Nx, int Ny, int Nz,
-                   T1 gridOS, T1 *__restrict outR_d, T1 *__restrict outI_d)
+                   T1 gridOS, T1 *__restrict outR_d, T1 *__restrict outI_d, const T1 kernelWidth, const T1 beta,
+                   const T1 *LUT, const uword sizeLUT)
 {
     
     /*
@@ -549,17 +618,19 @@ computeFH_CPU_Grid(
      *  Note that Beatty use their kernel width to be equal twice the window
      *  width parameter used by Jackson et al.
      */
+    /*
     T1 kernelWidth = 4.0;
     T1 beta = MRI_PI * std::sqrt( (gridOS - 0.5) * (gridOS - 0.5) *
                            (kernelWidth * kernelWidth*4.0) /
                            (gridOS * gridOS) - 0.8
                            );
-    
+    */
+
     parameters<T1> params;
     params.sync=0;
     params.binsize=128;
-    
-    params.useLUT = 0;
+
+    params.useLUT = 1;
     params.kernelWidth = kernelWidth;
     params.gridOS = gridOS;
     params.imageSize[0] = Nx;//gridSize is gridOS times larger than imageSize.
@@ -575,10 +646,6 @@ computeFH_CPU_Grid(
     params.numSamples = numK_per_coil;
 
     T1 *sampleDensity;
-    T1 *LUT; //use look-up table for faster execution on CPU (intermediate data)
-    unsigned int sizeLUT =0; //set in the function calculateLUT (intermediate data)
-    //Generating Look-Up Table
-    //calculateLUT  (beta, params.kernelWidth, LUT, sizeLUT);
 
 
     ReconstructionSample<T1>* samples; //Input Data
@@ -761,7 +828,8 @@ void
 computeFd_CPU_Grid(
         int numK_per_coil, const T1  *__restrict kx, const T1 *__restrict ky, const T1 *__restrict kz,
         const T1 *__restrict dR, const T1 *__restrict dI, int Nx, int Ny, int Nz,
-        T1 gridOS, T1 *__restrict outR_d, T1 *__restrict outI_d)
+        T1 gridOS, T1 *__restrict outR_d, T1 *__restrict outI_d, const T1 kernelWidth, const T1 beta, const T1 *LUT,
+        const uword sizeLUT)
 {
 
     /*
@@ -771,17 +839,18 @@ computeFd_CPU_Grid(
      *  Note that Beatty use their kernel width to be equal twice the window
      *  width parameter used by Jackson et al.
      */
+    /*
     T1 kernelWidth = 4.0;
     T1 beta = MRI_PI * std::sqrt( (gridOS - 0.5) * (gridOS - 0.5) *
                                   (kernelWidth * kernelWidth*4.0) /
                                   (gridOS * gridOS) - 0.8
     );
-
+    */
     parameters<T1> params;
     params.sync=0;
     params.binsize=128;
 
-    params.useLUT = 0;
+    params.useLUT = 1;
     params.kernelWidth = kernelWidth;
     params.gridOS = gridOS;
     params.imageSize[0] = Nx;//gridSize is gridOS times larger than imageSize.
@@ -797,10 +866,6 @@ computeFd_CPU_Grid(
     params.numSamples = numK_per_coil;
 
     T1 *sampleDensity;
-    T1 *LUT; //use look-up table for faster execution on CPU (intermediate data)
-    unsigned int sizeLUT = 0; //set in the function calculateLUT (intermediate data)
-    //Generating Look-Up Table
-    //calculateLUT(beta, params.kernelWidth, LUT, sizeLUT);
 
 
     complex<T1>* samples; //Input Data
@@ -946,7 +1011,7 @@ computeFd_CPU_Grid(
     }
 
 
-    // Gridding with CPU - gold
+    // Gridding with CPU - silver
     if(Nz==1)
     {
         gridding_Silver_2D<T1>(n, params, kx, ky, beta, samples, LUT, sizeLUT,
@@ -993,6 +1058,7 @@ computeFd_CPU_Grid(
 
     //deallocate samples
     free(samples);
+    //free(LUT);
     delete(gridData);
     delete(gridData_d);
     delete(gridData_os);
