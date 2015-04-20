@@ -42,8 +42,7 @@ public:
         //Deal with the LUT
         //Generating Look-Up Table
         calculateLUT(beta, kernelWidth, LUT, sizeLUT);
-        cout << "Size LUT = " << sizeLUT << endl;
-        cout << "LUT = " << LUT << endl;
+
     }
 
     //Class destructor to free LUT
@@ -79,12 +78,12 @@ public:
     {
         //This is just specifying size assuming things are the same size, change as necessary
         //uword dataLength = d.n_rows;
-
+        /*
         Col<T2> FM(ix.n_rows*iy.n_rows);
         Col<T2> t(n2);
         FM.zeros();
         t.zeros();
-
+        */
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
         //Now we grab the data out of armadillo with the memptr() function
@@ -137,12 +136,12 @@ public:
     {
         
         uword dataLength = n2;
-
+        /*
         Col<T2> FM(ix.n_rows*iy.n_rows);
         Col<T2> t(n2);
         FM.zeros();
         t.zeros();
-
+        */
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
         

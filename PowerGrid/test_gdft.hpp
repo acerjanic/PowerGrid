@@ -70,7 +70,7 @@ Col<T1> test_gdft(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T
 
     QuadPenalty<T1> R(64, 64, 1, 1, ReconMask);
     
-    uword niter = 20;
+    uword niter = 10;
     Col<T1> xinit = zeros<Col<cx_double>>(64*64); // initial estimate of x
     Mat<T1> W;
     W = eye<Mat<T1>>(G.n2,G.n2); // W is the weighting matrix. Sometimes we might want to weight the data inside of pwls,

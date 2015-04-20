@@ -86,7 +86,7 @@ public:
     {
         //mat C = join_vert(C1,C2);
         //double weight = conv_to<double>::from((trans(C*d)*(C*d)));
-        double weight = 1; //Testing to see how slow this line acutally is.
+        double weight = 1.0/d.n_rows; //Testing to see how slow this line acutally is.
         return weight*ones<Col<T1>>(d.n_rows);
     }
     

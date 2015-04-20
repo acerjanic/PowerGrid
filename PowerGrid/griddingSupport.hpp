@@ -88,6 +88,7 @@ void calculateLUT(T1 beta, T1 width, T1 *&LUT, uword &sizeLUT) {
 }
 
 template<typename T1>
+inline
 T1 kernel_value_LUT(T1 dist, const T1 *LUT, uword sizeLUT, T1 width) {    //v is between [0,width/2.0]
 	uword k0;
 	T1 v0;
