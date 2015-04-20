@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 
     //test_FieldCorrection<cx_double,double>("/shared/mrfil-data/dataPowerGridTest/64_64_16_4coils/");
 
-   int test = test_SpeedCompare<cx_double,double>("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/");
+   int test = test_SpeedCompare<cx_double,double>("/shared/mrfil-data/data/PowerGridTest/64_64_16_1coils/");
 
     return 0;
 }
