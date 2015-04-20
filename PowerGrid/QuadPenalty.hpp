@@ -54,14 +54,14 @@ public:
     Col<T1>Cd(const Col<T1>& d) const
     {
 
-        Col<T1> out(Nx*Ny*Nz);
+        Col<T1> out(Nx*Ny*Nz*8);
         uword offset;
         for(uword  ll = 0; ll < 2; ll++) {
             for( uword jj =0; jj < 2; jj++) {
                 for (uword kk = 0; kk < 2; kk++) {
                     offset = ll + jj*Nx + kk*Nx*Ny;
                     for(uword ii = offset; ii < Ny*Nx*Nz; ii++) {
-                        out(ii) = d(ii) - d(ii - offset);
+                        out(ii+((ll+2*jj+4*kk)*(Nx*Ny*Nz))) = d(ii) - d(ii - offset);
                     }
                 }
             }
@@ -71,6 +71,28 @@ public:
         return out;
     }
 
+    Col<T1>Ct(const Col<T1>& d) const
+    {
+
+        Col<T1> out(Nx*Ny*Nz);
+        uword offset;
+        for(uword  ll = 0; ll < 2; ll++) {
+            for( uword jj =0; jj < 2; jj++) {
+                for (uword kk = 0; kk < 2; kk++) {
+                    offset = ll + jj*Nx + kk*Nx*Ny;
+                    for(uword ii = offset; ii < Ny*Nx*Nz; ii++) {
+                        out(ii) += d(ii+((ll+2*jj+4*kk)*(Nx*Ny*Nz)));
+                        out(ii-offset) -= d(ii+((ll+2*jj+4*kk)*(Nx*Ny*Nz)));
+                    }
+                }
+            }
+        }
+
+
+        return out;
+    }
+
+
     double Penalty(const Col<T1>& d) const
     {   Col<T1> x = Cd(d);
         return this->Beta*(pow(this->Cd,2.0))*(this->DeltaX*this->DeltaY*this->DeltaZ);
@@ -78,7 +100,8 @@ public:
 
     Col<T1> Gradient(const Col<T1>& d) const
     {
-        return this->Cd(d)*(this->DeltaX*this->DeltaY*this->DeltaZ);
+       // THIS IS NOT RIGHT: NEEDS HELP!
+        return Ct(this->Cd(d))*(this->DeltaX*this->DeltaY*this->DeltaZ);
     }
 
 
