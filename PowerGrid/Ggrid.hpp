@@ -77,14 +77,15 @@ public:
     //Forward transform operation using gridding
     Col<T1> operator*(const Col<T1>& d) const//Don't change these arguments
     {
+
         //This is just specifying size assuming things are the same size, change as necessary
         //uword dataLength = d.n_rows;
-
+        /*
         Col<T2> FM(ix.n_rows*iy.n_rows);
         Col<T2> t(n2);
         FM.zeros();
         t.zeros();
-
+         */
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
         //Now we grab the data out of armadillo with the memptr() function
@@ -117,6 +118,7 @@ public:
                                realDataPtr, imagDataPtr, Nx, Ny, Nz,
                                gridOS, realXformedDataPtr, imagXformedDataPtr, kernelWidth, beta, LUT, sizeLUT);
 
+
         //To return data, we need to put our data back into Armadillo objects
         //We are telling the object how long it is because it will copy the data back into managed memory
         //realXformedData(realXformedDataPtr, dataLength);
@@ -127,7 +129,7 @@ public:
         Col<T1> XformedData(this->n2);
         XformedData.set_real(realXformedData);
         XformedData.set_imag(imagXformedData);
-        
+
         return conv_to<Col<T1>>::from(XformedData); //Return a vector of type T1
         
     }
@@ -137,12 +139,12 @@ public:
     {
         
         uword dataLength = n2;
-
+        /*
         Col<T2> FM(ix.n_rows*iy.n_rows);
         Col<T2> t(n2);
         FM.zeros();
         t.zeros();
-
+        */
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
         

@@ -565,12 +565,14 @@ zero_pad2d(
 	int dY_dst;
 	int common_index_dst;
 	int common_index_src;
+
+	offsetY = (int)(((T1)imageSizeY*gridOS / 2.0f) - ((T1)imageSizeY / 2.0f));
+	offsetX = (int)(((T1)imageSizeX*gridOS / 2.0f) - ((T1)imageSizeX / 2.0f));
+
 	for (int dY_src=0;dY_src<imageSizeY;dY_src++)
 	{
 		for (int dX_src=0;dX_src<imageSizeX;dX_src++)
 		{
-			offsetY = (int)(((T1)imageSizeY*gridOS / 2.0f) - ((T1)imageSizeY / 2.0f));
-			offsetX = (int)(((T1)imageSizeX*gridOS / 2.0f) - ((T1)imageSizeX / 2.0f));
 
 			dY_dst = dY_src + offsetY;
 			dX_dst = dX_src + offsetX;
@@ -606,16 +608,17 @@ zero_pad3d(
 	int common_index_dst;
 	int common_index_src;
 
-	for (int dZ_src = 0; dZ_src < imageSizeY; dZ_src++)
-	{
-		for (int dY_src = 0; dY_src < imageSizeX; dY_src++)
-		{
-			for (int dX_src = 0; dX_src < imageSizeZ; dX_src++)
-			{
-				offsetY = (int)(((float)imageSizeY*gridOS / 2.0f) - ((float)imageSizeY / 2.0f));
-				offsetX = (int)(((float)imageSizeX*gridOS / 2.0f) - ((float)imageSizeX / 2.0f));
-				offsetZ = (int)(((float)imageSizeZ*gridOS / 2.0f) - ((float)imageSizeZ / 2.0f));
 
+	offsetY = (int)(((float)imageSizeY*gridOS / 2.0f) - ((float)imageSizeY / 2.0f));
+	offsetX = (int)(((float)imageSizeX*gridOS / 2.0f) - ((float)imageSizeX / 2.0f));
+	offsetZ = (int)(((float)imageSizeZ*gridOS / 2.0f) - ((float)imageSizeZ / 2.0f));
+
+	for (int dZ_src = 0; dZ_src < imageSizeZ; dZ_src++)
+	{
+		for (int dY_src = 0; dY_src < imageSizeY; dY_src++)
+		{
+			for (int dX_src = 0; dX_src < imageSizeX; dX_src++)
+			{
 				dY_dst = dY_src + offsetY;
 				dX_dst = dX_src + offsetX;
 				dZ_dst = dZ_src + offsetZ;
@@ -627,6 +630,7 @@ zero_pad3d(
 			}
 		}
 	}
+
 }
 /*
 void

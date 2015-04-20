@@ -14,7 +14,7 @@
 using namespace arma;
 
 template<typename T1,typename T2>
-void test_3D(string dataPath)
+int test_3D(string dataPath)
 {
     string testPath = dataPath;
 
@@ -23,24 +23,26 @@ void test_3D(string dataPath)
     uword Nz =16;
 
     //Setup image space coordinates/trajectory
-    Mat<T2> ix(Nx,Ny,Nz);
-    Mat<T2> iy(Nx,Ny,Nz);
-    Mat<T2> iz(Nx,Ny,Nz);
-    Mat<T2> FM(Nx,Ny,Nz);
+    Cube<T2> ix(Nx,Ny,Nz);
+    Cube<T2> iy(Nx,Ny,Nz);
+    Cube<T2> iz(Nx,Ny,Nz);
+    Col<T2> FM;
+    Col<T1> SMap;
     
     ix.zeros();
     iy.zeros();
     iz.zeros();
-    FM.zeros();
     
     //generate the image space cordinates of the voxels we want to reconstruct
     // after vectorizing ix and iy the image coordinates must match the Field and SENSe map image coordinates
-    for(uword ii = 0; ii < 64; ii++) { //y
-        for (uword jj = 0; jj < 64; jj++) { //x
+    for(uword ii = 0; ii < Ny; ii++) { //y
+        for (uword jj = 0; jj < Nx; jj++) { //x
+            for (uword kk = 0; kk < Nz; kk++) { //z
 
-            ix(ii,jj) = ((T2)jj-32.0)/64.0;
-            iy(ii,jj) = ((T2)ii-32.0)/64.0;
-
+                ix(ii, jj, kk) = ((T2) jj - (T2) Nx / 2.0) / ((T2) Nx);
+                iy(ii, jj, kk) = ((T2) ii - (T2) Ny / 2.0) / ((T2) Ny);
+                iz(ii, jj, kk) = ((T2) kk - (T2) Nz / 2.0) / ((T2) Nz);
+            }
         }
     }
 
@@ -57,39 +59,52 @@ void test_3D(string dataPath)
     Col<T2> tvec;
     loadmat(testPath+"t.mat","t",&tvec);
     
-    uword L = 10;
+    uword L = 1;
     loadmat(testPath+"FM.mat","FM",&FM);
+    FM.zeros();
 
     uword nc = 4;
     loadmat(testPath+"SMap.mat","SMap",&SMap);
 
     // Fourier transfrom operator
+    cout << "Initializing Ggrid" << endl;
     Ggrid<T1,T2> G(nro,Nx,Ny,Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
 
     // Field correction operation
+    cout << "Initializing FieldCorrection" << endl;
     FieldCorrection<T1, T2, Ggrid<T1,T2>> A(G,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L);
 
    // Sense operation
+    cout << "Iniitalizing SENSE" << endl;
     SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>> S(A,SMap,nro*nc,Nx*Ny*Nz,nc);
 
     // Variables needed for the recon: Penalty object, num of iterations
-    umat ReconMask;
-    ReconMask.ones(Nx,Ny,Nz);
-    
-    QuadPenalty<T1>R(Nx,Ny,Nz,0,ReconMask);
-    
-    uword niter = 10;
-    Col<T1> xinit = zeros<Col<cx_double>>(Nx,Ny,Nz); // initial estimate of x
-    Mat<T1> W;
-    W = eye<Mat<T1>>(A.n1,A.n1); // Should be the size of k-space data: Is it right?
+    ucube ReconMask(Nx,Ny,Nz);
+    ReconMask.ones();
 
+    cout << "Iniitalizing QuadPenalty" << endl;
+    QuadPenalty<T1>R(Nx,Ny,Nz,0,ReconMask);
+    cout << "QuadPenalty setup successfull" << endl;
+
+    uword niter = 10;
+    Col<T1> xinit(Nx*Ny*Nz); // initial estimate of x
+    xinit.zeros();
+    Mat<T1> W;
+    //W = eye<sp_mat<T1>>(A.n1,A.n1); // Should be the size of k-space data: Is it right?
+    W=1;
+
+    cout << "loading data" << endl;
     Col<T1> data;
     loadmat(testPath+"data.mat","data",&data);
 
     Col<T1> x_t;
+    cout << "heading into PWLS_pcg1" << endl;
     x_t = pwls_pcg1<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
 
     savemat(testPath+"test_3D.mat","img",x_t);
+
+    return 0;
     
 }
+
 #endif

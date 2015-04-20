@@ -76,8 +76,8 @@ Col<T1> test_FieldCorrection()
     // Variables needed for the recon: Penalty object, num of iterations
     umat ReconMask;
     ReconMask.ones(64,64);
-
-    QuadPenalty<T1> R(64, 64, 1, 0, ReconMask);
+    
+    QuadPenalty<T1>R(64,64,1,0,ReconMask);
     
     uword niter = 10;
     Col<T1> xinit = zeros<Col<cx_double>>(64*64); // initial estimate of x

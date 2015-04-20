@@ -943,6 +943,7 @@ computeFd_CPU_Grid(
     //memcpy(gridData_d,gridData,imageNumElems*sizeof(complex<T1>));
 
     // deapodization
+
     if(Nz==1)
     {
         deapodization2d(gridData_d, gridData,
@@ -957,6 +958,7 @@ computeFd_CPU_Grid(
     complex<T1> *gridData_os = new complex<T1>[gridNumElems];
 
     //zero pad
+
     if(Nz==1)
     {
         zero_pad2d(gridData_os, gridData_d,
@@ -964,8 +966,10 @@ computeFd_CPU_Grid(
     }
     else
     {
+
         zero_pad3d(gridData_os, gridData_d,
                    Nx, Ny, Nz, params.gridOS);
+
     }
 
     complex<T1> *gridData_os_d = new complex<T1>[gridNumElems];
@@ -984,6 +988,7 @@ computeFd_CPU_Grid(
     }
 
     // ifftn(gridData):
+
     fftw_plan plan;
     if(Nz==1)
     {
@@ -1001,6 +1006,7 @@ computeFd_CPU_Grid(
     fftw_destroy_plan(plan);
 
     // ifftshift(gridData):
+
     if(Nz==1)
     {
         ifftshift2(gridData_os, gridData_os_d, params.gridSize[0], params.gridSize[1]);

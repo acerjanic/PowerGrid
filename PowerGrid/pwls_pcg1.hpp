@@ -31,9 +31,11 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,Mat<T1> const& W, Col<T
 {
     
     // Initialize projection
-    
+    cout << "initial projections" << endl;
     Col<T1> Ax = A*xInitial;
+    cout << "initial projections" << endl;
     Col<T1> x = xInitial;
+    cout << "initial projections" << endl;
     double oldinprod = 0;
     double gamma = 0.0;
     Col<T1> ddir;
@@ -53,14 +55,18 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,Mat<T1> const& W, Col<T
     double step;
     T1 rdenom;
     double newinprod;
+
+    cout << "beginning CG loops" << endl;
     for (unsigned int ii = 0; ii < niter; ii++)
     {
         // Compute negative gradient
+        cout << "computing negative gradient" << endl;
         ngrad = A / (W * (yi - Ax));
         if (norm_grad(ngrad,yi,W) < 1e-10) {
             cout << "Terminating early due to zero gradient." << endl;
             return x;
         }
+        cout << "computing negative gradient success" << endl;
         pgrad = R.Gradient(x);
         ngrad = ngrad - pgrad;
         // Direction
