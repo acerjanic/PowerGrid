@@ -37,7 +37,7 @@ public:
     // d is the vector of data of type T1, note it is const, so we don't modify it directly rather return another vector of type T1
     Col<T1> operator*(const Col<T1>& d) const {
 
-      Mat<T1> outData = zeros<Mat<T1>>(this->n2,this->nc);
+      Mat<T1> outData = zeros<Mat<T1>>(this->n1,this->nc);
 
         //In SENSE we store coil data using the columns of the data matrix, and we weight the data by the coil sensitivies from the SENSE map
       for (unsigned int ii=0; ii < this->nc; ii++) {
@@ -53,13 +53,15 @@ public:
     //For the adjoint operation, we have to weight the adjoint transform of the coil data by the SENSE map.
     Col<T1> operator/(const Col<T1>& d) const {
 
-      Mat<T1> inData = reshape(d,this->n2,this->nc);
+      Mat<T1> inData = reshape(d,this->n1,this->nc);
 
       Col<T1> outData = zeros<Col<T1>>(this->n2);
-
+        Col<T1> temp;
       for (unsigned int ii=0; ii < this->nc; ii++) {
         Col<T1> data = inData.col(ii);
         outData += this->SMap.col(ii)%((*this->G_obj)/data);
+         // temp = ((*this->G_obj)/data);
+         // savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/coil_img_" + std::to_string(ii) + ".mat","img",temp);
 
       }
 

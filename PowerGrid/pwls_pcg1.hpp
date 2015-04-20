@@ -20,22 +20,21 @@ complex<double> dot_double(const T1 &A, const T2  &B)
 
 template<typename T1>
 inline
-double norm_grad(const T1 &g,const T1 &yi,const Mat<cx_double> &W)
+double norm_grad(const T1 &g,const T1 &yi,const double &W)
 {
     double normGrad = conv_to<double>::from(norm(g) / real(trans(yi) * (W * yi)));
     return normGrad;
+
 }
 
 template<typename T1, typename Tobj, typename Robj>
-Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,Mat<T1> const& W, Col<T1> const& yi, Robj const& R, uword niter)
+Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,double const& W, Col<T1> const& yi, Robj const& R, uword niter)
 {
     
     // Initialize projection
-    cout << "initial projections" << endl;
+
     Col<T1> Ax = A*xInitial;
-    cout << "initial projections" << endl;
     Col<T1> x = xInitial;
-    cout << "initial projections" << endl;
     double oldinprod = 0;
     double gamma = 0.0;
     Col<T1> ddir;
@@ -56,18 +55,17 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,Mat<T1> const& W, Col<T
     T1 rdenom;
     double newinprod;
 
-    cout << "beginning CG loops" << endl;
     for (unsigned int ii = 0; ii < niter; ii++)
     {
         // Compute negative gradient
-        cout << "computing negative gradient" << endl;
         ngrad = A / (W * (yi - Ax));
         if (norm_grad(ngrad,yi,W) < 1e-10) {
             cout << "Terminating early due to zero gradient." << endl;
             return x;
         }
-        cout << "computing negative gradient success" << endl;
+        cout << "penalty grad" << endl;
         pgrad = R.Gradient(x);
+        cout << "penalty grad success" << endl;
         ngrad = ngrad - pgrad;
         // Direction
         cngrad = conj(ngrad);
@@ -98,7 +96,7 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,Mat<T1> const& W, Col<T
         }
         
         // Step size in search direction
-        
+        cout << "foreard projection" << endl;
         Adir = A * ddir;
         WAdir = W * Adir;
         dAWAd = real(dot_double(conj(Adir).eval(),WAdir));

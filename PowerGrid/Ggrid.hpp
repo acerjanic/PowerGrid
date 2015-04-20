@@ -39,6 +39,7 @@ public:
         beta = MRI_PI * std::sqrt((gridOS - 0.5) * (gridOS - 0.5) *
                                   (kernelWidth * kernelWidth * 4.0) /
                                   (gridOS * gridOS) - 0.8);
+
         //Deal with the LUT
         //Generating Look-Up Table
         calculateLUT(beta, kernelWidth, LUT, sizeLUT);
@@ -168,7 +169,6 @@ public:
         computeFH_CPU_Grid<T2>(dataLength, kx.memptr(),  ky.memptr(),  kz.memptr(),
                            realDataPtr, imagDataPtr, Nx, Ny, Nz,
                                gridOS, realXformedDataPtr, imagXformedDataPtr, kernelWidth, beta, LUT, sizeLUT);
-
         /*
         iftCpu<T2>(realXformedDataPtr,imagXformedDataPtr,
                    realDataPtr, imagDataPtr, kx.memptr(),
@@ -186,7 +186,8 @@ public:
         Col<T1> XformedData(n1);
         XformedData.set_real(realXformedData);
         XformedData.set_imag(imagXformedData);
-        
+        savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/ggrid.mat","img",XformedData);
+
         return conv_to<Col<T1>>::from(XformedData); //Return a vector of type T1
         
     }
