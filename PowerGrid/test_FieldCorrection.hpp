@@ -17,7 +17,7 @@ using namespace arma;
 template<typename T1,typename T2>
 Col<T1> test_FieldCorrection(string testPath)
 {
-    string testPath = "/Users/alexcerjanic/Developer/PG/Resources/";
+    //string testPath = "/Users/alexcerjanic/Developer/PG/Resources/";
 
     //Setup image space coordinates/trajectory
     Mat<T2> ix(N,N);

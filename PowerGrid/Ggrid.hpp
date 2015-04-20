@@ -80,7 +80,7 @@ public:
 
         //This is just specifying size assuming things are the same size, change as necessary
         //uword dataLength = d.n_rows;
-        /*
+
         Col<T2> FM(ix.n_rows*iy.n_rows);
         Col<T2> t(n2);
         FM.zeros();
