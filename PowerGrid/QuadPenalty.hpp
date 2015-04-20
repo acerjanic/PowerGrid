@@ -54,7 +54,7 @@ public:
     Col<T1>Cd(const Col<T1>& d) const
     {
 
-        Col<T1> out(Nx*Ny);
+        Col<T1> out(Nx*Ny*Nz);
         uword offset;
         for(uword  ll = 0; ll < 2; ll++) {
             for( uword jj =0; jj < 2; jj++) {

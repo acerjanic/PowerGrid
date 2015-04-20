@@ -39,6 +39,8 @@ namespace arma {
 #include "test_ggrid.hpp"
 #include "FieldCorrection.hpp"
 #include "test_FieldCorrection.hpp"
+#include "test_3D.hpp"
+#include "test_SpeedCompare.hpp"
 
 }
 

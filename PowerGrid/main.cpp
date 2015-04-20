@@ -98,7 +98,8 @@ int main(int argc, char** argv)
     savemat(testPath+"test_FieldCorrection.mat","test_FieldCorrection",out_FieldCorrected);
     */
 
-    test_FieldCorrection<cx_double,double>("/shared/mrfil-data/dataPowerGridTest/64_64_16_4coils/");
+    test_SpeedCompare<cx_double,double>("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/");
+    //test_3D<cx_double,double>("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/");
 
     return 0;
 }
