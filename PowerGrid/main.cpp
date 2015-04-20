@@ -16,11 +16,11 @@ using namespace std; //complex type comes from the STL
 
 int main(int argc, char** argv)
 {
-    /*
-
-    string testPath = "/shared/mrfil-data/jholtrop/repos/PowerGrid/Resources/";
 
 
+    //string testPath = "/Users/alexcerjanic/Developer/PG/Resources/";
+
+/*
     //Create an empty unsized matrix of type real double
     Mat<double> test;
 
@@ -93,13 +93,18 @@ int main(int argc, char** argv)
     kz.zeros();
     //Col<cx_double> out = test_ggrid<cx_double,double>(conv_to<Col<cx_double>>::from(test),kx,ky,kz);
     //savemat(testPath+"testGdft.mat","testGdft",out);
+    */
+    //Col<cx_double> out_FieldCorrected = test_FieldCorrection<cx_double,double>();
+    //savemat(testPath+"test_FieldCorrection.mat","test_FieldCorrection",out_FieldCorrected);
 
-    Col<cx_double> out_FieldCorrected = test_FieldCorrection<cx_double,double>();
+    /*
+    test_FieldCorrection<cx_double,double>();
     savemat(testPath+"test_FieldCorrection.mat","test_FieldCorrection",out_FieldCorrected);
     */
 
-    test_SpeedCompare<cx_double,double>("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/");
-    //test_3D<cx_double,double>("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/");
+    //test_FieldCorrection<cx_double,double>("/shared/mrfil-data/dataPowerGridTest/64_64_16_4coils/");
+
+   int test = test_SpeedCompare<cx_double,double>("/shared/mrfil-data/data/PowerGridTest/64_64_16_1coils/");
 
     return 0;
 }

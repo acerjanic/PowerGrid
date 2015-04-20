@@ -63,8 +63,7 @@ int test_SpeedCompare(string dataPath)
     loadmat(testPath+"FM.mat","FM",&FM);
     FM.zeros();
 
-    uword nc = 4;
-    loadmat(testPath+"SMap.mat","SMap",&SMap);
+
 
     // Fourier transfrom operator
     cout << "Initializing Ggrid" << endl;
@@ -74,21 +73,24 @@ int test_SpeedCompare(string dataPath)
     cout << "Initializing FieldCorrection" << endl;
     FieldCorrection<T1, T2, Ggrid<T1,T2>> A(Gg,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L);
 
-   // Sense operation
-    cout << "Iniitalizing SENSE Ggrid" << endl;
-    SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>> Sg(A,SMap,nro,Nx*Ny*Nz,nc);
-
     cout << "Initializing Gdft" << endl;
     Gdft<T1,T2> Gd(nro,Nx*Ny*Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM),vectorise(tvec));
+/*
+    uword nc = 4;
+    loadmat(testPath+"SMap.mat","SMap",&SMap);
 
     cout << "Iniitalizing SENSE gdft" << endl;
     SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>> Sd(A,SMap,nro,Nx*Ny*Nz,nc);
 
+    // Sense operation
+    cout << "Iniitalizing SENSE Ggrid" << endl;
+    SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>> Sg(A,SMap,nro,Nx*Ny*Nz,nc);
+    */
     cout << "loading data" << endl;
     Col<T1> data;
     loadmat(testPath+"data.mat","data",&data);
 
-    /*
+
     // Variables needed for the recon: Penalty object, num of iterations
     ucube ReconMask(Nx,Ny,Nz);
     ReconMask.ones();
@@ -97,36 +99,48 @@ int test_SpeedCompare(string dataPath)
     QuadPenalty<T1>R(Nx,Ny,Nz,0,ReconMask);
     cout << "QuadPenalty setup successfull" << endl;
 
-    uword niter = 5;
+    uword niter = 10;
     Col<T1> xinit(Nx*Ny*Nz); // initial estimate of x
     xinit.zeros();
     T2 W;
     //W = eye<sp_mat<T1>>(A.n1,A.n1); // Should be the size of k-space data: Is it right?
     W=1.0;
 
-    Col<T1> x_t;
-    cout << "heading into PWLS_pcg1" << endl;
-    x_t = pwls_pcg1<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
+    //Col<T1> x_t;
+    //cout << "heading into PWLS_pcg1" << endl;
+    //x_t = pwls_pcg1<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
     //x_t = S/data;
-    savemat(testPath+"test_3D.mat","img",x_t);*/
-
+    //savemat(testPath+"test_3D.mat","img",x_t);
+/*
+    cout << "Runing adjoint with ggrid" << endl;
     Col<T1> x_Sg_adjoint;
     x_Sg_adjoint = Sg/data;
     savemat(testPath+"test_adjoint_Sggrid.mat","img",x_Sg_adjoint);
 
+    cout << "Runing forward with ggrid" << endl;
     Col<T1> x_Sg_forward;
     x_Sg_forward = Sg*x_Sg_adjoint;
     savemat(testPath+"test_forward_Sggrid.mat","img",x_Sg_forward);
 
+    cout << "Runing adjoint with gdft" << endl;
     Col<T1> x_Sd_adjoint;
     x_Sd_adjoint = Sd/data;
     savemat(testPath+"test_adjoint_Sdft.mat","img",x_Sd_adjoint);
 
+    cout << "Runing forward with gdft" << endl;
     Col<T1> x_Sd_forward;
     x_Sd_forward = Sd*x_Sd_adjoint;
     savemat(testPath+"test_forward_Sdft.mat","img",x_Sd_forward);
 
+    cout << "Runing pwls with ggrid" << endl;
+    Col<T1> test_pwls;
+    test_pwls = pwls_pcg1<T1,  SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, Sg, W, data, R, niter);
+    savemat(testPath+"test_pwls.mat","img",test_pwls);*/
 
+    cout << "Runing pwls with ggrid" << endl;
+    Col<T1> test_pwls;
+    test_pwls = pwls_pcg1<T1,  Ggrid<T1,T2>,QuadPenalty<T1>>(xinit, Gg, W, data, R, niter);
+    savemat(testPath+"test_pwls.mat","img",test_pwls);
 
     return 0;
     
