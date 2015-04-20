@@ -156,7 +156,7 @@ deinterleave_data3d(
 		{
 			for(Y=0; Y<imageY; Y++)
 			{
-				lIndex = Y + Y*imageX + Z*imageY*imageX;
+				lIndex = Y + X*imageY + Z*imageY*imageX;
 				outR_d[lIndex] = src[lIndex].real();
 				outI_d[lIndex] = src[lIndex].imag();
 			}
@@ -528,8 +528,8 @@ crop_center_region3d(
 	{
 		for (int dX_dst = 0; dX_dst < imageSizeX; dX_dst++)
 		{
-    for (int dY_dst = 0; dY_dst < imageSizeY; dY_dst++)
-    {
+			for (int dY_dst = 0; dY_dst < imageSizeY; dY_dst++)
+			{
 
 
     		    offsetY = (int)(((float)gridSizeY / 2.0f) - ((float)imageSizeY / 2.0f));
@@ -566,12 +566,14 @@ zero_pad2d(
 	int dY_dst;
 	int common_index_dst;
 	int common_index_src;
+
+	offsetY = (int)(((T1)imageSizeY*gridOS / 2.0f) - ((T1)imageSizeY / 2.0f));
+	offsetX = (int)(((T1)imageSizeX*gridOS / 2.0f) - ((T1)imageSizeX / 2.0f));
+
 	for (int dY_src=0;dY_src<imageSizeY;dY_src++)
 	{
 		for (int dX_src=0;dX_src<imageSizeX;dX_src++)
 		{
-			offsetY = (int)(((T1)imageSizeY*gridOS / 2.0f) - ((T1)imageSizeY / 2.0f));
-			offsetX = (int)(((T1)imageSizeX*gridOS / 2.0f) - ((T1)imageSizeX / 2.0f));
 
 			dY_dst = dY_src + offsetY;
 			dX_dst = dX_src + offsetX;
@@ -607,27 +609,29 @@ zero_pad3d(
 	int common_index_dst;
 	int common_index_src;
 
-	for (int dZ_src = 0; dZ_src < imageSizeY; dZ_src++)
-	{
-		for (int dY_src = 0; dY_src < imageSizeX; dY_src++)
-		{
-			for (int dX_src = 0; dX_src < imageSizeZ; dX_src++)
-			{
-				offsetY = (int)(((float)imageSizeY*gridOS / 2.0f) - ((float)imageSizeY / 2.0f));
-				offsetX = (int)(((float)imageSizeX*gridOS / 2.0f) - ((float)imageSizeX / 2.0f));
-				offsetZ = (int)(((float)imageSizeZ*gridOS / 2.0f) - ((float)imageSizeZ / 2.0f));
 
+	offsetY = (int)(((float)imageSizeY*gridOS / 2.0f) - ((float)imageSizeY / 2.0f));
+	offsetX = (int)(((float)imageSizeX*gridOS / 2.0f) - ((float)imageSizeX / 2.0f));
+	offsetZ = (int)(((float)imageSizeZ*gridOS / 2.0f) - ((float)imageSizeZ / 2.0f));
+
+	for (int dZ_src = 0; dZ_src < imageSizeZ; dZ_src++)
+	{
+		for (int dY_src = 0; dY_src < imageSizeY; dY_src++)
+		{
+			for (int dX_src = 0; dX_src < imageSizeX; dX_src++)
+			{
 				dY_dst = dY_src + offsetY;
 				dX_dst = dX_src + offsetX;
 				dZ_dst = dZ_src + offsetZ;
 
-				common_index_dst = dZ_dst*imageSizeX*imageSizeY*gridOS*gridOS + dY_dst*imageSizeX*gridOS + dX_dst;
-				common_index_src = dZ_src*imageSizeX*imageSizeY   + dY_src*imageSizeX  + dX_src;
+				common_index_dst = dZ_dst*imageSizeX*imageSizeY*gridOS*gridOS + dX_dst*imageSizeY*gridOS + dY_dst;
+				common_index_src = dZ_src*imageSizeX*imageSizeY   + dX_src*imageSizeY  + dY_src;
 
 				dst[common_index_dst]= src[common_index_src];
 			}
 		}
 	}
+
 }
 /*
 void
@@ -684,6 +688,7 @@ cuda_fft3shift_grid(
 
 
 //Circshift routines for fftshift.
+//Are the X and Y references correct?
 template<typename T>
 void circshift2(T *__restrict out, const T *__restrict in, int xdim, int ydim, int xshift, int yshift) {
 	int ii, jj, kk;
@@ -706,7 +711,7 @@ void circshift3(T *__restrict out, const T *__restrict in, int xdim, int ydim, i
 			jj = (y + yshift) % ydim;
 			for (int z = 0; z < zdim; z++) {
 				kk = (z + zshift) % zdim;
-				out[ii + jj * xdim + kk * xdim * ydim] = in[x + y * xdim + z * xdim * ydim];
+				out[jj + ii * ydim + kk * xdim * ydim] = in[y + x * ydim + z * xdim * ydim];
 			}
 		}
 	}

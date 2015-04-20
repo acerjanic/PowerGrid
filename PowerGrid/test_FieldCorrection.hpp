@@ -15,7 +15,7 @@
 using namespace arma;
 
 template<typename T1,typename T2>
-Col<T1> test_FieldCorrection()
+Col<T1> test_FieldCorrection(string testPath)
 {
     string testPath = "/Users/alexcerjanic/Developer/PG/Resources/";
 

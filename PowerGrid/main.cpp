@@ -101,6 +101,9 @@ int main(int argc, char** argv)
     test_FieldCorrection<cx_double,double>();
     savemat(testPath+"test_FieldCorrection.mat","test_FieldCorrection",out_FieldCorrected);
     */
-     return 0;
+
+    test_FieldCorrection<cx_double,double>("/shared/mrfil-data/dataPowerGridTest/64_64_16_4coils/");
+
+    return 0;
 }
 

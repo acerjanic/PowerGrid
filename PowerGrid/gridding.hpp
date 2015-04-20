@@ -210,16 +210,15 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
         //	   shiftedKz = 0.0f;
         //	if(shiftedKz > ((float)gridOS)*((float)Nz));
         //	   shiftedKz = ((float)gridOS)*((float)Nz);
-        
-        
+
         NxL = (int)(fmax(0.0f,std::ceil(shiftedKx - kernelWidth*(gridOS)/2.0f)));
-        NxH = (int)(fmin((gridOS*(T1)Nx-1.0f),std::floor(shiftedKx + kernelWidth*((float)gridOS)/2.0f)));
-        
+        NxH = (int)(fmin((gridOS*(T1)Nx-1.0f),std::floor(shiftedKx + kernelWidth*(gridOS)/2.0f)));
+
         NyL = (int)(fmax(0.0f,std::ceil(shiftedKy - kernelWidth*(gridOS)/2.0f)));
-        NyH = (int)(fmin((gridOS*(T1)Ny-1.0f),std::floor(shiftedKy + kernelWidth*((float)gridOS)/2.0f)));
-        
+        NyH = (int)(fmin((gridOS*(T1)Ny-1.0f),std::floor(shiftedKy + kernelWidth*(gridOS)/2.0f)));
+
         NzL = (int)(fmax(0.0f,std::ceil(shiftedKz - kernelWidth*(gridOS)/2.0f)));
-        NzH = (int)(fmin((gridOS*(T1)Nz-1.0f),std::floor(shiftedKz + kernelWidth*((float)gridOS)/2.0f)));
+        NzH = (int)(fmin((gridOS*(T1)Nz-1.0f),std::floor(shiftedKz + kernelWidth*(gridOS)/2.0f)));
 
         for(nz=NzL; nz<=NzH; ++nz)
         {
@@ -232,6 +231,10 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
                 kbZ = bessi0(beta * std::sqrt(1.0 - (2.0 * distZ / kernelWidth) * (2.0 * distZ / kernelWidth))) /
                       kernelWidth;
 
+            }
+
+            if (kbZ != kbZ) {//if kbY = NaN
+                kbZ = 0;
             }
             for(nx=NxL; nx<=NxH; ++nx)
             {
@@ -273,7 +276,7 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
                     w = kbX * kbY * kbZ;
 
                     /* grid data */
-                    idx = ny + (nx)*params.gridSize[0] + (nz)*params.gridSize[0]*params.gridSize[1];
+                    idx = ny + (nx)*params.gridSize[1] + (nz)*params.gridSize[0]*params.gridSize[1];
                     //gridData[idx].x += (w*pt.real*atm);
                     //gridData[idx].y += (w*pt.imag*atm);
                     gridData[idx].real(gridData[idx].real()+w*pt.real);
@@ -286,7 +289,7 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
             }
         }
     }
-    
+
     // re-arrange dimensions and output
     // Nady uses: x->y->z
     // IMPATIENT uses: z->x->y
@@ -525,6 +528,10 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
                       kernelWidth;
 
             }
+
+            if (kbZ != kbZ) {//if kbY = NaN
+                kbZ = 0;
+            }
             for(nx=NxL; nx<=NxH; ++nx)
             {
                 distX = fabs(shiftedKx - ((T1) nx)) / (gridOS);
@@ -610,7 +617,7 @@ computeFH_CPU_Grid(
                    T1 gridOS, T1 *__restrict outR_d, T1 *__restrict outI_d, const T1 kernelWidth, const T1 beta,
                    const T1 *LUT, const uword sizeLUT)
 {
-    
+
     /*
      *  Based on Eqn. (5) of Beatty's gridding paper:
      *  "Rapid Gridding Reconstruction With a Minimal Oversampling Ratio"
@@ -695,7 +702,6 @@ computeFH_CPU_Grid(
         gridOS = 4.0f * std::ceil((gridOS * (T1)Nz) / 4.0f) / (T1) Nz;
     }
     // */
-    
     int gridNumElems  = params.gridSize[0] *
     params.gridSize[1] *
     params.gridSize[2] ;
@@ -729,8 +735,10 @@ computeFH_CPU_Grid(
     {
         gridding_Gold_3D<T1>(n, params, beta, samples, LUT, sizeLUT,
                          gridData, sampleDensity);
+
     }
-    cx_vec temp(gridData,gridNumElems);
+    //cx_vec temp(gridData,gridNumElems);
+    //savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/gridData.mat","img",temp);
 
     complex<T1> *gridData_d = new complex<T1>[gridNumElems];
     //memcpy(gridData_d,gridData,gridNumElems*sizeof(complex<T1>));
@@ -744,6 +752,8 @@ computeFH_CPU_Grid(
     {
         ifftshift3(gridData_d,gridData,params.gridSize[0],params.gridSize[1],params.gridSize[2]);
     }
+    //cx_vec temp2(gridData_d,gridNumElems);
+    //savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/ifftshiftData.mat","img",temp2);
 
     // ifftn(gridData):
     fftw_plan plan;
@@ -754,14 +764,13 @@ computeFH_CPU_Grid(
     }
     else
     {
-        plan = fftw_plan_dft_3d(params.gridSize[0],
-                                params.gridSize[1], params.gridSize[2], (fftw_complex *)gridData_d, (fftw_complex *)gridData_d, FFTW_BACKWARD, FFTW_ESTIMATE);
+        plan = fftw_plan_dft_3d(params.gridSize[2],
+                                params.gridSize[1], params.gridSize[0], (fftw_complex *)gridData_d, (fftw_complex *)gridData_d, FFTW_BACKWARD, FFTW_ESTIMATE);
     }
 
     /* Inverse transform 'gridData_d' in place. */
     fftw_execute(plan);
     fftw_destroy_plan(plan);
-
     // fftshift(gridData):
     if(Nz==1)
     {
@@ -774,7 +783,7 @@ computeFH_CPU_Grid(
                             params.gridSize[1], params.gridSize[2]);
     }
 
-    complex<T1> *gridData_crop_d = new complex<T1>[gridNumElems];
+    complex<T1> *gridData_crop_d = new complex<T1>[imageNumElems];
     //memcpy(gridData_crop_d,gridData_d,gridNumElems*sizeof(complex<T1>));
     // crop the center region of the "image".
     if(Nz==1)
@@ -788,7 +797,6 @@ computeFH_CPU_Grid(
                              params.imageSize[0], params.imageSize[1], params.imageSize[2],
                              params.gridSize[0], params.gridSize[1], params.gridSize[2]);
     }
-
     // deapodization
     if(Nz==1)
     {
@@ -821,6 +829,7 @@ computeFH_CPU_Grid(
     delete(gridData_d);
     delete(sampleDensity);
     delete(gridData_crop_d);
+
 }
 //Calculates the gridded forward fourier transform
 template<typename T1>
@@ -943,6 +952,7 @@ computeFd_CPU_Grid(
     //memcpy(gridData_d,gridData,imageNumElems*sizeof(complex<T1>));
 
     // deapodization
+
     if(Nz==1)
     {
         deapodization2d(gridData_d, gridData,
@@ -957,6 +967,7 @@ computeFd_CPU_Grid(
     complex<T1> *gridData_os = new complex<T1>[gridNumElems];
 
     //zero pad
+
     if(Nz==1)
     {
         zero_pad2d(gridData_os, gridData_d,
@@ -964,8 +975,10 @@ computeFd_CPU_Grid(
     }
     else
     {
+
         zero_pad3d(gridData_os, gridData_d,
                    Nx, Ny, Nz, params.gridOS);
+
     }
 
     complex<T1> *gridData_os_d = new complex<T1>[gridNumElems];
@@ -984,6 +997,7 @@ computeFd_CPU_Grid(
     }
 
     // ifftn(gridData):
+
     fftw_plan plan;
     if(Nz==1)
     {
@@ -992,8 +1006,8 @@ computeFd_CPU_Grid(
     }
     else
     {
-        plan = fftw_plan_dft_3d(params.gridSize[0],
-                                params.gridSize[1], params.gridSize[2], (fftw_complex *)gridData_os_d, (fftw_complex *)gridData_os_d, FFTW_FORWARD, FFTW_ESTIMATE);
+        plan = fftw_plan_dft_3d(params.gridSize[2],
+                                params.gridSize[1], params.gridSize[0], (fftw_complex *)gridData_os_d, (fftw_complex *)gridData_os_d, FFTW_FORWARD, FFTW_ESTIMATE);
     }
 
     /* Inverse transform 'gridData_d' in place. */
@@ -1001,6 +1015,7 @@ computeFd_CPU_Grid(
     fftw_destroy_plan(plan);
 
     // ifftshift(gridData):
+
     if(Nz==1)
     {
         ifftshift2(gridData_os, gridData_os_d, params.gridSize[0], params.gridSize[1]);
