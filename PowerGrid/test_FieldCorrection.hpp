@@ -14,9 +14,8 @@
 using namespace arma;
 
 template<typename T1,typename T2>
-Col<T1> test_FieldCorrection()
+Col<T1> test_FieldCorrection(string testPath)
 {
-    string testPath = "/shared/mrfil-data/jholtrop/repos/PowerGrid/Resources/";
 
     //Setup image space coordinates/trajectory
     Mat<T2> ix(64,64);
