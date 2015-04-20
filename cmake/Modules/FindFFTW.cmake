@@ -15,9 +15,10 @@ set(FFTW_INCLUDE_DIR $ENV{FFTW_INC})
 set(FFTW_LIBRARIES $ENV{FFTW_DIR}/libfftw3.a)
 else()
 find_path(FFTW_INCLUDE_DIR fftw3.h)
-set(FFTW_INCLUDE_DIRS ${FFTW_INCLUDE_DIR})
+find_library(FFTW_LIBRARIES NAMES fftw3)
 endif(NOT $ENV{FFTW_DIR})
 
+set(FFTW_INCLUDE_DIRS ${FFTW_INCLUDE_DIR})
 
 # handle the QUIETLY and REQUIRED arguments and set FFTW_FOUND to TRUE if
 # all listed variables are TRUE
