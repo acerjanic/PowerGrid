@@ -101,7 +101,7 @@ public:
     Col<T1> Gradient(const Col<T1>& d) const
     {
        // THIS IS NOT RIGHT: NEEDS HELP!
-        return Ct(this->Cd(d))*(this->DeltaX*this->DeltaY*this->DeltaZ);
+        return 2*Beta*Ct(this->Cd(d))*(this->DeltaX*this->DeltaY*this->DeltaZ);
     }
 
 
