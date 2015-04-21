@@ -15,9 +15,14 @@ using namespace std; //complex type comes from the STL
 
 
 int main(int argc, char** argv)
-{
-
-
+{  string testPath;
+   if (argc > 1) {
+     testPath = std::string(argv[1]);	
+   } else {
+      cout << "Enter a path to find test files." << endl;
+      return -1;
+   }
+  
     //string testPath = "/Users/alexcerjanic/Developer/PG/Resources/";
 
 /*
@@ -104,7 +109,7 @@ int main(int argc, char** argv)
 
     //test_FieldCorrection<cx_double,double>("/shared/mrfil-data/dataPowerGridTest/64_64_16_4coils/");
 
-   int test = test_SpeedCompare<cx_double,double>("/shared/mrfil-data/data/PowerGridTest/64_64_16_1coils/");
+    int test = test_SpeedCompare<cx_double,double>(testPath);
 
     return 0;
 }
