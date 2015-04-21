@@ -11,8 +11,10 @@
 
 #include "fftw3.h"
 #ifdef _OPENACC
+#include "openacc.h"
 #include "accelmath.h"
 #endif
+
 using namespace arma;
 
 
@@ -38,6 +40,7 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
     
     T1 shiftedKx, shiftedKy/*, shiftedKz*/;
     T1 distX, kbX, distY, kbY/*, distZ, kbZ*/;
+    T1 *__restrict pGData;
     
     T1 kernelWidth = params.kernelWidth;
     //T1 beta = 18.5547;
@@ -47,9 +50,11 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
     unsigned int Ny = params.imageSize[1];
     //unsigned int Nz = params.imageSize[2];
     
+    pGData = reinterpret_cast<T1 *>(gridData);
     //Jiading GAI
     //float t0 = t[0];
-#pragma acc parallel loop
+    
+    #pragma acc parallel loop gang vector copy(sampleDensity[0:n], pGData[0:n*2])
     for (unsigned int i=0; i < n; i++)
     {
         ReconstructionSample<T1> pt = sample[i];
@@ -115,18 +120,30 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
                 /* kernel weighting value */
                 //if (params.useLUT){
                 //    w = kbX * kbY;
-                //} else {
+                //} else
 
                 w = kbX * kbY;
                 
                 /* grid data */
                 idx = ny + (nx)*params.gridSize[1]/* + (nz)*gridOS*Nx*gridOS*Ny*/;
+
+                #pragma acc atomic update
+                pGData[2*idx] += w*pt.real;
+                // atomicAdd(pGData+2*idx, w*pt.real);
+
+                #pragma acc atomic update
+                pGData[2*idx+1] += w*pt.imag;
+                // atomicAdd(pGData+2*idx+1, w*pt.imag);
+
+                //gridData[idx].y += (w*pt.imag*atm);
                 //gridData[idx].x += (w*pt.real*atm);
                 //gridData[idx].y += (w*pt.imag*atm);
-                gridData[idx].real(gridData[idx].real()+w*pt.real);
-                gridData[idx].imag(gridData[idx].imag()+w*pt.imag);
+                //gridData[idx].real(gridData[idx].real()+w*pt.real);
+                //gridData[idx].imag(gridData[idx].imag()+w*pt.imag);
                 /* estimate sample density */
+                #pragma acc atomic update
                 sampleDensity[idx] += w;
+                //atomicAdd(sampleDensity+idx, w);
             }
         }
     }
@@ -177,6 +194,7 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
     
     T1 shiftedKx, shiftedKy, shiftedKz;
     T1 distX, kbX, distY, kbY, distZ, kbZ;
+    T1 *__restrict pGData;
     
     T1 kernelWidth = params.kernelWidth;
     //T1 beta = 18.5547;
@@ -188,7 +206,9 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
     
     //Jiading GAI
     //float t0 = t[0];
-#pragma acc parallel loop
+    pGData = reinterpret_cast<T1 *>(gridData);
+    
+    #pragma acc parallel loop gang vector copy(sampleDensity[0:n], pGData[0:n*2])
     for (unsigned int i=0; i < n; i++)
     {
         ReconstructionSample<T1> pt = sample[i];
@@ -279,13 +299,19 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
 
                     /* grid data */
                     idx = ny + (nx)*params.gridSize[1] + (nz)*params.gridSize[0]*params.gridSize[1];
+                    #pragma acc atomic update
+                    pGData[2*idx] += w*pt.real;
+
+                    #pragma acc atomic update
+                    pGData[2*idx+1] += w*pt.imag;
+
                     //gridData[idx].x += (w*pt.real*atm);
                     //gridData[idx].y += (w*pt.imag*atm);
-                    gridData[idx].real(gridData[idx].real()+w*pt.real);
-                    gridData[idx].imag(gridData[idx].imag()+w*pt.imag);
-                    
+                    //gridData[idx].real(gridData[idx].real()+w*pt.real);
+                    //gridData[idx].imag(gridData[idx].imag()+w*pt.imag);
                     
                     /* estimate sample density */
+                    #pragma acc atomic update
                     sampleDensity[idx] += w;
                 }
             }
@@ -349,7 +375,7 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
 
     //Jiading GAI
     //float t0 = t[0];
-    #pragma acc parallel loop
+
     for (unsigned int i=0; i < n; i++)
     {
         complex<T1> pt = sample[i];
@@ -483,7 +509,7 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
 
     //Jiading GAI
     //float t0 = t[0];
-    #pragma acc parallel loop
+
     for (unsigned int i=0; i < n; i++)
     {
         complex<T1> pt = sample[i];
