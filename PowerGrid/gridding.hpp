@@ -10,7 +10,9 @@
 #define PowerGrid_gridding_hpp
 
 #include "fftw3.h"
-
+#ifdef _OPENACC
+#include "accelmath.h"
+#endif
 using namespace arma;
 
 
@@ -47,7 +49,7 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
     
     //Jiading GAI
     //float t0 = t[0];
-    
+#pragma acc parallel loop
     for (unsigned int i=0; i < n; i++)
     {
         ReconstructionSample<T1> pt = sample[i];
@@ -186,7 +188,7 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
     
     //Jiading GAI
     //float t0 = t[0];
-    
+#pragma acc parallel loop
     for (unsigned int i=0; i < n; i++)
     {
         ReconstructionSample<T1> pt = sample[i];
@@ -347,7 +349,7 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
 
     //Jiading GAI
     //float t0 = t[0];
-    #pramga acc parallel loop
+    #pragma acc parallel loop
     for (unsigned int i=0; i < n; i++)
     {
         complex<T1> pt = sample[i];
@@ -481,7 +483,7 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
 
     //Jiading GAI
     //float t0 = t[0];
-
+    #pragma acc parallel loop
     for (unsigned int i=0; i < n; i++)
     {
         complex<T1> pt = sample[i];
