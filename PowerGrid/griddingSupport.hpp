@@ -67,7 +67,7 @@ T1 bessi0(T1 x)
 template<typename T1>
 void calculateLUT(T1 beta, T1 width, T1 *&LUT, uword &sizeLUT) {
 	T1 v;
-	T1 _width2_4 = (width*width)/4.0;
+	//T1 _width2_4 = (width*width)/4.0;
 
 	if(width > 0){
 		// compute size of LUT based on kernel width
@@ -91,7 +91,7 @@ template<typename T1>
 inline
 T1 kernel_value_LUT(T1 dist, const T1 *LUT, uword sizeLUT, T1 width) {    //v is between [0,width/2.0]
 	uword k0;
-	T1 v0;
+	//T1 v0;
 	T1 _width2_4 = 4.0 / (width * width); //Reciprocal of _width2_4 from calculateLUT function
 
 	k0 = (uword)((dist * dist * _width2_4) * (T1) sizeLUT);
@@ -230,7 +230,7 @@ deapodization2d(
 {
 //    assert( (!(imageX%2) && !(imageY%2)) ); //<< CHECK EVEN
     
-    int imageNumElems = imageX * imageY;
+    //int imageNumElems = imageX * imageY;
 
 	int Y;
 	int X;
@@ -358,7 +358,7 @@ deapodization3d(
 	int Y;
 	int X;
 
-    int imageNumElems = imageX * imageY * imageZ;
+    //int imageNumElems = imageX * imageY * imageZ;
 
     T1 gridKernelZ;
 	T1 gridKernelX;
@@ -373,7 +373,7 @@ deapodization3d(
 	T1 common_exprZ1;
 
 	T1 gridOS3;
-	int common_index;
+	//int common_index;
     for (Z=0;Z<imageZ;Z++)
     {
 		for (X=0;X<imageX;X++)
@@ -691,7 +691,7 @@ cuda_fft3shift_grid(
 //Are the X and Y references correct?
 template<typename T>
 void circshift2(T *__restrict out, const T *__restrict in, int xdim, int ydim, int xshift, int yshift) {
-	int ii, jj, kk;
+	int ii, jj;
 	for (int x = 0; x < xdim; x++) {
 		ii = (x + xshift) % xdim;
 		for (int y = 0; y < ydim; y++) {
