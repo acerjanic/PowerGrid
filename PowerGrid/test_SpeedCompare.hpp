@@ -139,7 +139,7 @@ int test_SpeedCompare(string dataPath)
 
     cout << "Runing pwls with ggrid" << endl;
     Col<T1> test_pwls;
-    test_pwls = pwls_pcg1<T1,  Gdft<T1,T2>,QuadPenalty<T1>>(xinit, Gd, W, data, R, niter);
+    test_pwls = pwls_pcg1<T1,  Ggrid<T1,T2>,QuadPenalty<T1>>(xinit, Gg, W, data, R, niter);
     savemat(testPath+"test_pwls.mat","img",test_pwls);
 
     return 0;
