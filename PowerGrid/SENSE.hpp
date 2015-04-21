@@ -41,9 +41,8 @@ public:
 
         //In SENSE we store coil data using the columns of the data matrix, and we weight the data by the coil sensitivies from the SENSE map
       for (unsigned int ii=0; ii < this->nc; ii++) {
-        Col<T1> data = d%(this->SMap.col(ii));
 
-        outData.col(ii) = (*this->G_obj)*(data);
+        outData.col(ii) = (*this->G_obj)*(d%(this->SMap.col(ii)));
 
       }
 
@@ -56,10 +55,10 @@ public:
       Mat<T1> inData = reshape(d,this->n1,this->nc);
 
       Col<T1> outData = zeros<Col<T1>>(this->n2);
-        Col<T1> temp;
+
       for (unsigned int ii=0; ii < this->nc; ii++) {
-        Col<T1> data = inData.col(ii);
-        outData += this->SMap.col(ii)%((*this->G_obj)/data);
+
+        outData += conj(this->SMap.col(ii))%((*this->G_obj)/inData.col(ii));
          // temp = ((*this->G_obj)/data);
          // savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/coil_img_" + std::to_string(ii) + ".mat","img",temp);
 

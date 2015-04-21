@@ -73,12 +73,12 @@ public:
 
     //output is the size of the kspace data
       Col<T1> outData = zeros<Mat<T1>>(this->n1);
-
+      Col<T1> Wo;
       //loop through time segments
       for (unsigned int ii=0; ii < this->L; ii++) {
 
     	//apply a phase to each time segment
-		Col<T1> Wo = exp(-i*(this->fieldMap)*((ii)*tau));
+		Wo = exp(-i*(this->fieldMap)*((ii)*tau));
 
 		//perform multiplication by the object and sum up the time segments
 		outData += (this->AA.col(ii))%((*this->obj)*(Wo%d));
@@ -95,12 +95,12 @@ public:
 
        //output is the size of the image
       Col<T1> outData = zeros<Mat<T1>>(this->n2);
-
+      Col<T1> Wo;
       //loop through the time segemtns
       for (unsigned int ii=0; ii < this->L; ii++) {
 
     	//create the phase map for the Lth time segment
-        Col<T1> Wo = exp(i*(this->fieldMap)*((ii)*tau));
+        Wo = exp(i*(this->fieldMap)*((ii)*tau));
 
         //perform adjoint operation by the object and sum up the time segments
         outData +=  Wo%((*this->obj)/(AA.col(ii)%d));

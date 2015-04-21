@@ -75,21 +75,20 @@ int test_SpeedCompare(string dataPath)
 
     cout << "Initializing Gdft" << endl;
     Gdft<T1,T2> Gd(nro,Nx*Ny*Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM),vectorise(tvec));
-/*
+
     uword nc = 4;
     loadmat(testPath+"SMap.mat","SMap",&SMap);
 
     cout << "Iniitalizing SENSE gdft" << endl;
-    SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>> Sd(A,SMap,nro,Nx*Ny*Nz,nc);
+    SENSE<cx_double, Gdft<T1,T2>> Sd(Gd,SMap,nro,Nx*Ny*Nz,nc);
 
     // Sense operation
     cout << "Iniitalizing SENSE Ggrid" << endl;
     SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>> Sg(A,SMap,nro,Nx*Ny*Nz,nc);
-    */
+
     cout << "loading data" << endl;
     Col<T1> data;
     loadmat(testPath+"data.mat","data",&data);
-
 
     // Variables needed for the recon: Penalty object, num of iterations
     ucube ReconMask(Nx,Ny,Nz);
@@ -131,16 +130,17 @@ int test_SpeedCompare(string dataPath)
     Col<T1> x_Sd_forward;
     x_Sd_forward = Sd*x_Sd_adjoint;
     savemat(testPath+"test_forward_Sdft.mat","img",x_Sd_forward);
-
+*/
     cout << "Runing pwls with ggrid" << endl;
     Col<T1> test_pwls;
     test_pwls = pwls_pcg1<T1,  SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, Sg, W, data, R, niter);
-    savemat(testPath+"test_pwls.mat","img",test_pwls);*/
-
+    savemat(testPath+"test_pwls.mat","img",test_pwls);
+/*
     cout << "Runing pwls with ggrid" << endl;
     Col<T1> test_pwls;
     test_pwls = pwls_pcg1<T1,  Gdft<T1,T2>,QuadPenalty<T1>>(xinit, Gd, W, data, R, niter);
     savemat(testPath+"test_pwls.mat","img",test_pwls);
+    */
 
     return 0;
     

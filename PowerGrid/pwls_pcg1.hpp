@@ -76,7 +76,7 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,double const& W, Col<T1
             
         }
         else {
-            if (std::abs(oldinprod) < 1e10) {
+            if (std::abs(oldinprod) < 1e-10) {
                 gamma = 0.0;
             }
             else {
@@ -90,7 +90,7 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,double const& W, Col<T1
         oldinprod = newinprod;
         
         // Check if descent direction
-        if (real(dot_double(ddir, ngrad)) < 0) {
+        if (real(dot_double(conj(ddir), ngrad)) < 0) {
             cout << " Warning descent direction not negative" << endl;
             return x;
         }
