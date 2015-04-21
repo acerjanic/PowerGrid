@@ -178,7 +178,7 @@ template<typename T1>
 int
 gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSample<T1> *__restrict  sample,
                  const T1 *LUT, const uword sizeLUT,
-                 complex<T1> *__restrict  gridData, T1 *__restrict  sampleDensity)
+                 complex<T1> *gridData, T1 *__restrict  sampleDensity)
 {
     unsigned int NxL, NxH;
     unsigned int NyL, NyH;
@@ -194,21 +194,21 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
     
     T1 shiftedKx, shiftedKy, shiftedKz;
     T1 distX, kbX, distY, kbY, distZ, kbZ;
-    T1 *__restrict pGData;
+    T1 * pGData;
     
     T1 kernelWidth = params.kernelWidth;
     //T1 beta = 18.5547;
     T1 gridOS = params.gridOS;
-    
+        
     unsigned int Nx = params.imageSize[0];
     unsigned int Ny = params.imageSize[1];
     unsigned int Nz = params.imageSize[2];
-    
+    unsigned int gridNumElems = params.gridSize[0]*params.gridSize[1]*params.gridSize[2];
     //Jiading GAI
     //float t0 = t[0];
     pGData = reinterpret_cast<T1 *>(gridData);
     
-    #pragma acc parallel loop gang vector copy(sampleDensity[0:n], pGData[0:n*2])
+    #pragma acc parallel loop gang copyin(LUT[0:sizeLUT]) copy(sampleDensity[0:gridNumElems], pGData[0:gridNumElems*2])
     for (unsigned int i=0; i < n; i++)
     {
         ReconstructionSample<T1> pt = sample[i];
@@ -254,10 +254,11 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
                       kernelWidth;
 
             }
-
-            if (kbZ != kbZ) {//if kbY = NaN
+/*
+            if (!std::isnan(kbZ)) {//if kbY = NaN
                 kbZ = 0;
             }
+            */
             for(nx=NxL; nx<=NxH; ++nx)
             {
                 distX = fabs(shiftedKx - ((T1) nx)) / (gridOS);
@@ -270,11 +271,11 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
                           kernelWidth;
 
                 }
-
-                if (kbX != kbX) {//if kbX = NaN
+                /*
+                if (!std::isnan(kbX)) {//if kbX = NaN
                     kbX = 0;
                 }
-
+*/
                 for(ny=NyL; ny<=NyH; ++ny)
                 {
                     distY = fabs(shiftedKy - ((T1) ny)) / (gridOS);
@@ -285,11 +286,11 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
                                 beta * std::sqrt(1.0 - (2.0 * distY / kernelWidth) * (2.0 * distY / kernelWidth))) /
                               kernelWidth;
                     }
-
-                    if (kbY != kbY) {//if kbY = NaN
+/*
+                    if (!std::isnan(kbY)) {//if kbY = NaN
                         kbY = 0;
                     }
-
+*/
                     /* kernel weighting value */
                     //if (params.useLUT){
                     //    w = kbX * kbY;
