@@ -347,7 +347,7 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
 
     //Jiading GAI
     //float t0 = t[0];
-
+    #pramga acc parallel loop
     for (unsigned int i=0; i < n; i++)
     {
         complex<T1> pt = sample[i];
