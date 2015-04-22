@@ -15,12 +15,17 @@ find_package(Armadillo REQUIRED)
 include_directories(${ARMADILLO_INCLUDE_DIRS})
 MESSAGE(${ARMADILLO_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${ARMADILLO_LIBRARIES})
+find_package(Xerces)
+include_directories(${XERCESC_INCLUDE_DIRS})
+set(LIBS ${LIBS} ${XERCESC_LIBRARY})
 
 
 set(POWERGRID_ALL_SOURCES
     ./PowerGrid/main.cpp
     ./PowerGrid/test_pwls_pcg.cpp
+    ./PowerGrid/config.cxx
 )
+
 add_executable(PowerGridMain ${POWERGRID_ALL_SOURCES})
 target_link_libraries(PowerGridMain ${LIBS})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/usr/include")
