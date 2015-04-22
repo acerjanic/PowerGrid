@@ -167,7 +167,7 @@ ftCpu(T1 *kdata_r, T1 *kdata_i,
     
     T1 sumr = 0, sumi = 0, tpi = 0, kzdeltaz = 0, kziztpi = 0,
     expr = 0, cosexpr = 0, sinexpr = 0, t_tpi = 0,
-    kx_N = 0, ky_N = 0, kxtpi = 0, kytpi = 0;
+    kx_N = 0, ky_N = 0, kxtpi = 0, kytpi = 0, kztpi = 0;
     int i = 0, j = 0;
     
     //--------------------------------------------------------------------
@@ -246,7 +246,7 @@ iftCpu(T1 *idata_r, T1 *idata_i,
     
     T1 sumr = 0, sumi = 0, tpi = 0, kzdeltaz = 0, kziztpi = 0,
     expr = 0, cosexpr = 0, sinexpr = 0,
-    itraj_x_tpi = 0, itraj_y_tpi = 0;
+    itraj_x_tpi = 0, itraj_y_tpi = 0, itraj_z_tpi = 0;
     int i = 0, j = 0;
     
     //--------------------------------------------------------------------
