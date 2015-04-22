@@ -18,6 +18,8 @@
 #include "test_pwls_pcg.h"
 #include "impatientTypes.h"
 #include "fftw3.h" //for fft library
+#include "config.hxx"
+#include <memory>
 
 // I throw everything into namespace arma to use the Armadillo objects and functions without arma:: everywhere
 // Maybe I should reevaluate this later...

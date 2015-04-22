@@ -14,13 +14,12 @@
 using namespace arma;
 
 template<typename T1,typename T2>
-int test_SpeedCompare(string dataPath)
-{
+int test_SpeedCompare(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter,uword nc) {
     string testPath = dataPath;
 
-    uword Nx =64;
-    uword Ny =64;
-    uword Nz =16;
+    //uword Nx =64;
+    //uword Ny =64;
+    //uword Nz =16;
 
     //Setup image space coordinates/trajectory
     Cube<T2> ix(Nx,Ny,Nz);
@@ -59,7 +58,7 @@ int test_SpeedCompare(string dataPath)
     Col<T2> tvec;
     loadmat(testPath+"t.mat","t",&tvec);
     
-    uword L = 1;
+    //uword L = 1;
     loadmat(testPath+"FM.mat","FM",&FM);
     FM.zeros();
 
@@ -76,7 +75,7 @@ int test_SpeedCompare(string dataPath)
     cout << "Initializing Gdft" << endl;
     Gdft<T1,T2> Gd(nro,Nx*Ny*Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM),vectorise(tvec));
 
-    uword nc = 4;
+    //uword nc = 4;
     loadmat(testPath+"SMap.mat","SMap",&SMap);
 
     cout << "Iniitalizing SENSE gdft" << endl;
@@ -98,7 +97,7 @@ int test_SpeedCompare(string dataPath)
     QuadPenalty<T1>R(Nx,Ny,Nz,0,ReconMask);
     cout << "QuadPenalty setup successfull" << endl;
 
-    uword niter = 10;
+    //uword niter = 10;
     Col<T1> xinit(Nx*Ny*Nz); // initial estimate of x
     xinit.zeros();
     T2 W;

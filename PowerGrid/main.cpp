@@ -15,13 +15,36 @@ using namespace std; //complex type comes from the STL
 
 
 int main(int argc, char** argv)
-{  string testPath;
-   if (argc > 1) {
-     testPath = std::string(argv[1]);	
-   } else {
+{
+    uword Nx,Ny,Nz,Niter = 1,NL = 1,Ncoils;
+
+
+    string testPath,configPath;
+    if (argc > 1) {
+        testPath = std::string(argv[1]);
+        configPath = testPath+"config.xml";
+    } else {
       cout << "Enter a path to find test files." << endl;
       return -1;
-   }
+    }
+
+    try
+    {
+        unique_ptr<PowerGridConfig_t> cfg(PowerGridConfig(configPath.c_str()));
+
+        Nx = cfg->Nx();
+        Ny = cfg->Ny();
+        Nz = cfg->Nz();
+        NL = cfg->Ntimeseg();
+        Niter = cfg->Niter();
+        Ncoils = cfg->Ncoils();
+
+    }
+    catch (const xml_schema::exception& e)
+    {
+        cerr << e << endl;
+        return 1;
+    }
   
     //string testPath = "/Users/alexcerjanic/Developer/PG/Resources/";
 
@@ -109,7 +132,7 @@ int main(int argc, char** argv)
 
     //test_FieldCorrection<cx_double,double>("/shared/mrfil-data/dataPowerGridTest/64_64_16_4coils/");
 
-    int test = test_SpeedCompare<cx_double,double>(testPath);
+    int test = test_SpeedCompare<cx_double,double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils);
 
     return 0;
 }
