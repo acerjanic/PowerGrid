@@ -24,6 +24,7 @@ public:
     uword n2 = 0; //Image size
     uword L = 0; //number of time segments
     T2 tau;		//time segment length
+    T2 T_min;   // minimum time in the time vector (i.e. TE for spiral out)
     Tobj *obj;
     Col<T2> fieldMap; //Field map (in radians per second)
     Col<T2> timeVec;  //timing vector of when each data point was collected relative to the echo time (in seconds)
@@ -38,11 +39,12 @@ public:
       L = c; //number of time segments
       obj = &G;
       fieldMap = map_in;
-      timeVec = timeVec_in;
+      
       AA.set_size(n1,L); //time segments weights
-      T2 T_min = timeVec.min();
+      T_min = timeVec.min();
       T2 rangt = timeVec.max()-T_min;
       tau = (rangt+datum::eps)/(L-1);
+      timeVec = timeVec_in-T_min;
 
       //Hanning interpolator
       if (L > 1){
@@ -74,11 +76,12 @@ public:
     //output is the size of the kspace data
       Col<T1> outData = zeros<Mat<T1>>(this->n1);
       Col<T1> Wo;
+      
       //loop through time segments
       for (unsigned int ii=0; ii < this->L; ii++) {
 
     	//apply a phase to each time segment
-		Wo = exp(-i*(this->fieldMap)*((ii)*tau));
+		Wo = exp(-i*(this->fieldMap)*((ii)*tau+T_min));
 
 		//perform multiplication by the object and sum up the time segments
 		outData += (this->AA.col(ii))%((*this->obj)*(Wo%d));
@@ -100,7 +103,7 @@ public:
       for (unsigned int ii=0; ii < this->L; ii++) {
 
     	//create the phase map for the Lth time segment
-        Wo = exp(i*(this->fieldMap)*((ii)*tau));
+        Wo = exp(i*(this->fieldMap)*((ii)*tau+T_min));
 
         //perform adjoint operation by the object and sum up the time segments
         outData +=  Wo%((*this->obj)/(AA.col(ii)%d));
