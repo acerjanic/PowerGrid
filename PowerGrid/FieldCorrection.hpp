@@ -41,10 +41,11 @@ public:
       fieldMap = map_in;
       
       AA.set_size(n1,L); //time segments weights
+      timeVec = timeVec_in;
       T_min = timeVec.min();
       T2 rangt = timeVec.max()-T_min;
       tau = (rangt+datum::eps)/(L-1);
-      timeVec = timeVec_in-T_min;
+      timeVec = timeVec - T_min;
 
       //Hanning interpolator
       if (L > 1){
