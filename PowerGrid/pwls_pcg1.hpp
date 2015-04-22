@@ -63,9 +63,7 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,double const& W, Col<T1
             cout << "Terminating early due to zero gradient." << endl;
             return x;
         }
-        cout << "penalty grad" << endl;
         pgrad = R.Gradient(x);
-        cout << "penalty grad success" << endl;
         ngrad = ngrad - pgrad;
         // Direction
         cngrad = conj(ngrad);
@@ -96,7 +94,6 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,double const& W, Col<T1
         }
         
         // Step size in search direction
-        cout << "foreard projection" << endl;
         Adir = A * ddir;
         WAdir = W * Adir;
         dAWAd = real(dot_double(conj(Adir).eval(),WAdir));
