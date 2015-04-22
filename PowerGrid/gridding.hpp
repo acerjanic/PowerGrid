@@ -54,7 +54,7 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
     //Jiading GAI
     //float t0 = t[0];
     
-    #pragma acc parallel loop gang vector copy(sampleDensity[0:n], pGData[0:n*2])
+//    #pragma acc parallel loop gang vector copy(sampleDensity[0:n], pGData[0:n*2])
     for (unsigned int i=0; i < n; i++)
     {
         ReconstructionSample<T1> pt = sample[i];
@@ -127,11 +127,11 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
                 /* grid data */
                 idx = ny + (nx)*params.gridSize[1]/* + (nz)*gridOS*Nx*gridOS*Ny*/;
 
-                #pragma acc atomic update
+   //             #pragma acc atomic update
                 pGData[2*idx] += w*pt.real;
                 // atomicAdd(pGData+2*idx, w*pt.real);
 
-                #pragma acc atomic update
+  //              #pragma acc atomic update
                 pGData[2*idx+1] += w*pt.imag;
                 // atomicAdd(pGData+2*idx+1, w*pt.imag);
 
@@ -141,7 +141,7 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
                 //gridData[idx].real(gridData[idx].real()+w*pt.real);
                 //gridData[idx].imag(gridData[idx].imag()+w*pt.imag);
                 /* estimate sample density */
-                #pragma acc atomic update
+ //               #pragma acc atomic update
                 sampleDensity[idx] += w;
                 //atomicAdd(sampleDensity+idx, w);
             }
@@ -180,18 +180,18 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
                  const T1 *LUT, const uword sizeLUT,
                  complex<T1> *gridData, T1 *__restrict  sampleDensity)
 {
-    unsigned int NxL, NxH;
-    unsigned int NyL, NyH;
-    unsigned int NzL, NzH;
+    int NxL, NxH;
+    int NyL, NyH;
+    int NzL, NzH;
     
-    unsigned int nx;
-    unsigned int ny;
-    unsigned int nz;
+    int nx;
+    int ny;
+    int nz;
     
     int idx;
     
     T1 w;
-    
+
     T1 shiftedKx, shiftedKy, shiftedKz;
     T1 distX, kbX, distY, kbY, distZ, kbZ;
     T1 * pGData;
@@ -200,16 +200,16 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
     //T1 beta = 18.5547;
     T1 gridOS = params.gridOS;
         
-    unsigned int Nx = params.imageSize[0];
-    unsigned int Ny = params.imageSize[1];
-    unsigned int Nz = params.imageSize[2];
-    unsigned int gridNumElems = params.gridSize[0]*params.gridSize[1]*params.gridSize[2];
+    int Nx = params.imageSize[0];
+    int Ny = params.imageSize[1];
+    int Nz = params.imageSize[2];
+    int gridNumElems = params.gridSize[0]*params.gridSize[1]*params.gridSize[2];
     //Jiading GAI
     //float t0 = t[0];
     pGData = reinterpret_cast<T1 *>(gridData);
     
-    #pragma acc parallel loop gang copyin(LUT[0:sizeLUT]) copy(sampleDensity[0:gridNumElems], pGData[0:gridNumElems*2])
-    for (unsigned int i=0; i < n; i++)
+    #pragma acc parallel loop gang vector copyin(LUT[0:sizeLUT]) copy(sampleDensity[0:gridNumElems], pGData[0:gridNumElems*2])
+    for (int i=0; i < n; i++)
     {
         ReconstructionSample<T1> pt = sample[i];
         
@@ -219,7 +219,7 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
         shiftedKx = (gridOS)*(pt.kX+((T1)Nx)/2.0f);
         shiftedKy = (gridOS)*(pt.kY+((T1)Ny)/2.0f);
         shiftedKz = (gridOS)*(pt.kZ+((T1)Nz)/2.0f);
-        
+
         //	if(shiftedKx < 0.0f)
         //	   shiftedKx = 0.0f;
         //	if(shiftedKx > ((float)gridOS)*((float)Nx));
@@ -241,60 +241,54 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
 
         NzL = (int)(fmax(0.0f,std::ceil(shiftedKz - kernelWidth*(gridOS)/2.0f)));
         NzH = (int)(fmin((gridOS*(T1)Nz-1.0f),std::floor(shiftedKz + kernelWidth*(gridOS)/2.0f)));
-
+        #pragma acc loop independent seq
         for(nz=NzL; nz<=NzH; ++nz)
         {
+            int k0;
             distZ = fabs(shiftedKz - ((T1)nz))/(gridOS);
             if (params.useLUT) {
-                kbZ = kernel_value_LUT(distZ, LUT, sizeLUT, kernelWidth);
-                //cout << "KBX = " << kbX << endl;
-
+              // kbZ = kernel_value_LUT(distZ, LUT, sizeLUT, kernelWidth);
+              k0 = (int)((distZ*distZ*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+              if (k0 >= sizeLUT)
+                kbZ = 0.0;
+              else
+                kbZ = LUT[k0];
             } else {
-                kbZ = bessi0(beta * std::sqrt(1.0 - (2.0 * distZ / kernelWidth) * (2.0 * distZ / kernelWidth))) /
-                      kernelWidth;
+                kbZ = bessi0(beta * std::sqrt(1.0 - (2.0 * distZ / kernelWidth) *
+                                               (2.0 * distZ / kernelWidth))) / kernelWidth;
+            }
 
-            }
-/*
-            if (!std::isnan(kbZ)) {//if kbY = NaN
-                kbZ = 0;
-            }
-            */
+            #pragma acc loop seq
             for(nx=NxL; nx<=NxH; ++nx)
             {
                 distX = fabs(shiftedKx - ((T1) nx)) / (gridOS);
                 if (params.useLUT) {
-                    kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
-                    //cout << "KBX = " << kbX << endl;
-
+//                    kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
+                  k0 = (int)((distX*distX*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                  if (k0 >= sizeLUT)
+                    kbX = 0.0;
+                  else
+                    kbX = LUT[k0];
                 } else {
-                    kbX = bessi0(beta * std::sqrt(1.0 - (2.0 * distX / kernelWidth) * (2.0 * distX / kernelWidth))) /
-                          kernelWidth;
+                    kbX = bessi0(beta * std::sqrt(1.0 - (2.0 * distX / kernelWidth) *
+                                            (2.0 * distX / kernelWidth))) / kernelWidth;
+                }
 
-                }
-                /*
-                if (!std::isnan(kbX)) {//if kbX = NaN
-                    kbX = 0;
-                }
-*/
+                #pragma acc loop seq
                 for(ny=NyL; ny<=NyH; ++ny)
                 {
                     distY = fabs(shiftedKy - ((T1) ny)) / (gridOS);
                     if (params.useLUT){
-                        kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
+//                      kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
+                      k0 = (int)((distY*distY*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                      if (k0 >= sizeLUT)
+                        kbY = 0.0;
+                      else
+                        kbY = LUT[k0];
                     } else {
-                        kbY = bessi0(
-                                beta * std::sqrt(1.0 - (2.0 * distY / kernelWidth) * (2.0 * distY / kernelWidth))) /
-                              kernelWidth;
+                        kbY = bessi0(beta * std::sqrt(1.0 - (2.0 * distY / kernelWidth) *
+                                              (2.0 * distY / kernelWidth))) / kernelWidth;
                     }
-/*
-                    if (!std::isnan(kbY)) {//if kbY = NaN
-                        kbY = 0;
-                    }
-*/
-                    /* kernel weighting value */
-                    //if (params.useLUT){
-                    //    w = kbX * kbY;
-                    //} else {
 
                     w = kbX * kbY * kbZ;
 
