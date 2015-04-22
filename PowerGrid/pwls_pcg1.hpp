@@ -20,7 +20,7 @@ complex<double> dot_double(const T1 &A, const T2  &B)
 
 template<typename T1>
 inline
-double norm_grad(const T1 &g,const T1 &yi,const double &W)
+double norm_grad(const Col<T1> &g,const Col<T1> &yi,const double &W)
 {
     double normGrad = conv_to<double>::from(norm(g) / real(trans(yi) * (W * yi)));
     return normGrad;
@@ -59,7 +59,7 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,double const& W, Col<T1
     {
         // Compute negative gradient
         ngrad = A / (W * (yi - Ax));
-        if (norm_grad(ngrad,yi,W) < 1e-10) {
+        if (norm_grad<T1>(ngrad,yi,W) < 1e-10) {
             cout << "Terminating early due to zero gradient." << endl;
             return x;
         }
