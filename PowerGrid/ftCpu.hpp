@@ -175,8 +175,8 @@ ftCpu(T1 *kdata_r, T1 *kdata_i,
     //--------------------------------------------------------------------
     tpi = 2 * MRI_PI;
 
-    kzdeltaz = kz[0] * MRI_DELTAZ;
-    kziztpi  = kz[0] * iz[0] * tpi;
+    //kzdeltaz = kz[0] * MRI_DELTAZ;
+    //kziztpi  = kz[0] * iz[0] * tpi;
 
 
     
@@ -197,7 +197,7 @@ ftCpu(T1 *kdata_r, T1 *kdata_i,
         //ky_N = ky[i] / MRI_NN;
         kxtpi = kx[i] * tpi;
         kytpi = ky[i] * tpi;
-        
+        kztpi = kz[i]  * tpi;
         
 #if USE_OPENMP
 #pragma omp parallel for default(none) reduction(+:sumr, sumi) \
@@ -207,7 +207,7 @@ kziztpi, kx_i, ky_i, kz_i, t, idata_r, idata_i)
 #endif
         T1 myti = t[i];
         for (j = 0; j < num_i; j++) { // j is the pixel point in image-space
-            expr = (kxtpi * ix[j] + kytpi * iy[j] + kziztpi +
+            expr = (kxtpi * ix[j] + kytpi * iy[j] + kztpi * iz[j] +
                     (FM[j] * myti));
 
             cosexpr = cos(expr); sinexpr = sin(expr);
@@ -254,8 +254,8 @@ iftCpu(T1 *idata_r, T1 *idata_i,
     //--------------------------------------------------------------------
     tpi = MRI_PI * 2.0;
 
-    kzdeltaz = kz[0] * MRI_DELTAZ;
-    kziztpi = kz[0] * iz[0] * tpi;
+    //kzdeltaz = kz[0] * MRI_DELTAZ;
+    //kziztpi = kz[0] * iz[0] * tpi;
 
     
     //--------------------------------------------------------------------
@@ -272,6 +272,7 @@ iftCpu(T1 *idata_r, T1 *idata_i,
         
         itraj_x_tpi = ix[j] * tpi;
         itraj_y_tpi = iy[j] * tpi;
+        itraj_z_tpi = iz[j] * tpi;
         
         
 #if USE_OPENMP
@@ -283,7 +284,7 @@ fm, kdata_r, kdata_i)
 	T1 myfmj = FM[j];
         for (i = 0; i < num_k; i++) { // i is the time points in k-space
             expr = (kx[i] * itraj_x_tpi +
-                    ky[i] * itraj_y_tpi + kziztpi +
+                    ky[i] * itraj_y_tpi + kz[i] * itraj_z_tpi +
                     (myfmj * t[i]));
 
             cosexpr = cos(expr); sinexpr = sin(expr);
