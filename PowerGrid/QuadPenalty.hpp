@@ -94,14 +94,14 @@ public:
 
 
     double Penalty(const Col<T1>& d) const
-    {   Col<T1> x = Cd(d);
-        return this->Beta*(pow(this->Cd,2.0))*(this->DeltaX*this->DeltaY*this->DeltaZ);
+    {   
+        return Beta*(pow(Cd(d),2.0))*(DeltaX*DeltaY*DeltaZ);
     }
 
     Col<T1> Gradient(const Col<T1>& d) const
     {
        // THIS IS NOT RIGHT: NEEDS HELP!
-        return 2*Beta*Ct(this->Cd(d))*(this->DeltaX*this->DeltaY*this->DeltaZ);
+        return Beta*Ct(Cd(d))*(DeltaX*DeltaY*DeltaZ);
     }
 
 
