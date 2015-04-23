@@ -111,6 +111,7 @@ iftCpu(T1 *idata_r, T1 *idata_i,
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <accelmath.h>
 
 //#include <tools.h>
 //#include <structures.h>
@@ -166,7 +167,7 @@ ftCpu(T1 *kdata_r, T1 *kdata_i,
     
     T1 sumr = 0, sumi = 0, tpi = 0, kzdeltaz = 0, kziztpi = 0,
     expr = 0, cosexpr = 0, sinexpr = 0, t_tpi = 0,
-    kx_N = 0, ky_N = 0, kxtpi = 0, kytpi = 0;
+    kx_N = 0, ky_N = 0, kxtpi = 0, kytpi = 0, kztpi = 0;
     int i = 0, j = 0;
     
     //--------------------------------------------------------------------
@@ -174,8 +175,8 @@ ftCpu(T1 *kdata_r, T1 *kdata_i,
     //--------------------------------------------------------------------
     tpi = 2 * MRI_PI;
 
-    kzdeltaz = kz[0] * MRI_DELTAZ;
-    kziztpi  = kz[0] * iz[0] * tpi;
+    //kzdeltaz = kz[0] * MRI_DELTAZ;
+    //kziztpi  = kz[0] * iz[0] * tpi;
 
 
     
@@ -186,6 +187,7 @@ ftCpu(T1 *kdata_r, T1 *kdata_i,
 #if 0 //USE_OPENMP // FIXME: We can choose either this or the inner loop.
 #pragma omp parallel for
 #endif
+#pragma acc parallel loop
     for (i = 0; i < num_k; i++) { // i is the time point in k-space
         sumr = 0.0;
         sumi = 0.0;
@@ -195,7 +197,7 @@ ftCpu(T1 *kdata_r, T1 *kdata_i,
         //ky_N = ky[i] / MRI_NN;
         kxtpi = kx[i] * tpi;
         kytpi = ky[i] * tpi;
-        
+        kztpi = kz[i]  * tpi;
         
 #if USE_OPENMP
 #pragma omp parallel for default(none) reduction(+:sumr, sumi) \
@@ -203,11 +205,12 @@ private(expr, cosexpr, sinexpr) \
 shared(i, kx_N, ky_N, kzdeltaz, t_tpi, fm, kxtpi, kytpi, \
 kziztpi, kx_i, ky_i, kz_i, t, idata_r, idata_i)
 #endif
+        T1 myti = t[i];
         for (j = 0; j < num_i; j++) { // j is the pixel point in image-space
-            expr = (kxtpi * ix[j] + kytpi * iy[j] + kziztpi +
-                    (FM[j] * t[i]));
+            expr = (kxtpi * ix[j] + kytpi * iy[j] + kztpi * iz[j] +
+                    (FM[j] * myti));
 
-            cosexpr = std::cos(expr); sinexpr = std::sin(expr);
+            cosexpr = cos(expr); sinexpr = sin(expr);
 
             //cosexpr = cosf(expr); sinexpr = sinf(expr);
 
@@ -243,7 +246,7 @@ iftCpu(T1 *idata_r, T1 *idata_i,
     
     T1 sumr = 0, sumi = 0, tpi = 0, kzdeltaz = 0, kziztpi = 0,
     expr = 0, cosexpr = 0, sinexpr = 0,
-    itraj_x_tpi = 0, itraj_y_tpi = 0;
+    itraj_x_tpi = 0, itraj_y_tpi = 0, itraj_z_tpi = 0;
     int i = 0, j = 0;
     
     //--------------------------------------------------------------------
@@ -251,8 +254,8 @@ iftCpu(T1 *idata_r, T1 *idata_i,
     //--------------------------------------------------------------------
     tpi = MRI_PI * 2.0;
 
-    kzdeltaz = kz[0] * MRI_DELTAZ;
-    kziztpi = kz[0] * iz[0] * tpi;
+    //kzdeltaz = kz[0] * MRI_DELTAZ;
+    //kziztpi = kz[0] * iz[0] * tpi;
 
     
     //--------------------------------------------------------------------
@@ -262,12 +265,14 @@ iftCpu(T1 *idata_r, T1 *idata_i,
 #if 0 //USE_OPENMP // FIXME: We can choose either this or the inner loop.
 #pragma omp parallel for
 #endif
+#pragma acc parallel loop
     for (j = 0; j < num_i; j++) { // j is the pixel points in image-space
         sumr = 0.0;
         sumi = 0.0;
         
         itraj_x_tpi = ix[j] * tpi;
         itraj_y_tpi = iy[j] * tpi;
+        itraj_z_tpi = iz[j] * tpi;
         
         
 #if USE_OPENMP
@@ -276,12 +281,13 @@ private(expr, cosexpr, sinexpr) \
 shared(j, kx, ky, kz, t, kzdeltaz, itraj_x_tpi, itraj_y_tpi, kziztpi, \
 fm, kdata_r, kdata_i)
 #endif
+	T1 myfmj = FM[j];
         for (i = 0; i < num_k; i++) { // i is the time points in k-space
             expr = (kx[i] * itraj_x_tpi +
-                    ky[i] * itraj_y_tpi + kziztpi +
-                    (FM[j] * t[i]));
+                    ky[i] * itraj_y_tpi + kz[i] * itraj_z_tpi +
+                    (myfmj * t[i]));
 
-            cosexpr = std::cos(expr); sinexpr = std::sin(expr);
+            cosexpr = cos(expr); sinexpr = sin(expr);
 
             //cosexpr = cosf(expr); sinexpr = sinf(expr);
 
