@@ -26,6 +26,7 @@ $ENV{XERCESC_INCLUDE_DIR}
 ${XERCESC_INCLUDE_DIR}
  /usr/local/include
  /usr/include
+ /u/staff/arnoldg/PowerGrid/include
 )
 
 IF (XERCESC_STATIC)
@@ -35,6 +36,7 @@ FIND_LIBRARY(XERCESC_LIBRARY NAMES xerces-c_static_3 xerces-c-3.1 xerces-c
  ${XERCESC_LIBRARY_DIR}
  /usr/lib
  /usr/local/lib
+ /u/staff/arnoldg/PowerGrid/lib
 )
 FIND_LIBRARY(XERCESC_LIBRARY_DEBUG NAMES xerces-c_static_3D xerces-c-3.1D
  PATHS
@@ -42,6 +44,7 @@ FIND_LIBRARY(XERCESC_LIBRARY_DEBUG NAMES xerces-c_static_3D xerces-c-3.1D
  ${XERCESC_LIBRARY_DIR}
  /usr/lib
  /usr/local/lib
+ /u/staff/arnoldg/PowerGrid/lib
 )
 ADD_DEFINITIONS( -DXERCES_STATIC_LIBRARY )
 ELSE (XERCESC_STATIC)
@@ -49,11 +52,13 @@ FIND_LIBRARY(XERCESC_LIBRARY NAMES xerces-c_3
  PATHS
  $ENV{XERCESC_LIBRARY_DIR}
  ${XERCESC_LIBRARY_DIR}
+ /u/staff/arnoldg/PowerGrid/lib	
 )
 FIND_LIBRARY(XERCESC_LIBRARY_DEBUG NAMES xerces-c_3D
  PATHS
  $ENV{XERCESC_LIBRARY_DIR}
  ${XERCESC_LIBRARY_DIR}
+ /u/staff/arnoldg/PowerGrid/lib
 )
 ENDIF (XERCESC_STATIC)
 
