@@ -30,7 +30,7 @@ int main(int argc, char** argv)
 
     try
     {
-        unique_ptr<PowerGridConfig_t> cfg(PowerGridConfig(configPath.c_str()));
+        auto_ptr<PowerGridConfig_t> cfg(PowerGridConfig(configPath.c_str()));
 
         Nx = cfg->Nx();
         Ny = cfg->Ny();
