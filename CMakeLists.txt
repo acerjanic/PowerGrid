@@ -20,14 +20,21 @@ include_directories(${XERCESC_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${XERCESC_LIBRARY})
 
 
-set(POWERGRID_ALL_SOURCES
-    ./PowerGrid/main.cpp
-    ./PowerGrid/test_pwls_pcg.cpp
+set(POWERGRID_TEST_GDFT
+    ./PowerGrid/PowerGridGdft.cpp
     ./PowerGrid/config.cxx
 )
 
-add_executable(PowerGridMain ${POWERGRID_ALL_SOURCES})
-target_link_libraries(PowerGridMain ${LIBS})
+set(POWERGRID_TEST_GGRID	
+	./PowerGrid/PowerGridGgrid.cpp
+	./PowerGrid/config.cxx
+)
+add_executable(PowerGridGdft ${POWERGRID_TEST_GDFT})
+add_executable(PowerGridGgrid ${POWERGRID_TEST_GGRID})
+
+target_link_libraries(PowerGridGdft ${LIBS})
+target_link_libraries(PowerGridGgrid ${LIBS})
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/usr/include")
 
 if(CMAKE_COMPILER_IS_GNUCXX)
