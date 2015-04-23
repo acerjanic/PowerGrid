@@ -104,7 +104,7 @@ public:
         //return Beta*Ct(Cd(d))*(DeltaX*DeltaY*DeltaZ);
         Col<T1> tmp;
         tmp.zeros(d.n_elem);
-        return = tmp;
+        return tmp;
     }
 
 
