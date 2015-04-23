@@ -103,7 +103,7 @@ public:
        // THIS IS NOT RIGHT: NEEDS HELP!
         //return Beta*Ct(Cd(d))*(DeltaX*DeltaY*DeltaZ);
         Col<T1> tmp;
-        tmp.zeros(d.nelem);
+        tmp.zeros(d.n_elem);
         return = tmp;
     }
 
