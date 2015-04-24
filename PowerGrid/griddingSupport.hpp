@@ -73,15 +73,18 @@ void calculateLUT(T1 beta, T1 width, T1 *&LUT, uword &sizeLUT) {
 		// compute size of LUT based on kernel width
 		sizeLUT = (uword)(10000 * width);
 		// allocate memory
-		LUT = (T1*) malloc (sizeLUT*sizeof(T1));
 
-		for(unsigned int k=0; k<sizeLUT; ++k){
+		LUT = (T1*) malloc (sizeLUT*sizeof(T1));
+		//#pragma acc enter data create(LUT[0:sizeLUT])
+
+
+		for(int k=0; k<sizeLUT; ++k){
 			// compute value to evaluate kernel at
 			// v in the range 0:(_width/2)^2
 			v = static_cast<T1>(k) / static_cast<T1>(sizeLUT);
 
 			// compute kernel value and store
-			LUT[k] = bessi0(beta * std::sqrt(1.0 - (v))) / width;
+			LUT[k] = bessi0(beta * sqrt(1.0 - (v))) / width;
 
 		}
 	}
@@ -114,6 +117,7 @@ deinterleave_data2d( ///NAIVE
                     int imageX, int imageY)
 {
     int lIndex;
+	//#pragma acc parallel loop
     for(int X=0; X<imageX; X++)
     {
     	for(int Y=0; Y<imageY; Y++)
@@ -149,6 +153,7 @@ deinterleave_data3d(
                     int imageX, int imageY, int imageZ)
 {
     int lIndex,X,Y,Z;
+	//#pragma acc parallel loop
 	for(Z=0; Z<imageZ; Z++)
 	{
 
@@ -248,10 +253,17 @@ deapodization2d(
 	int common_index;
 	T1 gridOS2;
 
+	int destSize = imageX*imageY;
+
+	#pragma acc parallel loop copyout(dst[0:destSize])
+	for (int jj = 0; jj < destSize; jj++) {
+		dst[jj] = 0.0;
+	}
+	#pragma acc parallel loop pcopyin(src[0:imageX*imageY]) pcopy(dst[0:imageX*imageY])
 	for(X=0; X<imageX; X++)
 	{
-	for(Y=0; Y<imageY; Y++)
-	{
+		for(Y=0; Y<imageY; Y++)
+		{
 
 				gridKernelY = T1(Y - (imageY/2)) / (T1)imageY;
 			    gridKernelX = T1(X - (imageX/2)) / (T1)imageX;
@@ -374,12 +386,19 @@ deapodization3d(
 
 	T1 gridOS3;
 	//int common_index;
-    for (Z=0;Z<imageZ;Z++)
+	int destSize = imageX*imageY*imageZ;
+
+	//#pragma acc parallel loop copyout(dst[0:destSize])
+	//for (int jj = 0; jj < destSize; jj++) {
+//		dst[jj] = 0.0;
+//	}
+	//#pragma acc parallel loop pcopyin(src[0:imageX*imageY*imageZ]) pcopyout(dst[0:imageX*imageY*imageZ])
+	for (Z=0;Z<imageZ;Z++)
     {
 		for (X=0;X<imageX;X++)
 		{
-    	for (Y=0;Y<imageY;Y++)
-    	{
+    		for (Y=0;Y<imageY;Y++)
+    		{
 
     			gridKernelZ = (T1(Z) - ((T1)imageZ/2.0f)) / (T1)imageZ;
     		    gridKernelY = (T1(Y) - ((T1)imageY/2.0f)) / (T1)imageY;
@@ -459,6 +478,7 @@ crop_center_region2d(
     int dX_src;
     int common_index_dst;
     int common_index_src;
+	#pragma acc parallel loop copyin(src[0:gridSizeX*gridSizeY]) copyout(dst[0:imageSizeX*imageSizeY])
 	for (int dX_dst=0;dX_dst<imageSizeX;dX_dst++)
 	{
     for (int dY_dst=0;dY_dst<imageSizeY;dY_dst++)
@@ -524,6 +544,8 @@ crop_center_region3d(
 	int dZ_src;
 	int common_index_dst;
 	int common_index_src;
+
+	#pragma acc parallel loop copyin(src[0:gridSizeX*gridSizeY*gridSizeZ]) copyout(dst[0:imageSizeX*imageSizeY*imageSizeZ])
 	for (int dZ_dst = 0; dZ_dst < imageSizeZ; dZ_dst++)
 	{
 		for (int dX_dst = 0; dX_dst < imageSizeX; dX_dst++)
@@ -569,7 +591,13 @@ zero_pad2d(
 
 	offsetY = (int)(((T1)imageSizeY*gridOS / 2.0f) - ((T1)imageSizeY / 2.0f));
 	offsetX = (int)(((T1)imageSizeX*gridOS / 2.0f) - ((T1)imageSizeX / 2.0f));
+	int destSize = imageSizeX*gridOS*imageSizeY*gridOS;
 
+	#pragma acc parallel loop copyout(dst[0:destSize])
+	for (int jj = 0; jj < destSize; jj++) {
+		dst[jj] = 0.0;
+	}
+	#pragma acc parallel loop pcopyin(src[0:imageSizeX*imageSizeY]) pcopy(dst[0:destSize])
 	for (int dY_src=0;dY_src<imageSizeY;dY_src++)
 	{
 		for (int dX_src=0;dX_src<imageSizeX;dX_src++)
@@ -613,11 +641,19 @@ zero_pad3d(
 	offsetY = (int)(((float)imageSizeY*gridOS / 2.0f) - ((float)imageSizeY / 2.0f));
 	offsetX = (int)(((float)imageSizeX*gridOS / 2.0f) - ((float)imageSizeX / 2.0f));
 	offsetZ = (int)(((float)imageSizeZ*gridOS / 2.0f) - ((float)imageSizeZ / 2.0f));
+	int destSize = imageSizeX*gridOS*imageSizeY*gridOS*imageSizeZ*gridOS;
 
+	#pragma acc parallel loop copyout(dst[0:destSize])
+	for (int jj = 0; jj < destSize; jj++) {
+		dst[jj] = 0.0;
+	}
+
+	#pragma acc parallel loop pcopyin(src[0:imageSizeX*imageSizeY*imageSizeZ]) pcopy(dst[0:destSize])
 	for (int dZ_src = 0; dZ_src < imageSizeZ; dZ_src++)
 	{
 		for (int dY_src = 0; dY_src < imageSizeY; dY_src++)
 		{
+
 			for (int dX_src = 0; dX_src < imageSizeX; dX_src++)
 			{
 				dY_dst = dY_src + offsetY;
@@ -627,7 +663,7 @@ zero_pad3d(
 				common_index_dst = dZ_dst*imageSizeX*imageSizeY*gridOS*gridOS + dX_dst*imageSizeY*gridOS + dY_dst;
 				common_index_src = dZ_src*imageSizeX*imageSizeY   + dX_src*imageSizeY  + dY_src;
 
-				dst[common_index_dst]= src[common_index_src];
+				dst[common_index_dst] = src[common_index_src];
 			}
 		}
 	}
@@ -692,6 +728,8 @@ cuda_fft3shift_grid(
 template<typename T>
 void circshift2(T *__restrict out, const T *__restrict in, int xdim, int ydim, int xshift, int yshift) {
 	int ii, jj;
+
+	#pragma acc parallel loop pcopyin(in[0:xdim*ydim]) pcopyout(out[0:xdim*ydim])
 	for (int x = 0; x < xdim; x++) {
 		ii = (x + xshift) % xdim;
 		for (int y = 0; y < ydim; y++) {
@@ -705,6 +743,8 @@ void circshift2(T *__restrict out, const T *__restrict in, int xdim, int ydim, i
 template<typename T>
 void circshift3(T *__restrict out, const T *__restrict in, int xdim, int ydim, int zdim, int xshift, int yshift, int zshift) {
 	int ii, jj, kk;
+
+	#pragma acc parallel loop pcopyin(in[0:xdim*ydim*zdim]) pcopyout(out[0:xdim*ydim*zdim])
 	for (int x = 0; x < xdim; x++) {
 		ii = (x + xshift) % xdim;
 		for (int y = 0; y < ydim; y++) {
@@ -746,6 +786,7 @@ fft2shift_grid(
 {
 	//(dimX,dimY) is the size of 'src'
 	int common_index_dst;
+	#pragma acc parallel loop
 	for (int dY_dst = 0; dY_dst < dimY; dY_dst++)
 	{
 		for (int dX_dst = 0; dX_dst < dimX; dX_dst++)
@@ -766,6 +807,7 @@ fft3shift_grid(
 	//(dimX,dimY,dimZ) is the size of 'src'
 	int common_index_dst;
 
+	#pragma acc parallel loop
 	for (int dY_dst = 0; dY_dst < dimY; dY_dst++)
 	{
 		for (int dX_dst = 0; dX_dst < dimX; dX_dst++) {
