@@ -49,13 +49,14 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
     unsigned int Nx = params.imageSize[0];
     unsigned int Ny = params.imageSize[1];
     //unsigned int Nz = params.imageSize[2];
-    
+    int gridNumElems = params.gridSize[0]*params.gridSize[1];
+
     pGData = reinterpret_cast<T1 *>(gridData);
     //Jiading GAI
     //float t0 = t[0];
-    
-//    #pragma acc parallel loop gang vector copy(sampleDensity[0:n], pGData[0:n*2])
-    for (unsigned int i=0; i < n; i++)
+
+    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(sampleDensity[0:gridNumElems], pGData[0:gridNumElems*2])
+    for (int i=0; i < n; i++)
     {
         ReconstructionSample<T1> pt = sample[i];
         
@@ -85,11 +86,17 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
         //NzL = (int)(fmax(0.0f,ceil(shiftedKz - kernelWidth*((float)gridOS)/2)));
         //NzH = (int)(fmin((float)(gridOS*Nz-1),floor(shiftedKz + kernelWidth*((float)gridOS)/2)));
 
-
+        #pragma acc loop independent seq
         for(nx=NxL; nx<=NxH; ++nx)
         {
+            int k0;
             distX = fabs(shiftedKx - ((T1)nx))/(gridOS);
             if (params.useLUT) {
+                k0 = (int)((distX*distX*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                if (k0 >= sizeLUT)
+                    kbY = 0.0;
+                else
+                    kbY = LUT[k0];
                 kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
                 //cout << "KBX = " << kbX << endl;
 
@@ -102,12 +109,20 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
             if (kbX != kbX) {//if kbX = NaN
                 kbX = 0;
             }
-            
+            #pragma acc loop seq
+
             for(ny=NyL; ny<=NyH; ++ny)
             {
                 distY = fabs(shiftedKy - ((T1)ny))/(gridOS);
                 if (params.useLUT){
-                    kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
+
+                    k0 = (int)((distY*distY*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+
+                    if (k0 >= sizeLUT)
+                        kbY = 0.0;
+                    else
+                        kbY = LUT[k0];
+
                 } else {
                     kbY = bessi0(beta * std::sqrt(1.0 - (2.0 * distY / kernelWidth) * (2.0 * distY / kernelWidth))) /
                           kernelWidth;
@@ -208,7 +223,7 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
     //float t0 = t[0];
     pGData = reinterpret_cast<T1 *>(gridData);
     
-    #pragma acc parallel loop gang vector copyin(LUT[0:sizeLUT]) copy(sampleDensity[0:gridNumElems], pGData[0:gridNumElems*2])
+    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(sampleDensity[0:gridNumElems], pGData[0:gridNumElems*2])
     for (int i=0; i < n; i++)
     {
         ReconstructionSample<T1> pt = sample[i];
@@ -345,18 +360,20 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
                  complex<T1> * __restrict gridData, T1 *__restrict sampleDensity)
 {
 
-    unsigned int NxL, NxH;
-    unsigned int NyL, NyH;
+    int NxL, NxH;
+    int NyL, NyH;
     //unsigned int NzL, NzH;
 
-    unsigned int nx;
-    unsigned int ny;
+    int nx;
+    int ny;
     //unsigned int nz;
 
     int idx;
-
+    T1 *pSamples;
+    T1 *pGridData;
     T1 w;
-
+    T1 sampleReal;
+    T1 sampleImag;
     T1 shiftedKx, shiftedKy/*, shiftedKz*/;
     T1 distX, kbX, distY, kbY/*, distZ, kbZ*/;
 
@@ -364,16 +381,20 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
     //T1 beta = 18.5547;
     T1 gridOS = params.gridOS;
 
-    unsigned int Nx = params.imageSize[0];
-    unsigned int Ny = params.imageSize[1];
-    //unsigned int Nz = params.imageSize[2];
+    int Nx = params.imageSize[0];
+    int Ny = params.imageSize[1];
+    int imageNumElems = params.imageSize[0]*params.imageSize[1];
+    int gridNumElems = params.gridSize[0]*params.gridSize[1];
 
+    //unsigned int Nz = params.imageSize[2];
+    pSamples = reinterpret_cast<T1 *>(sample);
+    pGridData = reinterpret_cast<T1 *>(gridData);
     //Jiading GAI
     //float t0 = t[0];
-
-    for (unsigned int i=0; i < n; i++)
+    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(sampleDensity[0:n], pGridData[0:gridNumElems*2], pSamples[0:n*2])
+    for (int i=0; i < n; i++)
     {
-        complex<T1> pt = sample[i];
+        //complex<T1> pt = sample[i];
 
         //Jiading GAI
         //float atm = hanning_d(t[i], tau, l, t0);//a_l(t_m)
@@ -402,11 +423,20 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
         //NzL = (int)(fmax(0.0f,ceil(shiftedKz - kernelWidth*((float)gridOS)/2)));
         //NzH = (int)(fmin((float)(gridOS*Nz-1),floor(shiftedKz + kernelWidth*((float)gridOS)/2)));
 
+        #pragma acc loop independent seq
         for(nx=NxL; nx<=NxH; ++nx)
         {
+            int k0;
             distX = fabs(shiftedKx - ((T1)nx))/(gridOS);
             if (params.useLUT){
-                kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
+                //kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
+
+                k0 = (int)((distX*distX*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                if (k0 >= sizeLUT)
+                    kbX = 0.0;
+                else
+                    kbX = LUT[k0];
+
             } else {
                 kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
 
@@ -416,11 +446,19 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
                 kbX = 0;
             }
 
+            #pragma acc loop seq
             for(ny=NyL; ny<=NyH; ++ny)
             {
                 distY = fabs(shiftedKy - ((T1)ny))/(gridOS);
                 if (params.useLUT){
-                    kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
+                    //kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
+
+                    k0 = (int)((distY*distY*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                    if (k0 >= sizeLUT)
+                        kbY = 0.0;
+                    else
+                        kbY = LUT[k0];
+
                 } else {
                     kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
                 }
@@ -439,9 +477,18 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
                 idx = ny + (nx)*params.gridSize[1]/* + (nz)*gridOS*Nx*gridOS*Ny*/;
                 //gridData[idx].x += (w*pt.real*atm);
                 //gridData[idx].y += (w*pt.imag*atm);
-                sample[i].real(sample[i].real()+w*gridData[idx].real());
-                sample[i].imag(sample[i].imag()+w*gridData[idx].imag());
+
+                #pragma acc atomic update
+                pSamples[2*i] += w*pGridData[2*idx];
+
+                #pragma acc atomic update
+                pSamples[2*i+1] += w*pGridData[2*idx+1];
+
+                //sample[i].real(sample[i].real()+w*gridData[idx].real());
+                //sample[i].imag(sample[i].imag()+w*gridData[idx].imag());
                 /* estimate sample density */
+
+                #pragma acc atomic update
                 sampleDensity[i] += w;
             }
         }
@@ -479,16 +526,17 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
                    const T1 *LUT, const uword sizeLUT,
                  complex<T1> *__restrict  gridData, T1 *__restrict  sampleDensity)
 {
-    unsigned int NxL, NxH;
-    unsigned int NyL, NyH;
-    unsigned int NzL, NzH;
+    int NxL, NxH;
+    int NyL, NyH;
+    int NzL, NzH;
 
-    unsigned int nx;
-    unsigned int ny;
-    unsigned int nz;
+    int nx;
+    int ny;
+    int nz;
 
     int idx;
-
+    T1 *pSamples;
+    T1 *pGridData;
     T1 w;
 
     T1 shiftedKx, shiftedKy, shiftedKz;
@@ -498,16 +546,20 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
     //T1 beta = 18.5547;
     T1 gridOS = params.gridOS;
 
-    unsigned int Nx = params.imageSize[0];
-    unsigned int Ny = params.imageSize[1];
-    unsigned int Nz = params.imageSize[2];
-
+    int Nx = params.imageSize[0];
+    int Ny = params.imageSize[1];
+    int Nz = params.imageSize[2];
+    int imageNumElems = params.imageSize[0]*params.imageSize[1]*params.imageSize[2];
+    int gridNumElems = params.gridSize[0]*params.gridSize[1]*params.gridSize[2];
+    pSamples = reinterpret_cast<T1 *>(sample);
+    pGridData = reinterpret_cast<T1 *>(gridData);
     //Jiading GAI
     //float t0 = t[0];
 
-    for (unsigned int i=0; i < n; i++)
+    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(sampleDensity[0:n], pSamples[0:n*2], pGridData[0:gridNumElems*2])
+    for (int i=0; i < n; i++)
     {
-        complex<T1> pt = sample[i];
+        //complex<T1> pt = sample[i];
 
         //Jiading GAI
         //float atm = hanning_d(t[i], tau, l, t0);//a_l(t_m)
@@ -539,11 +591,18 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
         NzL = (int)(fmax(0.0f,std::ceil(shiftedKz - kernelWidth*(gridOS)/2.0f)));
         NzH = (int)(fmin((gridOS*(T1)Nz-1.0f),std::floor(shiftedKz + kernelWidth*((float)gridOS)/2.0f)));
 
+        #pragma acc loop independent seq
         for(nz=NzL; nz<=NzH; ++nz)
         {
+            int k0;
             distZ = fabs(shiftedKz - ((T1)nz))/(gridOS);
             if (params.useLUT) {
-                kbZ = kernel_value_LUT(distZ, LUT, sizeLUT, kernelWidth);
+                //kbZ = kernel_value_LUT(distZ, LUT, sizeLUT, kernelWidth);
+                k0 = (int)((distZ*distZ*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                if (k0 >= sizeLUT)
+                    kbZ = 0.0;
+                else
+                    kbZ = LUT[k0];
                 //cout << "KBX = " << kbX << endl;
 
             } else {
@@ -555,11 +614,18 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
             if (kbZ != kbZ) {//if kbY = NaN
                 kbZ = 0;
             }
+
+            #pragma acc loop seq
             for(nx=NxL; nx<=NxH; ++nx)
             {
                 distX = fabs(shiftedKx - ((T1) nx)) / (gridOS);
                 if (params.useLUT) {
-                    kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
+                    //kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
+                    k0 = (int)((distX*distX*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                    if (k0 >= sizeLUT)
+                        kbX = 0.0;
+                    else
+                        kbX = LUT[k0];
                     //cout << "KBX = " << kbX << endl;
 
                 } else {
@@ -572,10 +638,18 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
                     kbX = 0;
                 }
 
+                #pragma acc loop seq
                 for (ny = NyL; ny <= NyH; ++ny) {
                     distY = fabs(shiftedKy - ((T1) ny)) / (gridOS);
                     if (params.useLUT) {
-                        kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
+                        //kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
+
+                        k0 = (int)((distY*distY*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                        if (k0 >= sizeLUT)
+                            kbY = 0.0;
+                        else
+                            kbY = LUT[k0];
+
                     } else {
                         kbY = bessi0(
                                 beta * std::sqrt(1.0 - (2.0 * distY / kernelWidth) * (2.0 * distY / kernelWidth))) /
@@ -596,11 +670,18 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
                     idx = ny + (nx)*params.gridSize[1] + (nz)*params.gridSize[0]*params.gridSize[1];
                     //gridData[idx].x += (w*pt.real*atm);
                     //gridData[idx].y += (w*pt.imag*atm);
-                    sample[i].real(sample[i].real()+w*gridData[idx].real());
-                    sample[i].imag(sample[i].imag()+w*gridData[idx].imag());
+                    #pragma acc atomic update
+                    pSamples[2*i] += w*pGridData[2*idx];
+
+                    #pragma acc atomic update
+                    pSamples[2*i+1] += w*pGridData[2*idx+1];
+                    //sample[i].real(sample[i].real()+w*gridData[idx].real());
+                    //sample[i].imag(sample[i].imag()+w*gridData[idx].imag());
 
 
                     /* estimate sample density */
+
+                    #pragma acc atomic update
                     sampleDensity[i] += w;
                 }
             }
@@ -656,9 +737,9 @@ computeFH_CPU_Grid(
                            );
     */
 
-    parameters<T1> params;
-    params.sync=0;
-    params.binsize=128;
+    parameters <T1> params;
+    params.sync = 0;
+    params.binsize = 128;
 
     params.useLUT = 1;
     params.kernelWidth = kernelWidth;
@@ -666,48 +747,48 @@ computeFH_CPU_Grid(
     params.imageSize[0] = Nx;//gridSize is gridOS times larger than imageSize.
     params.imageSize[1] = Ny;
     params.imageSize[2] = Nz;
-    params.gridSize[0]  = std::ceil(gridOS*(T1)Nx);
-    params.gridSize[1]  = std::ceil(gridOS*(T1)Ny);
-    if(params.gridSize[0]%2)//3D case, gridOS is adjusted on the z dimension:
+    params.gridSize[0] = std::ceil(gridOS * (T1) Nx);
+    params.gridSize[1] = std::ceil(gridOS * (T1) Ny);
+    if (params.gridSize[0] % 2)//3D case, gridOS is adjusted on the z dimension:
         params.gridSize[0] += 1;//That why we need to make sure here that the xy
-    if(params.gridSize[1]%2)//dimensions have even sizes.
+    if (params.gridSize[1] % 2)//dimensions have even sizes.
         params.gridSize[1] += 1;
-    params.gridSize[2]  = (Nz==1)?Nz:(std::ceil(gridOS*(T1)Nz));// 2D or 3D
+    params.gridSize[2] = (Nz == 1) ? Nz : (std::ceil(gridOS * (T1) Nz));// 2D or 3D
     params.numSamples = numK_per_coil;
 
     T1 *sampleDensity;
+    complex <T1> *gridData_d;
 
-
-    ReconstructionSample<T1>* samples; //Input Data
+    ReconstructionSample <T1> *samples; //Input Data
     //allocate samples
-    samples = (ReconstructionSample<T1>*) malloc(params.numSamples*sizeof(ReconstructionSample<T1>));
-    
-    if (samples == NULL){
+    samples = (ReconstructionSample <T1> *) malloc(params.numSamples * sizeof(ReconstructionSample < T1 > ));
+
+    if (samples == NULL) {
         printf("ERROR: Unable to allocate memory for input data\n");
         exit(1);
     }
-    
-    unsigned int n =  params.numSamples;
+
+    unsigned int n = params.numSamples;
     //
-    for(int i=0; i<params.numSamples; i++){
-        if( std::abs(kx[i])>(Nx/2.0) ||
-                std::abs(ky[i])>(Ny/2.0) ||
-                std::abs(kz[i])>(Nz/2.0)
-           ) {
+    for (int i = 0; i < params.numSamples; i++) {
+        if (std::abs(kx[i]) > (Nx / 2.0) ||
+            std::abs(ky[i]) > (Ny / 2.0) ||
+            std::abs(kz[i]) > (Nz / 2.0)
+                ) {
 
             printf("\nError:k-space trajectory out of range [-N/2,N/2]:\n      gridding requires that k-space should be contained within the window -N/2 to N/2.\n");
             cout << "kx = " << kx[i] << " ky = " << ky[i] << " kz = " << kz[i] << " i = " << i << endl;
             exit(1);
         }
         else {
-            
+
             samples[i].kX = kx[i];
             samples[i].kY = ky[i];
             samples[i].kZ = kz[i];
-            
+
             samples[i].real = dR[i];
             samples[i].imag = dI[i];
-            
+
             samples[i].sdc = 1.0f;
             //samples[i].t = t[i];
         }
@@ -716,142 +797,159 @@ computeFH_CPU_Grid(
     //       (required by the cropImageRegion)
     // grid_size in z-axis has to be divisible-by-four:
     //       (required by the function gridding_GPU_3D(.))
-    if(1==Nz) {
+    if (1 == Nz) {
         //round grid size (xy-axis) to the next divisible-by-two.
-        gridOS = 2.0f * std::ceil((gridOS * (T1)Nx) / 2.0f) / (T1) Nx;
+        gridOS = 2.0f * std::ceil((gridOS * (T1) Nx) / 2.0f) / (T1) Nx;
     }
     else {
         //round grid size (z-axis) to the next divisible-by-four.
-        gridOS = 4.0f * std::ceil((gridOS * (T1)Nz) / 4.0f) / (T1) Nz;
+        gridOS = 4.0f * std::ceil((gridOS * (T1) Nz) / 4.0f) / (T1) Nz;
     }
     // */
-    int gridNumElems  = params.gridSize[0] *
-    params.gridSize[1] *
-    params.gridSize[2] ;
-    
+    int gridNumElems = params.gridSize[0] *
+                       params.gridSize[1] *
+                       params.gridSize[2];
+
     int imageNumElems = params.imageSize[0] *
-    params.imageSize[1] *
-    params.imageSize[2] ;
+                        params.imageSize[1] *
+                        params.imageSize[2];
 
 
     //allocate gridData
-    complex<T1> *gridData = new complex<T1>[gridNumElems];
+    complex <T1> *gridData = new complex <T1>[gridNumElems];
     sampleDensity = new T1[gridNumElems];
 
-    // Have to set 'gridData' and 'sampleDensity' to zero.
-    // Because they will be involved in accumulative operations
-    // inside gridding functions.
-    for(int i=0;i<gridNumElems;i++)
-    {
-        gridData[i].real(0.0);
-        gridData[i].imag(0.0);
-        sampleDensity[i] = 0.0;
-    }
+    //#pragma acc data create(gridData[0:gridNumElems]) pcreate(sampleDensity[0:gridNumElems])
+    //{
 
-    // Gridding with CPU - gold
-    if(Nz==1)
-    {
-        gridding_Gold_2D<T1>(n, params, beta, samples, LUT, sizeLUT,
-                         gridData, sampleDensity);
-    }
-    else
-    {
-        gridding_Gold_3D<T1>(n, params, beta, samples, LUT, sizeLUT,
-                         gridData, sampleDensity);
 
-    }
-    //cx_vec temp(gridData,gridNumElems);
-    //savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/gridData.mat","img",temp);
+        // Have to set 'gridData' and 'sampleDensity' to zero.
+        // Because they will be involved in accumulative operations
+        // inside gridding functions.
+        //#pragma acc parallel loop
+        for (int i = 0; i < gridNumElems; i++) {
+            gridData[i].real(0.0);
+            gridData[i].imag(0.0);
+            sampleDensity[i] = 0.0;
+        }
 
-    complex<T1> *gridData_d = new complex<T1>[gridNumElems];
-    //memcpy(gridData_d,gridData,gridNumElems*sizeof(complex<T1>));
+        // Gridding with CPU - gold
+        if (Nz == 1) {
+            gridding_Gold_2D<T1>(n, params, beta, samples, LUT, sizeLUT,
+                             gridData, sampleDensity);
+        }
+        else {
+            gridding_Gold_3D<T1>(n, params, beta, samples, LUT, sizeLUT,
+                             gridData, sampleDensity);
 
-    // ifftshift(gridData):
-    if(Nz==1)
-    {
-        ifftshift2(gridData_d,gridData,params.gridSize[0], params.gridSize[1]);
-    }
-    else
-    {
-        ifftshift3(gridData_d,gridData,params.gridSize[0],params.gridSize[1],params.gridSize[2]);
-    }
-    //cx_vec temp2(gridData_d,gridNumElems);
-    //savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/ifftshiftData.mat","img",temp2);
+        }
+        //cx_vec temp(gridData,gridNumElems);
+        //savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/gridData.mat","img",temp);
 
-    // ifftn(gridData):
-    fftw_plan plan;
-    if(Nz==1)
-    {
-        plan = fftw_plan_dft_2d(params.gridSize[0],
-                                     params.gridSize[1], (fftw_complex *)gridData_d, (fftw_complex *)gridData_d, FFTW_BACKWARD, FFTW_ESTIMATE);
-    }
-    else
-    {
+        gridData_d = new complex <T1>[gridNumElems];
+
+        //memcpy(gridData_d,gridData,gridNumElems*sizeof(complex<T1>));
+        //cout << "About to reach the gridData_d data directive" << endl;
+        #pragma acc enter data create(gridData_d[0:gridNumElems])
+        //cout << "Made it through the data directive" << endl;
+        // ifftshift(gridData):
+        if (Nz == 1) {
+            ifftshift2(gridData_d, gridData, params.gridSize[0], params.gridSize[1]);
+        }
+        else {
+            ifftshift3(gridData_d, gridData, params.gridSize[0], params.gridSize[1], params.gridSize[2]);
+        }
+
+        //cx_vec temp2(gridData_d,gridNumElems);
+        //savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/ifftshiftData.mat","img",temp2);
+
+        // ifftn(gridData):
+        //cout << "About to get to update host directive" << endl;
+        #pragma acc update host(gridData_d[0:gridNumElems])
+        //cout << "Got through the update host directive" << endl;
+        fftw_plan plan;
+        if (Nz == 1) {
+            plan = fftw_plan_dft_2d(params.gridSize[0],
+                                params.gridSize[1], (fftw_complex *) gridData_d, (fftw_complex *) gridData_d,
+                                FFTW_BACKWARD, FFTW_ESTIMATE);
+        }
+        else {
         plan = fftw_plan_dft_3d(params.gridSize[2],
-                                params.gridSize[1], params.gridSize[0], (fftw_complex *)gridData_d, (fftw_complex *)gridData_d, FFTW_BACKWARD, FFTW_ESTIMATE);
-    }
+                                params.gridSize[1], params.gridSize[0], (fftw_complex *) gridData_d,
+                                (fftw_complex *) gridData_d, FFTW_BACKWARD, FFTW_ESTIMATE);
+        }
 
-    /* Inverse transform 'gridData_d' in place. */
-    fftw_execute(plan);
-    fftw_destroy_plan(plan);
-    // fftshift(gridData):
-    if(Nz==1)
-    {
-        fftshift2(gridData, gridData_d,params.gridSize[0],
-                            params.gridSize[1]);
-    }
-    else
-    {
-        fftshift3(gridData, gridData_d, params.gridSize[0],
-                            params.gridSize[1], params.gridSize[2]);
-    }
-
-    complex<T1> *gridData_crop_d = new complex<T1>[imageNumElems];
-    //memcpy(gridData_crop_d,gridData_d,gridNumElems*sizeof(complex<T1>));
-    // crop the center region of the "image".
-    if(Nz==1)
-    {
-        crop_center_region2d(gridData_crop_d, gridData,
-                             params.imageSize[0], params.imageSize[1],
-                             params.gridSize[0], params.gridSize[1]);
-    }
-    else {
-        crop_center_region3d(gridData_crop_d, gridData,
-                             params.imageSize[0], params.imageSize[1], params.imageSize[2],
-                             params.gridSize[0], params.gridSize[1], params.gridSize[2]);
-    }
-    // deapodization
-    if(Nz==1)
-    {
-        deapodization2d(gridData_crop_d, gridData_crop_d,
-                        Nx, Ny, kernelWidth, beta, params.gridOS);
-    }
-    else
-    {
-        deapodization3d(gridData_crop_d, gridData_crop_d,
-                        Nx, Ny, Nz, kernelWidth, beta, params.gridOS);
-    }
-
-    // Copy results from gridData_crop_d to outR_d and outI_d
-    // gridData_crop_d is cufftComplex, interleaving
-    // De-interleaving the data from cufftComplex to outR_d-and-outI_d
+        /* Inverse transform 'gridData_d' in place. */
+        fftw_execute(plan);
+        fftw_destroy_plan(plan);
+        // fftshift(gridData):
+        //cout << "About to get to update device directive" << endl;
+        #pragma acc update device(gridData_d[0:gridNumElems])
+        //cout << "Got through the update device directive" << endl;
+        if (Nz == 1) {
+            fftshift2(gridData, gridData_d, params.gridSize[0],
+                          params.gridSize[1]);
+        }
+        else {
+            fftshift3(gridData, gridData_d, params.gridSize[0],
+                          params.gridSize[1], params.gridSize[2]);
+        }
 
 
-    if(Nz==1)
-    {
-        deinterleave_data2d(gridData_crop_d, outR_d, outI_d, Nx, Ny);
-    }
-    else
-    {
-        deinterleave_data3d(gridData_crop_d, outR_d, outI_d, Nx, Ny, Nz);
-    }
+        complex <T1> *gridData_crop_d = new complex <T1>[imageNumElems];
+        complex <T1> *gridData_crop_deAp = new complex <T1>[imageNumElems];
+        //memcpy(gridData_crop_d,gridData_d,gridNumElems*sizeof(complex<T1>));
+        // crop the center region of the "image".
+        //#pragma acc data create(gridData_crop_d[0:imageNumElems]) copyout(outR_d[0:imageNumElems],outI_d[0:imageNumElems])
+        //{
 
+                if (Nz == 1) {
+                    crop_center_region2d(gridData_crop_d, gridData,
+                                         params.imageSize[0], params.imageSize[1],
+                                         params.gridSize[0], params.gridSize[1]);
+                }
+                else {
+                    crop_center_region3d(gridData_crop_d, gridData,
+                                         params.imageSize[0], params.imageSize[1], params.imageSize[2],
+                                         params.gridSize[0], params.gridSize[1], params.gridSize[2]);
+                }
+
+                // deapodization
+                if (Nz == 1) {
+                    deapodization2d(gridData_crop_deAp, gridData_crop_d,
+                                    Nx, Ny, kernelWidth, beta, params.gridOS);
+                }
+                else {
+                    deapodization3d(gridData_crop_deAp, gridData_crop_d,
+                                    Nx, Ny, Nz, kernelWidth, beta, params.gridOS);
+                }
+
+
+                // Copy results from gridData_crop_d to outR_d and outI_d
+                // gridData_crop_d is cufftComplex, interleaving
+                // De-interleaving the data from cufftComplex to outR_d-and-outI_d
+
+
+                if (Nz == 1) {
+                    deinterleave_data2d(gridData_crop_deAp, outR_d, outI_d, Nx, Ny);
+                }
+                else {
+                    deinterleave_data3d(gridData_crop_deAp, outR_d, outI_d, Nx, Ny, Nz);
+                }
+
+
+        //}// Close #pragma acc data #3
+        delete(gridData_crop_d);
+        delete(gridData_crop_deAp);
+
+    //}// Close #pragma acc data
     //deallocate samples
     free(samples);
     delete(gridData);
+    #pragma acc exit data delete(gridData_d)
     delete(gridData_d);
+    #pragma acc exit data delete(sampleDensity)
     delete(sampleDensity);
-    delete(gridData_crop_d);
 
 }
 //Calculates the gridded forward fourier transform

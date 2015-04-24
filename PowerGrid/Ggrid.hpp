@@ -43,12 +43,14 @@ public:
         //Deal with the LUT
         //Generating Look-Up Table
         calculateLUT(beta, kernelWidth, LUT, sizeLUT);
+        #pragma acc enter data copyin(LUT[0:sizeLUT])
 
     }
 
     //Class destructor to free LUT
     ~Ggrid() {
         if (LUT) {
+            #pragma acc exit data delete(LUT)
             free(LUT);
         }
     }
