@@ -14,7 +14,7 @@
 using namespace arma;
 
 template<typename T1,typename T2>
-int reconfMRIGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter,uword nc) {
+int reconfMRIGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter,uword nc, uword startIndex, uword endIndex) {
     string testPath = dataPath;
 
 
@@ -92,11 +92,10 @@ int reconfMRIGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword
 
     cout << " Start recon data with Gridding"<< endl;
     int slices = 20;
-    int tot_time = 2;
 
     for(int jj = 1; jj< slices+1; jj++)   
     {
-        for (int ii = 1; ii< tot_time+1; ii++)
+        for (int ii = startIndex; ii< endIndex+1; ii++)
         {   
 
     string name1;

@@ -8,7 +8,8 @@
 
 #include "PowerGrid.h" //Project headers.
 #include "../Support/CeempleMatio.h" //Headers for using savemat and loadmat
-
+#include <string>
+#include <cstdlib>
 
 using namespace arma; //Armdillo stuff is in the arma namespace
 using namespace std; //complex type comes from the STL
@@ -17,17 +18,24 @@ using namespace std; //complex type comes from the STL
 int main(int argc, char** argv)
 {
     uword Nx,Ny,Nz,Niter = 1,NL = 1,Ncoils;
-
+    uword startIndex, endIndex;
 
     string testPath,configPath;
-    if (argc > 1) {
+    if (argc > 1) {;
         testPath = std::string(argv[1]);
         configPath = testPath+"config.xml";
     } else {
       cout << "Enter a path to find test files." << endl;
       return -1;
     }
-
+    
+    
+    if (argc > 2) {
+       startIndex = atoi(argv[2]);
+       endIndex = atoi(argv[3]);
+       cout << "Start Index = " << startIndex << "End Index = " << endIndex << endl;
+    }
+       
     try
     {
         auto_ptr<PowerGridConfig_t> cfg(PowerGridConfig(configPath.c_str()));
@@ -132,7 +140,7 @@ int main(int argc, char** argv)
 
     //test_FieldCorrection<cx_double,double>("/shared/mrfil-data/dataPowerGridTest/64_64_16_4coils/");
 
-    int test = test_SpeedCompareGdft<cx_double,double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils);
+    int test = reconfMRIGdft<cx_double,double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils,startIndex,endIndex);
 
     return 0;
 }

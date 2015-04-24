@@ -13,7 +13,7 @@
 using namespace arma;
 
 template<typename T1,typename T2>
-int reconfMRIGdft(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter,uword nc) {
+int reconfMRIGdft(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter,uword nc, uword startIndex, uword endIndex ) {
     string testPath = dataPath;
 
 
@@ -90,11 +90,10 @@ int reconfMRIGdft(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword 
 
     cout << " Start recon data with Gdft"<< endl;
     int slices = 20;
-    int tot_time = 2;
 
     for(int jj = 1; jj< slices +1; jj++)   
     {
-        for (int ii = 1; ii< tot_time +1; ii++)
+        for (int ii = startIndex; ii< endIndex +1; ii++)
         {   
    string name1;
    std::stringstream ss1;
