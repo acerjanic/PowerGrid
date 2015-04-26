@@ -18,7 +18,10 @@ set(LIBS ${LIBS} ${ARMADILLO_LIBRARIES})
 find_package(Xerces)
 include_directories(${XERCESC_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${XERCESC_LIBRARY})
-
+find_package(HDF5)
+include_directories(${HDF5_INCLUDE_DIRS})
+set(LIBS ${LIBS} ${HDF5_C_LIBRARIES})
+set(LIBS ${LIBS} ${HDF5_CXX_LIBRARIES})
 
 set(POWERGRID_TEST_GDFT
     ./PowerGrid/PowerGridGdft.cpp
@@ -39,7 +42,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/usr/include")
 
 if(CMAKE_COMPILER_IS_GNUCXX)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lgfortran")
+else()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive -pgf77libs")
 endif()
+
+
+#Needed for CMake 2.8 or so to not add the -rdynamic flag to compilers like PGI
+#PGI chokes on link because it does not understand the -rdynamic flag
+#Why CMake insists on passing this flag, I don't know...
+SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
  
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
