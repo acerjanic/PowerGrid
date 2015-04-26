@@ -142,11 +142,11 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
                 /* grid data */
                 idx = ny + (nx)*params.gridSize[1]/* + (nz)*gridOS*Nx*gridOS*Ny*/;
 
-   //             #pragma acc atomic update
+                #pragma acc atomic update
                 pGData[2*idx] += w*pt.real;
                 // atomicAdd(pGData+2*idx, w*pt.real);
 
-  //              #pragma acc atomic update
+                #pragma acc atomic update
                 pGData[2*idx+1] += w*pt.imag;
                 // atomicAdd(pGData+2*idx+1, w*pt.imag);
 
@@ -156,7 +156,7 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
                 //gridData[idx].real(gridData[idx].real()+w*pt.real);
                 //gridData[idx].imag(gridData[idx].imag()+w*pt.imag);
                 /* estimate sample density */
- //               #pragma acc atomic update
+                #pragma acc atomic update
                 sampleDensity[idx] += w;
                 //atomicAdd(sampleDensity+idx, w);
             }
