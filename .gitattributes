@@ -1,0 +1,18 @@
+# These files are text and should be normalized (convert crlf to lf)
+*.cpp	text
+*.h	text
+*.hpp   text
+*.txt	text
+*.md	text
+*.cxx 	text
+*.hxx	text
+
+
+
+# Images should be treated as binary
+*.png	binary
+*.jpeg	binary
+*.jpg	binary
+*.mat	binary
+
+
