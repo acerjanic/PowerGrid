@@ -90,11 +90,11 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
     loadmat(testPath+"data.mat","data",&data);
 
     // Variables needed for the recon: Penalty object, num of iterations
-    ucube ReconMask(Nx,Ny,Nz);
-    ReconMask.ones();
+    //ucube ReconMask(Nx,Ny,Nz);
+    //ReconMask.ones();
 
     cout << "Iniitalizing QuadPenalty" << endl;
-    QuadPenalty<T1>R(Nx,Ny,Nz,0,ReconMask);
+    QuadPenalty<T1>R(Nx,Ny,Nz,0);
     cout << "QuadPenalty setup successfull" << endl;
 
     //uword niter = 10;

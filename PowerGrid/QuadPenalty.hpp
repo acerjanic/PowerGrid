@@ -9,7 +9,7 @@
 #ifndef PowerGrid_QuadPenalty_hpp
 #define PowerGrid_QuadPenalty_hpp
 
-#include "armadillo"
+//#include <armadillo>
 
 using namespace arma;
 
@@ -27,14 +27,15 @@ public:
     double DeltaY;
     double DeltaZ;
     double Beta;
-    Mat<uword> ReconMask;
+    //Mat<uword> ReconMask;
 
     mat C1;
     mat C2;
 
-
+    //TODO: Fix the class constructor. Disabled the mask input because it of a type issue
+    // It was declared as type Mat<uword> and the 3D type was a cube. We need to vectorize it before it is passed to QuadPenalty.
     //Custom Class Constructor
-    QuadPenalty(uword Nx,uword Ny,uword Nz, double Beta,Mat<uword> ReconMask)
+    QuadPenalty(uword Nx,uword Ny,uword Nz, double Beta)
     {
         //Set Class Memebers
         this->Nx = Nx;
@@ -44,7 +45,7 @@ public:
         this->DeltaY = 1.0/(double)Ny;
         this->DeltaZ = 1.0/(double)Nz;
 
-        this->ReconMask = ReconMask;
+        //this->ReconMask = ReconMask;
 
     }
 
@@ -100,7 +101,7 @@ public:
 
     Col<T1> Gradient(const Col<T1>& d) const
     {
-       // THIS IS NOT RIGHT: NEEDS HELP!
+        //TODO: Fix the math here. THIS IS NOT RIGHT: NEEDS HELP!
         //return Beta*Ct(Cd(d))*(DeltaX*DeltaY*DeltaZ);
         Col<T1> tmp;
         tmp.zeros(d.n_elem);

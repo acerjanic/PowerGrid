@@ -94,7 +94,7 @@ int test_SpeedCompareGdft(string dataPath, uword Nx, uword Ny, uword Nz, uword L
     ReconMask.ones();
 
     cout << "Iniitalizing QuadPenalty" << endl;
-    QuadPenalty<T1>R(Nx,Ny,Nz,0,ReconMask);
+    QuadPenalty<T1>R(Nx,Ny,Nz,0);
     cout << "QuadPenalty setup successfull" << endl;
 
     //uword niter = 10;

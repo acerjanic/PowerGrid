@@ -8,7 +8,7 @@
 
 #ifndef PowerGrid_PowerGrid_h
 #define PowerGrid_PowerGrid_h
-#define ARMA_NO_DEBUG
+//#define ARMA_NO_DEBUG // Disable this comment only for release.
 #include <iostream>
 #include <cmath>
 #include "armadillo"
@@ -44,6 +44,8 @@ namespace arma {
 #include "test_3D.hpp"
 #include "test_SpeedCompareGgrid.hpp"
 #include "test_SpeedCompareGdft.hpp"
+#include "reconfMRIGdft.hpp"
+#include "reconfMRIGgrid.hpp"
 
 }
 

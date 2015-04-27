@@ -22,6 +22,7 @@ public:
           const Col <T2> &k3, const Col <T2> &i1, const Col <T2> &i2,
           const Col <T2> &i3) //Change these argumenst as you need to setup the object
     {
+        cout << "Entering the class constructor for Ggrid" << endl;
         n1 = nx*ny*nz;
         n2 = dataLength;
         Nx = nx;
@@ -42,6 +43,7 @@ public:
 
         //Deal with the LUT
         //Generating Look-Up Table
+        cout << "Calculating look up table" << endl;
         calculateLUT(beta, kernelWidth, LUT, sizeLUT);
         #pragma acc enter data copyin(LUT[0:sizeLUT])
 
@@ -79,15 +81,15 @@ public:
     //Forward transform operation using gridding
     Col<T1> operator*(const Col<T1>& d) const//Don't change these arguments
     {
-
+        cout << "Entering forward operator overload in Ggrid." << endl;
         //This is just specifying size assuming things are the same size, change as necessary
         //uword dataLength = d.n_rows;
-
+        /* TODO: Fix this. It eats up more than 32GB of memory!
         Col<T2> FM(ix.n_rows*iy.n_rows);
         Col<T2> t(n2);
         FM.zeros();
         t.zeros();
-
+        */
         Col<T2> realData = real(d);
         Col<T2> imagData = imag(d);
         //Now we grab the data out of armadillo with the memptr() function
@@ -141,7 +143,7 @@ public:
     {
         
         uword dataLength = n2;
-        /*
+        /* TODO: Fix this. It eats up more than 32GB of memory!
         Col<T2> FM(ix.n_rows*iy.n_rows);
         Col<T2> t(n2);
         FM.zeros();

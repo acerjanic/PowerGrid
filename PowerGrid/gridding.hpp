@@ -761,13 +761,14 @@ computeFH_CPU_Grid(
 
     ReconstructionSample <T1> *samples; //Input Data
     //allocate samples
-    samples = (ReconstructionSample <T1> *) malloc(params.numSamples * sizeof(ReconstructionSample < T1 > ));
+    cout << "Allocating samples" << endl;
+    samples = (ReconstructionSample <T1> *) malloc(params.numSamples * sizeof(ReconstructionSample<T1>));
 
     if (samples == NULL) {
         printf("ERROR: Unable to allocate memory for input data\n");
         exit(1);
     }
-
+    cout << "Finished samples" << endl;
     unsigned int n = params.numSamples;
     //
     for (int i = 0; i < params.numSamples; i++) {
@@ -816,9 +817,12 @@ computeFH_CPU_Grid(
 
 
     //allocate gridData
-    complex <T1> *gridData = new complex <T1>[gridNumElems];
-    sampleDensity = new T1[gridNumElems];
+    cout << "Allocating gridData" << endl;
 
+    complex <T1> *gridData = new complex <T1>[gridNumElems];
+    cout << "Finished allocating gridData and now allocating sampleDensity" << endl;
+    sampleDensity = new T1[gridNumElems];
+    cout << "Finished allocating sampleDensity" << endl;
     //#pragma acc data create(gridData[0:gridNumElems]) pcreate(sampleDensity[0:gridNumElems])
     //{
 
@@ -845,8 +849,9 @@ computeFH_CPU_Grid(
         }
         //cx_vec temp(gridData,gridNumElems);
         //savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/gridData.mat","img",temp);
-
+        cout << "Allocating gridData_d" << endl;
         gridData_d = new complex <T1>[gridNumElems];
+        cout << "Finished allocating gridData_d" << endl;
 
         //memcpy(gridData_d,gridData,gridNumElems*sizeof(complex<T1>));
         //cout << "About to reach the gridData_d data directive" << endl;
@@ -895,10 +900,13 @@ computeFH_CPU_Grid(
                           params.gridSize[1], params.gridSize[2]);
         }
 
-
+        cout << "Allocating gridData_crop_d" << endl;
         complex <T1> *gridData_crop_d = new complex <T1>[imageNumElems];
+        cout << "Finished Allocating gridData_crop_d and now allocating gridData_crop_deAp" << endl;
         complex <T1> *gridData_crop_deAp = new complex <T1>[imageNumElems];
-        //memcpy(gridData_crop_d,gridData_d,gridNumElems*sizeof(complex<T1>));
+        cout << "Finished allocating gridData_crop_deAp" << endl;
+
+    //memcpy(gridData_crop_d,gridData_d,gridNumElems*sizeof(complex<T1>));
         // crop the center region of the "image".
         //#pragma acc data create(gridData_crop_d[0:imageNumElems]) copyout(outR_d[0:imageNumElems],outI_d[0:imageNumElems])
         //{
@@ -939,17 +947,18 @@ computeFH_CPU_Grid(
 
 
         //}// Close #pragma acc data #3
-        delete(gridData_crop_d);
-        delete(gridData_crop_deAp);
+        cout << "Deallocating memory from the adjoint gridding operation" << endl;
+        delete[] gridData_crop_d;
+        delete[] gridData_crop_deAp;
 
     //}// Close #pragma acc data
     //deallocate samples
     free(samples);
-    delete(gridData);
+    delete[] gridData;
     #pragma acc exit data delete(gridData_d)
-    delete(gridData_d);
+    delete[] gridData_d;
     #pragma acc exit data delete(sampleDensity)
-    delete(sampleDensity);
+    delete[] sampleDensity;
 
 }
 //Calculates the gridded forward fourier transform
@@ -1000,7 +1009,9 @@ computeFd_CPU_Grid(
 
     complex<T1>* samples; //Input Data
     //allocate samples
+    cout << "Allocating memory for samples" << endl;
     samples = (complex<T1>*) malloc(params.numSamples*sizeof(complex<T1>));
+    cout << "Finished allocating memory for samples" << endl;
 
     if (samples == NULL){
         printf("ERROR: Unable to allocate memory for input data\n");
@@ -1056,9 +1067,11 @@ computeFd_CPU_Grid(
 
 
     //allocate gridData
+    cout << "Allocating memory for gridData" << endl;
     complex<T1> *gridData = new complex<T1>[imageNumElems];
+    cout << "Finished allocating memory for gridData and allocating memory for sampleDensity" << endl;
     sampleDensity = new T1[gridNumElems];
-
+    cout << "Finished allocating memory for sampleDensity" << endl;
     // Have to set 'gridData' and 'sampleDensity' to zero.
     // Because they will be involved in accumulative operations
     // inside gridding functions.
@@ -1068,8 +1081,9 @@ computeFd_CPU_Grid(
         gridData[i].imag(dI[i]);
         sampleDensity[i] = 0.0;
     }
-
+    cout << "Allocating memory for gridData_d" << endl;
     complex<T1> *gridData_d = new complex<T1>[imageNumElems];
+    cout << "Finished allocating memory for gridData_d" << endl;
     //memcpy(gridData_d,gridData,imageNumElems*sizeof(complex<T1>));
 
     // deapodization
@@ -1101,8 +1115,9 @@ computeFd_CPU_Grid(
                    Nx, Ny, Nz, params.gridOS);
 
     }
-
+    cout << "Allocating memory for gridData_os_d" << endl;
     complex<T1> *gridData_os_d = new complex<T1>[gridNumElems];
+    cout << "Allocating memory for gridData_os_d" << endl;
     //memcpy(gridData_os_d, gridData_os, gridNumElems*sizeof(complex<T1>));
     // fftshift(gridData):
 
@@ -1195,11 +1210,11 @@ computeFd_CPU_Grid(
     //deallocate samples
     free(samples);
     //free(LUT);
-    delete(gridData);
-    delete(gridData_d);
-    delete(gridData_os);
-    delete(gridData_os_d);
-    delete(sampleDensity);
+    delete[] gridData;
+    delete[] gridData_d;
+    delete[] gridData_os;
+    delete[] gridData_os_d;
+    delete[] sampleDensity;
     //delete(gridData_crop_d);
 }
 

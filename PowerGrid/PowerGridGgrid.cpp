@@ -31,28 +31,52 @@ int main(int argc, char** argv)
     if (argc > 2) {
         startIndex = atoi(argv[2]);
         endIndex = atoi(argv[3]);
+        cout << "Start Index." << startIndex << "End Index" << endIndex << endl;
+
+        try
+        {
+            auto_ptr<PowerGridConfig_t> cfg(PowerGridConfig(configPath.c_str()));
+
+            Nx = cfg->Nx();
+            Ny = cfg->Ny();
+            Nz = cfg->Nz();
+            NL = cfg->Ntimeseg();
+            Niter = cfg->Niter();
+            Ncoils = cfg->Ncoils();
+
+        }
+        catch (const xml_schema::exception& e)
+        {
+            cerr << e << endl;
+            return 1;
+        }
+
+        int test = reconfMRIGgrid<cx_double,double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils,startIndex,endIndex);
     } else {
-      cout << "Start Index." << startIndex << "End Index" << endIndex << endl;
-      return 0;
-    }
-    try
-    {
-        auto_ptr<PowerGridConfig_t> cfg(PowerGridConfig(configPath.c_str()));
 
-        Nx = cfg->Nx();
-        Ny = cfg->Ny();
-        Nz = cfg->Nz();
-        NL = cfg->Ntimeseg();
-        Niter = cfg->Niter();
-        Ncoils = cfg->Ncoils();
+        try
+        {
+            auto_ptr<PowerGridConfig_t> cfg(PowerGridConfig(configPath.c_str()));
+
+            Nx = cfg->Nx();
+            Ny = cfg->Ny();
+            Nz = cfg->Nz();
+            NL = cfg->Ntimeseg();
+            Niter = cfg->Niter();
+            Ncoils = cfg->Ncoils();
+
+        }
+        catch (const xml_schema::exception& e)
+        {
+            cerr << e << endl;
+            return 1;
+        }
+
+        int test = test_SpeedCompareGgrid<cx_double,double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils);
+
 
     }
-    catch (const xml_schema::exception& e)
-    {
-        cerr << e << endl;
-        return 1;
-    }
-  
+
     //string testPath = "/Users/alexcerjanic/Developer/PG/Resources/";
 
 /*
@@ -139,7 +163,7 @@ int main(int argc, char** argv)
 
     //test_FieldCorrection<cx_double,double>("/shared/mrfil-data/dataPowerGridTest/64_64_16_4coils/");
 
-    int test = reconfMRIGgrid<cx_double,double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils,startIndex,endIndex);
+
 
     return 0;
 }

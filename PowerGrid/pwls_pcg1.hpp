@@ -32,7 +32,7 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,double const& W, Col<T1
 {
     
     // Initialize projection
-
+    cout << "Entering pwls_pcg1" << endl;
     Col<T1> Ax = A*xInitial;
     Col<T1> x = xInitial;
     double oldinprod = 0;
@@ -54,10 +54,11 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,double const& W, Col<T1
     double step;
     T1 rdenom;
     double newinprod;
-
+    cout << "Entering pwls_pcg1 iteration loop" << endl;
     for (unsigned int ii = 0; ii < niter; ii++)
     {
         // Compute negative gradient
+        cout << "About to calculate the gradient of the cost function" << endl;
         ngrad = A / (W * (yi - Ax));
         if (norm_grad<T1>(ngrad,yi,W) < 1e-10) {
             cout << "Terminating early due to zero gradient." << endl;
