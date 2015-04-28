@@ -39,14 +39,15 @@ target_link_libraries(PowerGridGdft ${LIBS})
 target_link_libraries(PowerGridGgrid ${LIBS})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/usr/include")
-
-if(CMAKE_COMPILER_IS_GNUCXX)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lgfortran")
+if(APPLE)
+	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lgfortran")
 else()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive -pgf77libs")
-
+	if(CMAKE_COMPILER_IS_GNUCXX)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lgfortran")
+	else()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive -pgf77libs")
+	endif()
 endif()
-
 
 #Needed for CMake 2.8 or so to not add the -rdynamic flag to compilers like PGI
 #PGI chokes on link because it does not understand the -rdynamic flag
