@@ -8,7 +8,7 @@
 *   /Support - Convenience headers and support files from other sources. These files are compiled into the project.
 
 ## Depedenencies 
-*   Xerces-C++ - XML Parser used with the CodeSynthesis Generated fiels for parsing our config.xml files.
+*   Xerces-C++ - XML Parser used with the CodeSynthesis Generated files for parsing our config.xml files.
 
 *   Armadillo (http://arma.sourceforge.net) - Templated Linear Algebra library. Gives us MATLAB like syntax in C++
 

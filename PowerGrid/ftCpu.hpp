@@ -111,7 +111,11 @@ iftCpu(T1 *idata_r, T1 *idata_i,
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <accelmath.h>
+#ifdef _OPENACC
+#include "openacc.h"
+#include "accelmath.h"
+#endif
+
 
 //#include <tools.h>
 //#include <structures.h>
@@ -210,7 +214,7 @@ kziztpi, kx_i, ky_i, kz_i, t, idata_r, idata_i)
             expr = (kxtpi * ix[j] + kytpi * iy[j] + kztpi * iz[j] +
                     (FM[j] * myti));
 
-            cosexpr = cos(expr); sinexpr = sin(expr);
+            cosexpr = std::cos(expr); sinexpr = std::sin(expr);
 
             //cosexpr = cosf(expr); sinexpr = sinf(expr);
 
@@ -287,7 +291,7 @@ fm, kdata_r, kdata_i)
                     ky[i] * itraj_y_tpi + kz[i] * itraj_z_tpi +
                     (myfmj * t[i]));
 
-            cosexpr = cos(expr); sinexpr = sin(expr);
+            cosexpr = std::cos(expr); sinexpr = std::sin(expr);
 
             //cosexpr = cosf(expr); sinexpr = sinf(expr);
 

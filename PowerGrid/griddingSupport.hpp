@@ -84,7 +84,7 @@ void calculateLUT(T1 beta, T1 width, T1 *&LUT, uword &sizeLUT) {
 			v = static_cast<T1>(k) / static_cast<T1>(sizeLUT);
 
 			// compute kernel value and store
-			LUT[k] = bessi0(beta * sqrt(1.0 - (v))) / width;
+			LUT[k] = bessi0(beta * std::sqrt(1.0 - (v))) / width;
 
 		}
 	}
