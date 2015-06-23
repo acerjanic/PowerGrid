@@ -62,3 +62,7 @@ local.properties
 .texlipse
 # Excluded Folders
 .idea/
+
+# Exclude build folder
+build/
+.vagrant/
