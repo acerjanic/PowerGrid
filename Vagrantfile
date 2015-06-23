@@ -32,7 +32,10 @@ Vagrant.configure(2) do |config|
     override.vm.box_url = "https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box"
     override.ssh.username = "ubuntu"
     override.ssh.private_key_path = "./VagrantKey.pem"
+    override.vm.synced_folder ".", "/vagrant", type: "rsync", :disabled => true
+    override.sshfs.paths = { "." => "/vagrant" }
     override.nfs.functional = false
+
    end
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -88,7 +91,7 @@ Vagrant.configure(2) do |config|
    config.vm.provision "shell", inline: <<-SHELL
      sudo apt-get update
   #  Installing ismrmrd
-     sudo apt-get install -y libhdf5-serial-dev h5utils cmake cmake-curses-gui libboost-all-dev doxygen git
+     sudo apt-get install -y libhdf5-serial-dev h5utils cmake cmake-curses-gui libboost-all-dev doxygen git libfftw3-dev g++
      git clone https://github.com/ismrmrd/ismrmrd
      cd ismrmrd/
      mkdir build
@@ -97,6 +100,6 @@ Vagrant.configure(2) do |config|
      make
      sudo make install
   #  Installing the PowerGrid Dependencies
-     sudo apt-get install -y libmatio-dev libopenblas-dev libfftw3-dev libxerces-c-dev libarmadillo-dev xsdcxx
+     sudo apt-get install -y libmatio-dev libopenblas-dev libxerces-c-dev libarmadillo-dev xsdcxx
    SHELL
 end
