@@ -60,12 +60,12 @@ Step 3: Ensure that your AWS credentials and keys are located in your .bashrc fi
 
 ~/.bashrc
 
-    export AWS_ACCESS_KEY=::PASTE ACCESS KEY HERE::
-    export AWS_SECRET_KEY=::PASTE SECRET KEY HERE::
-    export AWS_SSH_KEY=::PUT LOCATION OF SSH PRIVATE KEY (such as $HOME/VagrantKey.pem)::
+    export AWS_ACCESS_KEY=PASTE ACCESS KEY HERE
+    export AWS_SECRET_KEY=PASTE SECRET KEY HERE
+    export AWS_SSH_KEY=NAME OF SSH KEY IN EUCA
     ssh-agent
     
-Step 4: Make sure that you have ssh keys for passwordless login setup on the cluster. It is strongly reccomended that you have no passphrase on your ssh key to allow for automated ssh from vagrant.
+Step 4: Make sure that you have ssh keys for passwordless ssh login setup on a lab workstation. It is strongly reccomended that you have no passphrase on your ssh key to allow for automated ssh from vagrant.
 
 Step 3: Clone the PowerGrid git repository 
 

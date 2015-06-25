@@ -20,7 +20,7 @@ Vagrant.configure(2) do |config|
 
         aws.access_key_id = "#{ENV['AWS_ACCESS_KEY']}"
         aws.secret_access_key = "#{ENV['AWS_SECRET_KEY']}"
-        aws.keypair_name = "VagrantKey"
+        aws.keypair_name = "#{ENV['AWS_SSH_KEY']}"
         aws.ami = "emi-dc40a7ee"
         aws.instance_ready_timeout = 300
         aws.instance_type = "m1.medium"
@@ -45,7 +45,7 @@ Vagrant.configure(2) do |config|
         # override.ssh.private_key_path = "~/.ssh/id_rsa"
         override.ssh.forward_agent = true
         override.ssh.insert_key = false
-        override.ssh.private_key_path = ["#{ENV['AWS_SSH_KEY']}", '~/.ssh/id_rsa']
+        override.ssh.private_key_path = ["#{ENV['AWS_SSH_KEY']}/#{ENV['AWS_SSH_KEY']}.pem", '~/.ssh/id_rsa']
 
     end
 
