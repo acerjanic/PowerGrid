@@ -56,7 +56,7 @@ Vagrant.configure(2) do |config|
     config.vm.provision "shell" do |s|
       s.inline = <<-SHELL
         sudo apt-get update
-        sudo apt-get install -y sshfs
+        sudo apt-get install -y sshfs autossh
         #  Installing ismrmrd
         sudo apt-get install -y libhdf5-serial-dev h5utils cmake cmake-curses-gui libboost-all-dev doxygen git libfftw3-dev g++
         git clone https://github.com/ismrmrd/ismrmrd
@@ -73,17 +73,20 @@ Vagrant.configure(2) do |config|
 
     end
 
-    config.vm.provider :aws do |aws|
-      config.vm.provision "shell" do |s|
+    config.vm.provider :aws do |aws, override|
+      override.vm.provision "shell" do |s|
         s.inline = <<-SHELL
-          sudo mkdir /vagrant
-          sshfs -o StrictHostKeyChecking=no \
-          -o reconnect \
-          -o ServerAliveInterval=45 \
-          -o ServerAliveCountMax=2 \
-          -o ssh_command='autossh -M 0' $1@$2:$3 /vagrant
+          sudo mkdir -p /vagrant
+	  sudo chmod a+rwx /vagrant
+	  sudo chmod a+r /etc/fuse.conf
+	  sudo echo 'user_allow_other' >> /etc/fuse.conf
+          sshfs -o StrictHostKeyChecking=no -o allow_other \
+           -o reconnect \
+           -o ServerAliveInterval=45 \
+           -o ServerAliveCountMax=2 \
+           -o ssh_command='autossh -M 0' $1@$2:$3 /vagrant
           SHELL
-          s.args = ["#{ENV['USER']},#{ENV['HOSTNAME']},#{vagrant_root}"]
+          s.args = ["#{ENV['USER']}","#{ENV['HOSTNAME']}","#{vagrant_root}"]
         end
     end
 end
