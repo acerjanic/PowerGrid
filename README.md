@@ -19,7 +19,74 @@
 ### These dependencies are requires for running on Blue Waters
 ACML - AMD Core Math Library - A set of math routines including LAPACK and BLAS for running on Opteron processors like on Blue Waters and other Cray systems.
 
+## How to setup Vagrant to use with PowerGrid
+Vagrant (http://www.vagrantup.com) is a tool for creating, managing, and distributing reproducable development environments. In short Vagrant uses an existing virtualization provider (like VirtualBox or AWS) to download, provision, and run a virtual machine (VM).
 
+We use Vagrant with an Ubuntu 15.04 box and a shell script provisioner. The Vagrantfile supports VirtualBox and Parallels provisioners as well as AWS with a few caveats.
+ 
+### To use Vagrant to setup your build environment on a local provider (VMWare, VirtualBox, and Parallels)
+
+Step 1: Install Vagrant from www.vagrantup.com. Binaries exist for OS X, Windows, and Linux. These instructions were made using Vagrant 1.7.2
+
+Step 2: Clone the PowerGrid git repository 
+
+    git clone git@bioe-mrfil-07.bioen.illinois.edu:mrfil/PowerGrid.git
+    cd PowerGrid
+
+Step 3: Bring up your VM with the following command
+
+    vagrant up
+    
+Step 4: Log into your VM. The PowerGrid repo will be mounted in the virtual machine at /vagrant. This folder is the PowerGrid repo directory mounted in the virtual machine.  
+
+    vagrant ssh 
+    cd /vagrant
+    cd build
+    cmake ../
+    make
+    
+ 
+### To use Vagrant to setup your build environment on an AWS (Eucalyptus like CUBIC) provider.
+
+These instructions assume your account is setup properly for the cloud and that you have already created AWS keys and a keypair.
+
+Step 1: Install Vagrant from www.vagrantup.com. Binaries exist for OS X, Windows, and Linux. These instructions were made using Vagrant 1.7.2
+
+Step 2: Install the vagrant-aws plugin
+
+    vagrant plugin install vagrant-aws
+
+Step 3: Ensure that your AWS credentials and keys are located in your .bashrc file. Also, ensure that ssh-agent is running for secure key forwarding.
+
+.bashrc
+    export AWS_ACCESS_KEY=::PASTE ACCESS KEY HERE::
+    export AWS_SECRET_KEY=::PASTE SECRET KEY HERE::
+    export AWS_SSH_KEY=::PUT LOCATION OF SSH PRIVATE KEY (such as $HOME/VagrantKey.pem)::
+    ssh-agent
+    
+Step 4: Make sure that you have ssh keys for passwordless login setup on the cluster. It is strongly reccomended that you have no passphrase on your ssh key to allow for automated ssh from vagrant.
+
+Step 3: Clone the PowerGrid git repository 
+
+    git clone git@bioe-mrfil-07.bioen.illinois.edu:mrfil/PowerGrid.git
+    cd PowerGrid
+
+Step 3: Bring up your VM with the following command
+
+    vagrant up
+    
+Step 4: Log into your VM. The PowerGrid repo will be mounted in the virtual machine at /vagrant. This folder is the PowerGrid repo directory mounted in the virtual machine. 
+
+    vagrant ssh 
+    cd /vagrant
+    cd build
+    cmake ../
+    make
+    
+## Troubleshooting:
+    ### Vagrant complains that sshfs doesn't work? I can't see my local files in the virtual machine at /vagrant on AWS/Euca?
+    
+    This happens when the guest (VM) can't login to your host (read physical machine). Check that your SSH Keys are setup correctly. Also, using SSHFS to create a shared file system betwen host and guest relies on SSH connections. If your computer is not reachable at the fully qualified domain name, then the sshfs will fail. Use one of the other providers instead.
 
 ## CPU Build Instructions with PGI
 
