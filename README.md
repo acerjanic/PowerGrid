@@ -19,7 +19,7 @@
 ### These dependencies are requires for running on Blue Waters
 ACML - AMD Core Math Library - A set of math routines including LAPACK and BLAS for running on Opteron processors like on Blue Waters and other Cray systems.
 
-## How to setup Vagrant to use with PowerGrid
+## How to setup build environment for PowerGrid with Vagrant
 Vagrant (http://www.vagrantup.com) is a tool for creating, managing, and distributing reproducable development environments. In short Vagrant uses an existing virtualization provider (like VirtualBox or AWS) to download, provision, and run a virtual machine (VM).
 
 We use Vagrant with an Ubuntu 15.04 box and a shell script provisioner. The Vagrantfile supports VirtualBox and Parallels provisioners as well as AWS with a few caveats.
@@ -58,7 +58,8 @@ Step 2: Install the vagrant-aws plugin
 
 Step 3: Ensure that your AWS credentials and keys are located in your .bashrc file. Also, ensure that ssh-agent is running for secure key forwarding.
 
-.bashrc
+~/.bashrc
+
     export AWS_ACCESS_KEY=::PASTE ACCESS KEY HERE::
     export AWS_SECRET_KEY=::PASTE SECRET KEY HERE::
     export AWS_SSH_KEY=::PUT LOCATION OF SSH PRIVATE KEY (such as $HOME/VagrantKey.pem)::
