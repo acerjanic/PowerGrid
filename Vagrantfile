@@ -45,7 +45,7 @@ Vagrant.configure(2) do |config|
         # override.ssh.private_key_path = "~/.ssh/id_rsa"
         override.ssh.forward_agent = true
         override.ssh.insert_key = false
-        override.ssh.private_key_path = ["#{ENV['AWS_SSH_KEY']}/#{ENV['AWS_SSH_KEY']}.pem", '~/.ssh/id_rsa']
+        override.ssh.private_key_path = ["#{ENV['HOME']}/#{ENV['AWS_SSH_KEY']}.pem", '~/.ssh/id_rsa']
 
     end
 
