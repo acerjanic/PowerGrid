@@ -68,7 +68,12 @@ Vagrant.configure(2) do |config|
         sudo make install
         #  Installing the PowerGrid Dependencies
         sudo apt-get install -y libmatio-dev libopenblas-dev libxerces-c-dev libarmadillo-dev xsdcxx
-
+        cd ~
+        git clone http://bioe-mrfil-07.bioen.illinois.edu/PowerGrid/Armadillo.git
+        cd Armadillo
+        cmake .
+        make
+        sudo make install
       SHELL
 
     end
