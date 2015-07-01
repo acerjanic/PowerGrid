@@ -41,6 +41,7 @@ Step 4: Log into your VM. The PowerGrid repo will be mounted in the virtual mach
 
     vagrant ssh 
     cd /vagrant
+    mkdir build
     cd build
     cmake ../
     make
@@ -67,19 +68,20 @@ Step 3: Ensure that your AWS credentials and keys are located in your .bashrc fi
     
 Step 4: Make sure that you have ssh keys for passwordless ssh login setup on a lab workstation. It is strongly reccomended that you have no passphrase on your ssh key to allow for automated ssh from vagrant.
 
-Step 3: Clone the PowerGrid git repository 
+Step 5: Clone the PowerGrid git repository 
 
     git clone git@bioe-mrfil-07.bioen.illinois.edu:mrfil/PowerGrid.git
     cd PowerGrid
 
-Step 3: Bring up your VM with the following command
+Step 6: Bring up your VM with the following command
 
     vagrant up
     
-Step 4: Log into your VM. The PowerGrid repo will be mounted in the virtual machine at /vagrant. This folder is the PowerGrid repo directory mounted in the virtual machine. 
+Step 7: Log into your VM. The PowerGrid repo will be mounted in the virtual machine at /vagrant. This folder is the PowerGrid repo directory mounted in the virtual machine. 
 
     vagrant ssh 
     cd /vagrant
+    mkdir build
     cd build
     cmake ../
     make
@@ -119,21 +121,21 @@ Step 1: Load all required dependencies by loading PowerGridSupport Module
 
     module load PowerGridSupport/1.0
 
-Step 3: Clone the PowerGrid git repository
+Step 2: Clone the PowerGrid git repository
     
     git clone git@bioe-mrfil-07.bioen.illinois.edu:mrfil/PowerGrid.git
 
-Step 4: Make a build directory in the root of your PowerGrid repository
+Step 3: Make a build directory in the root of your PowerGrid repository
 
     cd PowerGrid
     mkdir build
     
-Step 5: Use the cmake command to setup your build directory from within your build directory
+Step 4: Use the cmake command to setup your build directory from within your build directory
     
     cd build
     cmake ../ -DCMAKE_CXX_COMPILER=g++ -DCXX_FLAGS="-O2"
     
-Step 6: Make the software in the buld directory. Use -j# to build with multiple threads.
+Step 5: Make the software in the buld directory. Use -j# to build with multiple threads.
 
     make -j2
     
