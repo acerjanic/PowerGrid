@@ -74,6 +74,8 @@ Vagrant.configure(2) do |config|
         cmake .
         make
         sudo make install
+        cd ~
+        git clone http://bioe-mrfil-07.bioen.illinois.edu/PowerGrid/PowerGridTestData.git
       SHELL
 
     end
