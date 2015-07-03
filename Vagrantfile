@@ -54,6 +54,7 @@ Vagrant.configure(2) do |config|
     # documentation for more information about their specific syntax and use.
     vagrant_root = File.dirname(__FILE__)
     config.vm.provision "shell" do |s|
+      s.privileged = false
       s.inline = <<-SHELL
         sudo apt-get update
         sudo apt-get install -y sshfs autossh
