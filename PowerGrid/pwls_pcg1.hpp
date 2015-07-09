@@ -102,9 +102,12 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,double const& W, Col<T1
         dAWr = conv_to<double>::from(real(proj).eval());
         step = 0.0;
         
-        for (unsigned int j = 0; j < 2; j++)
+        for (unsigned int j = 0; j < 3; j++)
         {
-            pdenom = real(dot_double(pow(abs(ddir),2.0).eval(), R.Denom(x + step*ddir)));
+            //pdenom = real(dot_double(pow(abs(ddir),2.0).eval(), R.Denom(x + step*ddir)));
+            //pdenom = Cdir' * (R.wpot(R.wt, Cdir) .* Cdir); Original MATLAB code from pwls_pcg1.m
+            pdenom = R.Denom(ddir);
+            cout << " pdenom = " << pdenom << endl;
             denom = dAWAd + pdenom;
             
             if (std::abs(denom) < 1e-10 || std::abs(denom) > 1e25) {
@@ -119,6 +122,8 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,double const& W, Col<T1
             }
 
             pgrad = R.Gradient(x+step*ddir);
+            savemat("/home/vagrant/test_reg.mat","pgrad",pgrad);
+
             pdot = real(dot_double(conj(ddir),pgrad));
 
             stepIntermediate = (-dAWr + step * dAWAd + pdot) / denom;
@@ -127,7 +132,7 @@ Col<T1> pwls_pcg1(const Col<T1> &xInitial, Tobj const& A,double const& W, Col<T1
         
         // Check downhill direction
         if (step < 0) {
-            cout <<"Warning downhill?"<<endl;
+            cout << "Warning downhill?" << endl;
         }
         
         // Update
