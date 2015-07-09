@@ -1,29 +1,29 @@
 //
-//  QuadPenalty.hpp
+//  TVPenalty.hpp
 //  PowerGrid
 //
-//  Created by Alex Cerjanic on 4/4/15.
+//  Created by Alex Cerjanic on 6/8/15.
 //  Copyright (c) 2015 MRFIL. All rights reserved.
 //
 
-#ifndef PowerGrid_QuadPenalty_hpp
-#define PowerGrid_QuadPenalty_hpp
+#ifndef PowerGrid_TVPenalty_hpp
+#define PowerGrid_TVPenalty_hpp
 
 //#include <armadillo>
 
 using namespace arma;
 
 template <typename T1>
-class QuadPenalty: protected Robject<T1>
+class TVPenalty: protected Robject<T1>
 {
 public:
-    QuadPenalty();
+    TVPenalty();
 
     // It was declared as type Mat<uword> and the 3D type was a cube. We need to vectorize it before it is passed to QuadPenalty.
     //Custom Class Constructor
-    QuadPenalty(uword nx,uword ny,uword nz, double beta)
+    TVPenalty(uword nx,uword ny,uword nz, double beta, double delta)
     {
-        //Set Class Memebers
+        //Set Class Members
         this->Nx = nx;
         this->Ny = ny;
         this->Nz = nz;
@@ -31,19 +31,22 @@ public:
         this->DeltaY = 1.0/(double)ny;
         this->DeltaZ = 1.0/(double)nz;
         this->Beta = beta;
+        this->Delta = delta;
 
     }
 
     //Class Methods
 
     Col<T1> wpot(const Col<T1>& d) const
-    {
-        return ones < Col < T1 >> (d.n_rows);
+    {   Col<double> temp = abs(d / this->Delta);
+        Col<T1> out = 1.0/sqrt(1.0 + conv_to<Col<T1>>::from(temp % temp));
+        return out;
     }
 
     Col<T1> pot(const Col<T1>& d) const
     {
-        return d % d / 2.0;
+        Col <T1> out = this->delta * this->delta * (sqrt(1.0 + (abs(d / this->Delta) % abs(d / this->Delta))) - 1.0);
+        return out;
     }
 
     double Penalty(const Col<T1>& x) const
@@ -112,7 +115,8 @@ public:
 
         return (this->DeltaX*this->DeltaY*this->DeltaZ)*this->Beta*penal;
     }
-
+private:
+    double Delta;
 };
 
-#endif
+#endif //PowerGrid_TVPenalty_hpp

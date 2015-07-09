@@ -94,7 +94,7 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
     //ReconMask.ones();
 
     cout << "Iniitalizing QuadPenalty" << endl;
-    QuadPenalty<T1>R(Nx,Ny,Nz,0);
+    TVPenalty<T1>R(Nx,Ny,Nz,100000000.0,.01);
     cout << "QuadPenalty setup successfull" << endl;
 
     //uword niter = 10;
@@ -132,7 +132,7 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 */
     cout << "Runing pwls with ggrid" << endl;
     Col<T1> test_pwls;
-    test_pwls = pwls_pcg1<T1,  SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, Sg, W, data, R, niter);
+    test_pwls = pwls_pcg1<T1,  SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,TVPenalty<T1>>(xinit, Sg, W, data, R, niter);
     savemat(testPath+"test_pwls.mat","img",test_pwls);
 /*
     cout << "Runing pwls with ggrid" << endl;

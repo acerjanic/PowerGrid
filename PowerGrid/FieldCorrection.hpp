@@ -80,7 +80,7 @@ public:
       
       //loop through time segments
       for (unsigned int ii=0; ii < this->L; ii++) {
-
+        cout << "Entering time segmentation loop" << endl;
     	//apply a phase to each time segment
 		Wo = exp(-i*(this->fieldMap)*((ii)*tau+T_min));
 
@@ -92,8 +92,6 @@ public:
 
       return outData;
     }
-    
-
 
     Col<T1> operator/(const Col<T1>& d) const {
 
@@ -114,6 +112,14 @@ public:
       return outData;
 
     }
+/*
+protected:
+  Col<T1> int_tim_seg(uword L) {
+
+  }
+*/
+
+
 };
 
 #endif

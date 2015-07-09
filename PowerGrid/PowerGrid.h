@@ -30,7 +30,9 @@ namespace arma {
 #include "fftshift.hpp"
 #include "Gfft.hpp"
 #include "SENSE.hpp"
+#include "Robject.hpp"
 #include "QuadPenalty.hpp"
+#include "TVPenalty.hpp"
 #include "pwls_pcg1.hpp"
 #include "ftCpu.hpp"
 #include "Gdft.hpp"
@@ -46,6 +48,7 @@ namespace arma {
 #include "test_SpeedCompareGdft.hpp"
 #include "reconfMRIGdft.hpp"
 #include "reconfMRIGgrid.hpp"
+
 
 }
 
