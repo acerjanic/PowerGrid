@@ -54,9 +54,6 @@ public:
       tau = (rangt+datum::eps)/(L); // it was L-1 before
       timeVec = timeVec - T_min;
 
-      savemat("/vagrant/AAinit.mat","AAinit",AA);
-
-
       if (type == 1) {// Hanning interpolator
         cout << "Hanning interpolation" << endl;
         //tau = (rangt+datum::eps)/(L-1);
@@ -85,11 +82,11 @@ public:
         gg = exp(i * fieldMap * tau)*Ltp;
         Mat <T1> iGTGGT;
         iGTGGT.set_size(L+1,n2);
-        savemat("/vagrant/gg.mat","ggc",gg);
+        //savemat("/vagrant/gg.mat","ggc",gg);
         Mat <T1> gl;
         gl.zeros(n2, L);
-        savemat("/vagrant/fieldMap.mat","fieldMap",fieldMap);
-        savemat("/vagrant/timeVec.mat","timeVecc",timeVec);
+        //savemat("/vagrant/fieldMap.mat","fieldMap",fieldMap);
+        //savemat("/vagrant/timeVec.mat","timeVecc",timeVec);
 
 
         //cout << "M0" << endl;
@@ -98,7 +95,7 @@ public:
            gl(jj,ii) = pow(gg(jj,ii),double (ii+1));
            }
         }
-        savemat("/vagrant/gl.mat","glc",gl);
+        //savemat("/vagrant/gl.mat","glc",gl);
 
         Mat <T1> G;
         G.set_size(n2,L+1);
@@ -111,8 +108,6 @@ public:
               G.col(jj) = gl.col(jj-1);
             }
         }
-        savemat("/vagrant/G.mat","Gc",G);
-        cout << "LLL" << endl;
 
         //G = joint_rows(ggtp, gl);
         Col <T1> glsum;
@@ -120,7 +115,7 @@ public:
         GTG.zeros(L + 1, L + 1);
         GTG.diag(0) += n2;
         glsum = sum(gl.t(),1);
-        savemat("/vagrant/glsum.mat","glsumc",glsum);
+        //savemat("/vagrant/glsum.mat","glsumc",glsum);
 
         for (unsigned int ii = 0; ii < L ; ii++) {
           Mat <T1> GTGtp;
@@ -130,7 +125,7 @@ public:
           GTG = GTG + GTGtp;
         }
 
-        savemat("/vagrant/GTG.mat","GTGc",GTG);
+        //savemat("/vagrant/GTG.mat","GTGc",GTG);
 
         T2 rcn = 1/cond(GTG);
         if (rcn > 10*2e-16) { //condition number of GTG
@@ -140,8 +135,8 @@ public:
          iGTGGT = pinv(GTG)*G.t(); // pseudo inverse
         }
 
-        savemat("/vagrant/iGTGGT.mat","iGTGGTc",iGTGGT);
-        savemat("/vagrant/timeVec.mat","timeVecc",timeVec);
+        //savemat("/vagrant/iGTGGT.mat","iGTGGTc",iGTGGT);
+        //savemat("/vagrant/timeVec.mat","timeVecc",timeVec);
 
         Mat <T1> iGTGGTtp;
         Mat <T1> ftp;
@@ -158,23 +153,15 @@ public:
           cout << "Loop L" << jj << endl;
         }*/
 
-
-
           for (unsigned int ii = 0; ii < n1; ii++) {
             ftp = exp(i*fieldMap*timeVec(ii));
-            //savemat("/vagrant/ftp.mat","ftpc",ftp);
-            //cout << "L" << endl;
-
             res = iGTGGT*ftp;
-            //cout << "N" << endl;
-            //savemat("/vagrant/res.mat","res",res);
-
             AA.row(ii) = conj(res.t());
           }
 
 
 
-        savemat("/vagrant/AA.mat","AAc",AA);
+        //savemat("/vagrant/AA.mat","AAc",AA);
 
       }
 
@@ -183,8 +170,6 @@ public:
     	  tau = 0;
     	  AA.ones();
       }
-
-      savemat("/vagrant/AA.mat","AAc",AA);
     }
     
     //Overloaded operators go here
@@ -208,7 +193,6 @@ public:
 
 
       }
-      savemat("/vagrant/outForward.mat","outForward",outData);
       return outData;
     }
 
@@ -227,7 +211,6 @@ public:
         outData +=  Wo%((*this->obj)/(AA.col(ii)%d));
 
       }
-      savemat("/vagrant/outBackward.mat","outBackward",outData);
 
       return outData;
 
