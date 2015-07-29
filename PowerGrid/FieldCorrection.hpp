@@ -47,91 +47,80 @@ public:
       obj = &G;
       fieldMap = map_in;
       
-      AA.set_size(n1,L); //time segments weights
+      AA.set_size(n1,L+1); //time segments weights
       timeVec = timeVec_in;
       T_min = timeVec.min();
       T2 rangt = timeVec.max()-T_min;
-      tau = (rangt+datum::eps)/(L-1);
+      tau = (rangt+datum::eps)/(L); // it was L-1 before
       timeVec = timeVec - T_min;
 
+      savemat("/vagrant/AAinit.mat","AAinit",AA);
+
+
       if (type == 1) {// Hanning interpolator
-        tau = (rangt+datum::eps)/(L-1);
-		  for (unsigned int ii=0; ii < L; ii++) {
+        cout << "Hanning interpolation" << endl;
+        //tau = (rangt+datum::eps)/(L-1);
+		  for (unsigned int ii=0; ii < L+1; ii++) {
 			for (unsigned int jj=0; jj < n1; jj++) {
 			  if ((fabs(timeVec(jj)-((ii)*tau)))<=tau){
-				AA(jj,ii) = 0.5 + 0.5*std::cos((datum::pi)*(timeVec(jj)-((ii)*tau))/tau);
+              	AA(jj,ii) = 0.5 + 0.5*std::cos((datum::pi)*(timeVec(jj)-((ii)*tau))/tau);
 			  } else {
                 AA(jj,ii) = 0.0;
               }
 			}
-		  }
+          }
       }
 
       else if (type == 2) { // Min-max interpolator: Exact LS interpolator
 
         cout << "Min Max time segmentation" << endl;
-        cout << "nro" << n2<< endl;
-        cout << "L" << L << endl;
-        cout << "ndat" << n1<< endl;
-        Mat <T2> Ltp;
+        //cout << "nro" << n2<< endl;
+        //cout << "L" << L << endl;
+        //cout << "ndat" << n1<< endl;
+        Mat <T1> Ltp;
         Ltp.ones(1, L);
         Col <T1> ggtp;
         ggtp.ones(n2, 1);
         Mat <T1> gg;
-        gg = exp(-i * fieldMap * tau) * Ltp;
+        gg = exp(i * fieldMap * tau)*Ltp;
         Mat <T1> iGTGGT;
         iGTGGT.set_size(L+1,n2);
-
+        savemat("/vagrant/gg.mat","ggc",gg);
         Mat <T1> gl;
         gl.zeros(n2, L);
+        savemat("/vagrant/fieldMap.mat","fieldMap",fieldMap);
+        savemat("/vagrant/timeVec.mat","timeVecc",timeVec);
 
-        cout << "M0" << endl;
+
+        //cout << "M0" << endl;
         for (unsigned int ii = 0; ii < L; ii++) {
           for (unsigned int jj = 0; jj < n2; jj++) {
            gl(jj,ii) = pow(gg(jj,ii),double (ii+1));
            }
         }
-
+        savemat("/vagrant/gl.mat","glc",gl);
 
         Mat <T1> G;
         G.set_size(n2,L+1);
 
-        /*for (unsigned int jj = 0; jj<L+1; jj++){
-          for (unsigned int ii = 0; ii<n2; ii++){
-            if (jj<1) {
-              T1 tp = ggtp(ii);
-              cout << "to " << ggtp(ii) << endl;
-              G(ii,jj) = ggtp(ii,0);
-              cout << "M" << jj << endl;
-            }
-            else {
-              cout << "T" << jj << endl;
-              G(ii,jj) = gl(ii,jj-1);
-            }
-          }
-        }*/
-        cout << "M1" << endl;
         for (unsigned int jj = 0; jj<L+1; jj++){
-           if (jj<1) {
+           if (jj == 0) {
               G.col(jj) = ggtp;
-              cout << "M" << jj << endl;
             }
             else {
-              cout << "T" << jj << endl;
               G.col(jj) = gl.col(jj-1);
             }
         }
+        savemat("/vagrant/G.mat","Gc",G);
+        cout << "LLL" << endl;
 
-        cout << "M2" << endl;
         //G = joint_rows(ggtp, gl);
         Col <T1> glsum;
-        glsum = sum(gl,1); // sum in each column
-        cout << "M3" << endl;
         Mat <T1> GTG;
         GTG.zeros(L + 1, L + 1);
         GTG.diag(0) += n2;
-        cout << "M4" << endl;
-
+        glsum = sum(gl.t(),1);
+        savemat("/vagrant/glsum.mat","glsumc",glsum);
 
         for (unsigned int ii = 0; ii < L ; ii++) {
           Mat <T1> GTGtp;
@@ -139,10 +128,10 @@ public:
           GTGtp.diag(- double (ii+1)) += glsum(ii);
           GTGtp.diag( double (ii+1)) += std::conj(glsum(ii));
           GTG = GTG + GTGtp;
-
         }
 
-        cout << "M5" << endl;
+        savemat("/vagrant/GTG.mat","GTGc",GTG);
+
         T2 rcn = 1/cond(GTG);
         if (rcn > 10*2e-16) { //condition number of GTG
          iGTGGT = inv(GTG)*G.t();
@@ -151,30 +140,51 @@ public:
          iGTGGT = pinv(GTG)*G.t(); // pseudo inverse
         }
 
-        cout << "M6" << endl;
-        for (unsigned int jj = 0; jj < L; jj++) {
-         for (unsigned int ii = 0; ii < L ; ii++) {
-           Mat <T1> iGTGGTtp;
-           iGTGGTtp.zeros(1,n1);
-           cout << "M" << jj << endl;
+        savemat("/vagrant/iGTGGT.mat","iGTGGTc",iGTGGT);
+        savemat("/vagrant/timeVec.mat","timeVecc",timeVec);
 
-           iGTGGTtp =iGTGGT.row(jj); // is it column or row??
+        Mat <T1> iGTGGTtp;
+        Mat <T1> ftp;
+        Col<T1> res;
 
-           Col <T1> ftp = exp(i*fieldMap*timeVec(ii));
-           T1 res;
-          res = sum(iGTGGTtp.t()%ftp);
-           AA(jj,ii) = std::conj(res);
+        cout << "Start filling the AA matrix" << endl;
+        /*for (unsigned int jj = 0; jj < L+1; jj++) {
+         for (unsigned int ii = 0; ii < n1; ii++) {
+           iGTGGTtp =iGTGGT.row(jj);
+           ftp = exp(i*fieldMap*timeVec(ii));
+           res = iGTGGTtp*ftp;
+           AA(ii,jj) = std::conj(res);
          }
-        }
+          cout << "Loop L" << jj << endl;
+        }*/
+
+
+
+          for (unsigned int ii = 0; ii < n1; ii++) {
+            ftp = exp(i*fieldMap*timeVec(ii));
+            //savemat("/vagrant/ftp.mat","ftpc",ftp);
+            //cout << "L" << endl;
+
+            res = iGTGGT*ftp;
+            //cout << "N" << endl;
+            //savemat("/vagrant/res.mat","res",res);
+
+            AA.row(ii) = conj(res.t());
+          }
+
+
+
+        savemat("/vagrant/AA.mat","AAc",AA);
 
       }
+
 
       else { //no time segmentation needed
     	  tau = 0;
     	  AA.ones();
       }
 
-
+      savemat("/vagrant/AA.mat","AAc",AA);
     }
     
     //Overloaded operators go here
@@ -198,7 +208,7 @@ public:
 
 
       }
-
+      savemat("/vagrant/outForward.mat","outForward",outData);
       return outData;
     }
 
@@ -217,6 +227,7 @@ public:
         outData +=  Wo%((*this->obj)/(AA.col(ii)%d));
 
       }
+      savemat("/vagrant/outBackward.mat","outBackward",outData);
 
       return outData;
 
