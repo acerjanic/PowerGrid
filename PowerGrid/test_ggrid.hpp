@@ -64,9 +64,9 @@ Col<T1> test_ggrid(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<
     Col<T1> xinit = zeros<Col<cx_double>>(64*64); // initial estimate of x
     Mat<T1> W;
     W = eye<Mat<T1>>(G.n2,G.n2); // Should be the size of k-space data: Is it right?
-    cout << "About to call pwls_pcg1 from test_ggrid" << endl;
+    cout << "About to call solve_pwls_pcg from test_ggrid" << endl;
     Col<T1> x_t;
-    x_t = pwls_pcg1<T1,Ggrid<T1,T2>,QuadPenalty<T1>>(xinit, G, W, TestForward, R, niter);
+    x_t = solve_pwls_pcg<T1,Ggrid<T1,T2>,QuadPenalty<T1>>(xinit, G, W, TestForward, R, niter);
     
     return x_t;
     

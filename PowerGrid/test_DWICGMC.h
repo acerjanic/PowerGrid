@@ -114,8 +114,8 @@ int test_SpeedCompare(string dataPath)
     W=1.0;
 
     //Col<T1> x_t;
-    //cout << "heading into PWLS_pcg1" << endl;
-    //x_t = pwls_pcg1<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
+    //cout << "heading into solve_pwls_pcg" << endl;
+    //x_t = solve_pwls_pcg<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
     //x_t = S/data;
     //savemat(testPath+"test_3D.mat","img",x_t);
 /*
@@ -142,20 +142,20 @@ int test_SpeedCompare(string dataPath)
     /*
     cout << "Runing pwls with ggrid" << endl;
     Col<T1> test_pwls;
-    test_pwls = pwls_pcg1<T1,  SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, Sg, W, data, R, niter);
+    test_pwls = solve_pwls_pcg<T1,  SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, Sg, W, data, R, niter);
     savemat(testPath+"test_pwls.mat","img",test_pwls);
      */
 
     cout << "Runing pwls with ggrid" << endl;
     Col<T1> test_pwls;
-    test_pwls = pwls_pcg1<T1,  DWICGMC<T1,T2> ,QuadPenalty<T1>>(xinit, S_DWI, W, data, R, niter);
+    test_pwls = solve_pwls_pcg<T1,  DWICGMC<T1,T2> ,QuadPenalty<T1>>(xinit, S_DWI, W, data, R, niter);
     savemat(testPath+"test_pwls.mat","img",test_pwls);
 
      /*
 
     cout << "Runing pwls with ggrid" << endl;
     Col<T1> test_pwls;
-    test_pwls = pwls_pcg1<T1,  Gdft<T1,T2>,QuadPenalty<T1>>(xinit, Gd, W, data, R, niter);
+    test_pwls = solve_pwls_pcg<T1,  Gdft<T1,T2>,QuadPenalty<T1>>(xinit, Gd, W, data, R, niter);
     savemat(testPath+"test_pwls.mat","img",test_pwls);
     */
 

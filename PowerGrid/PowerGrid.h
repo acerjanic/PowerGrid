@@ -33,7 +33,7 @@ namespace arma {
 #include "Robject.hpp"
 #include "QuadPenalty.hpp"
 #include "TVPenalty.hpp"
-#include "pwls_pcg1.hpp"
+#include "solve_pwls_pcg.hpp"
 #include "ftCpu.hpp"
 #include "Gdft.hpp"
 #include "test_gdft.hpp" 

@@ -12,9 +12,12 @@
 
 using namespace std; //where to put?
 
-
+#ifdef _OPENACC
+#include "openacc.h"
+#include "accelmath.h"
+#endif //_OPENACC
 ///*From Numerical Recipes in C, 2nd Edition
-//Just a vanilla I(0,x) function appoximation
+//Just a vanilla I(0,x) function approximation
 template<typename T1>
 inline
 T1 bessi0(T1 x)
@@ -22,7 +25,7 @@ T1 bessi0(T1 x)
 	T1 ax,ans;
 	T1 y;
 
-	if ((ax=std::abs(x)) < 3.75)
+	if ((ax=abs(x)) < 3.75)
 	{
 		y=x/3.75;
 		y=y*y;
@@ -32,7 +35,7 @@ T1 bessi0(T1 x)
 	else
 	{
 		y=3.75/ax;
-		ans=(std::exp(ax)/std::sqrt(ax))*(0.39894228+y*(0.1328592e-1+y*(0.225319e-2+
+		ans=(exp(ax)/sqrt(ax))*(0.39894228+y*(0.1328592e-1+y*(0.225319e-2+
 															  y*(-0.157565e-2+y*(0.916281e-2+y*(-0.2057706e-1+y*(0.2635537e-1+
 																												 y*(-0.1647633e-1+y*0.392377e-2))))))));
 	}
@@ -40,7 +43,7 @@ T1 bessi0(T1 x)
 }
 //__global__ static void
 //Deinterleave_data2d_kernel(
-//                           cufftComplex *src, float *outR_d, float *outI_d,
+//                           cufftstd::complex *src, float *outR_d, float *outI_d,
 //                           int imageX, int imageY)
 //{
 //    int Y = blockIdx.x;
@@ -54,7 +57,7 @@ T1 bessi0(T1 x)
 
 //void
 //deinterleave_data2d(
-//                    cufftComplex *src, float *outR_d, float *outI_d,
+//                    cufftstd::complex *src, float *outR_d, float *outI_d,
 //                    int imageX, int imageY)
 //{
 //    dim3 threads(1,1);
@@ -84,7 +87,7 @@ void calculateLUT(T1 beta, T1 width, T1 *&LUT, uword &sizeLUT) {
 			v = static_cast<T1>(k) / static_cast<T1>(sizeLUT);
 
 			// compute kernel value and store
-			LUT[k] = bessi0(beta * std::sqrt(1.0 - (v))) / width;
+			LUT[k] = bessi0(beta * sqrt(1.0 - (v))) / width;
 
 		}
 	}
@@ -117,7 +120,7 @@ deinterleave_data2d( ///NAIVE
                     int imageX, int imageY)
 {
     int lIndex;
-	//#pragma acc parallel loop
+	#pragma acc parallel loop pcopyin(src[0:imageX*imageY]) pcopyout(outR_d[0:imageX*imageY],outI_d[0:imageX*imageY])
     for(int X=0; X<imageX; X++)
     {
     	for(int Y=0; Y<imageY; Y++)
@@ -133,7 +136,7 @@ deinterleave_data2d( ///NAIVE
 
 //__global__ static void
 //Deinterleave_data3d_kernel(
-//                           cufftComplex *src, float *outR_d, float *outI_d,
+//                           cufftstd::complex *src, float *outR_d, float *outI_d,
 //                           int imageX, int imageY, int imageZ)
 //{
 //    int Z;
@@ -153,7 +156,7 @@ deinterleave_data3d(
                     int imageX, int imageY, int imageZ)
 {
     int lIndex,X,Y,Z;
-	//#pragma acc parallel loop
+	#pragma acc parallel loop pcopyin(src[0:imageX*imageY*imageZ]) pcopyout(outR_d[0:imageX*imageY*imageZ],outI_d[0:imageX*imageY*imageZ])
 	for(Z=0; Z<imageZ; Z++)
 	{
 
@@ -173,7 +176,7 @@ deinterleave_data3d(
 //
 //__global__ static void
 //Deapodization2d_kernel(
-//                       cufftComplex *dst, cufftComplex *src,
+//                       cufftstd::complex *dst, cufftstd::complex *src,
 //                       int imageX, int imageY,
 //                       float kernelWidth, float beta, float gridOS)
 //{
@@ -255,11 +258,11 @@ deapodization2d(
 
 	int destSize = imageX*imageY;
 
-	#pragma acc parallel loop copyout(dst[0:destSize])
+	//#pragma acc parallel loop pcreate(dst[0:destSize])
 	for (int jj = 0; jj < destSize; jj++) {
 		dst[jj] = 0.0;
 	}
-	#pragma acc parallel loop pcopyin(src[0:imageX*imageY]) pcopy(dst[0:imageX*imageY])
+	//#pragma acc parallel loop pcopyin(src[0:imageX*imageY]) pcopyout(dst[0:imageX*imageY])
 	for(X=0; X<imageX; X++)
 	{
 		for(Y=0; Y<imageY; Y++)
@@ -272,14 +275,14 @@ deapodization2d(
 			    common_exprY = (MRI_PI*MRI_PI*kernelWidth*kernelWidth*gridKernelY*gridKernelY - beta*beta);
 
 			    if(common_exprX>=0)
-			        common_exprX1 = (std::sin(std::sqrt(common_exprX))/std::sqrt(common_exprX));
+			        common_exprX1 = (sin(sqrt(common_exprX))/sqrt(common_exprX));
 			    else
-			        common_exprX1 = (std::sinh(std::sqrt(-1.0f*common_exprX))/std::sqrt(-1.0f*common_exprX));
+			        common_exprX1 = (sinh(sqrt(-1.0f*common_exprX))/sqrt(-1.0f*common_exprX));
 
 			    if(common_exprY>=0)
-			        common_exprY1 = (std::sin(std::sqrt(common_exprY))/std::sqrt(common_exprY));
+			        common_exprY1 = (sin(sqrt(common_exprY))/sqrt(common_exprY));
 			    else
-			        common_exprY1 = (std::sinh(std::sqrt(-1.0f*common_exprY))/std::sqrt(-1.0f*common_exprY));
+			        common_exprY1 = (sinh(sqrt(-1.0f*common_exprY))/sqrt(-1.0f*common_exprY));
 
 			    gridKernel =  common_exprX1 * common_exprY1;
 
@@ -297,7 +300,7 @@ deapodization2d(
 
 //__global__ static void
 //Deapodization3d_kernel(
-//                       cufftComplex *dst, cufftComplex *src,
+//                       cufftstd::complex *dst, cufftstd::complex *src,
 //                       int imageX, int imageY, int imageZ,
 //                       float kernelWidth, float beta, float gridOS)
 //{
@@ -409,19 +412,19 @@ deapodization3d(
     		    common_exprZ = (MRI_PI*MRI_PI*kernelWidth*kernelWidth*gridKernelZ*gridKernelZ - beta*beta);
 
     		    if(common_exprX>=0)
-    		        common_exprX1 = (std::sin(std::sqrt(common_exprX))/std::sqrt(common_exprX));
+    		        common_exprX1 = (sin(sqrt(common_exprX))/sqrt(common_exprX));
     		    else
-    		        common_exprX1 = (std::sinh(std::sqrt(-1.0f*common_exprX))/std::sqrt(-1.0f*common_exprX));
+    		        common_exprX1 = (sinh(sqrt(-1.0f*common_exprX))/sqrt(-1.0f*common_exprX));
 
     		    if(common_exprY>=0)
-    		        common_exprY1 = (std::sin(std::sqrt(common_exprY))/std::sqrt(common_exprY));
+    		        common_exprY1 = (sin(sqrt(common_exprY))/sqrt(common_exprY));
     		    else
-    		        common_exprY1 = (std::sinh(std::sqrt(-1.0f*common_exprY))/std::sqrt(-1.0f*common_exprY));
+    		        common_exprY1 = (sinh(sqrt(-1.0f*common_exprY))/sqrt(-1.0f*common_exprY));
 
     		    if(common_exprZ>=0)
-    		        common_exprZ1 = (std::sin(std::sqrt(common_exprZ))/std::sqrt(common_exprZ));
+    		        common_exprZ1 = (sin(sqrt(common_exprZ))/sqrt(common_exprZ));
     		    else
-    		        common_exprZ1 = (std::sinh(std::sqrt(-1.0f*common_exprZ))/std::sqrt(-1.0f*common_exprZ));
+    		        common_exprZ1 = (sinh(sqrt(-1.0f*common_exprZ))/sqrt(-1.0f*common_exprZ));
 
     		    T1 gridKernel =  common_exprX1 * common_exprY1 * common_exprZ1;
 
@@ -440,7 +443,7 @@ deapodization3d(
 
 //__global__ static void
 //CropCenterRegion2d_kernel(
-//                          cufftComplex *dst, cufftComplex *src,
+//                          cufftstd::complex *dst, cufftstd::complex *src,
 //                          int imageSizeX, int imageSizeY,
 //                          int gridSizeX, int gridSizeY)
 //{
@@ -501,7 +504,7 @@ crop_center_region2d(
 //
 //__global__ static void
 //CropCenterRegion3d_kernel(
-//                          cufftComplex *dst, cufftComplex *src,
+//                          cufftstd::complex *dst, cufftstd::complex *src,
 //                          int imageSizeX, int imageSizeY, int imageSizeZ,
 //                          int gridSizeX, int gridSizeY, int gridSizeZ)
 //{
@@ -565,7 +568,10 @@ crop_center_region3d(
     		    common_index_dst = dZ_dst*imageSizeX*imageSizeY + dX_dst*imageSizeY + dY_dst;
     		    common_index_src = dZ_src*gridSizeX*gridSizeY   + dX_src*gridSizeY  + dY_src;
 
-    		    dst[common_index_dst]= src[common_index_src];
+				dst[common_index_dst] = src[common_index_src];
+
+				//dst[common_index_dst].real() = src[common_index_src].real();
+				//dst[common_index_dst].imag() = src[common_index_src].imag();
     		}
     	}
     }
@@ -672,7 +678,7 @@ zero_pad3d(
 /*
 void
 cuda_fft2shift_grid(
-                    cufftComplex *src, cufftComplex *dst,
+                    cufftstd::complex *src, cufftstd::complex *dst,
                     int dimY, int dimX, int inverse)
 {
     //(dimX,dimY) is the size of 'src'
@@ -680,11 +686,11 @@ cuda_fft2shift_grid(
     int pivotY = 0;
     int pivotX = 0;
     if(inverse) {
-        pivotY = (int)std::floor(float(dimY / 2));
-        pivotX = (int)std::floor(float(dimX / 2));
+        pivotY = (int)floor(float(dimY / 2));
+        pivotX = (int)floor(float(dimX / 2));
     } else {
-        pivotY = (int)std::ceil(float(dimY / 2));
-        pivotX = (int)std::ceil(float(dimX / 2));
+        pivotY = (int)ceil(float(dimY / 2));
+        pivotX = (int)ceil(float(dimX / 2));
     }
     
     dim3 threads(FFTSHIFT_TILE_SIZE_X, FFTSHIFT_TILE_SIZE_Y);
@@ -696,7 +702,7 @@ cuda_fft2shift_grid(
 
 void
 cuda_fft3shift_grid(
-                    cufftComplex *src, cufftComplex *dst,
+                    cufftstd::complex *src, cufftstd::complex *dst,
                     int dimY, int dimX, int dimZ, int inverse)
 {  
     //(dimX,dimY,dimZ) is the size of 'src'
@@ -781,7 +787,7 @@ void fftshift2(T *__restrict out, const T *__restrict in, int xdim, int ydim) {
 template<typename T1>
 void
 fft2shift_grid(
-		complex<T1> *__restrict src,
+		std::complex<T1> *__restrict src,
 		int dimY, int dimX)
 {
 	//(dimX,dimY) is the size of 'src'
@@ -792,7 +798,7 @@ fft2shift_grid(
 		for (int dX_dst = 0; dX_dst < dimX; dX_dst++)
 		{
 			common_index_dst = dY_dst*dimX + dX_dst;
-			src[common_index_dst] = std::pow(-1.0,(T1)(dY_dst+dX_dst))*src[common_index_dst];
+			src[common_index_dst] = pow(-1.0,(T1)(dY_dst+dX_dst))*src[common_index_dst];
 		}
 	}
 
@@ -801,7 +807,7 @@ fft2shift_grid(
 template<typename T1>
 void
 fft3shift_grid(
-		complex<T1> *__restrict src,
+		std::complex<T1> *__restrict src,
 		int dimY, int dimX, int dimZ)
 {
 	//(dimX,dimY,dimZ) is the size of 'src'
@@ -813,7 +819,7 @@ fft3shift_grid(
 		for (int dX_dst = 0; dX_dst < dimX; dX_dst++) {
 			for (int dZ_dst = 0; dZ_dst < dimZ; dZ_dst++) {
 				common_index_dst = dY_dst * dimX * dimZ + dX_dst * dimZ + dZ_dst;
-				src[common_index_dst] = std::pow(-1.0,(T1)(dY_dst + dX_dst + dZ_dst)) * src[common_index_dst];
+				src[common_index_dst] = pow(-1.0,(T1)(dY_dst + dX_dst + dZ_dst)) * src[common_index_dst];
 			}
 		}
 	}

@@ -119,7 +119,7 @@ int reconfMRIGdft(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword 
   
     cout << "sense created" << endl;
     Col<T1> img;
-    img = pwls_pcg1<T1, SENSE< T1 , Gdft<T1,T2>>,QuadPenalty<T1>>(xinit, Sd, W, data, R, niter);
+    img = solve_pwls_pcg<T1, SENSE< T1 , Gdft<T1,T2>>,QuadPenalty<T1>>(xinit, Sd, W, data, R, niter);
     savemat(testPath + "img_gdft_" + name1 + "_" + name2 + ".mat","img",img);
        }
    }

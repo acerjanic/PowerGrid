@@ -33,7 +33,7 @@ Mat<cx_double> test_pwls_pcg()
    //W = eye<Mat<cx_double>>(G.n1*G.n1,G.n1*G.n1); // Should be the size of k-space data: Is it right?
 
    Col<cx_double> x_t;
-   x_t = pwls_pcg1<cx_double,Gfft<cx_double>,QuadPenalty<cx_double>>(xinit, G, W, TestForward, R, niter);
+   x_t = solve_pwls_pcg<cx_double,Gfft<cx_double>,QuadPenalty<cx_double>>(xinit, G, W, TestForward, R, niter);
 	
    return x_t;
 }

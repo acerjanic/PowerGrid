@@ -98,7 +98,7 @@ Col<T1> test_FieldCorrection(string testPath)
     savemat(testPath+"testGgridAdjoint2.mat","testGgridAdjoint2",TestAdjoint);
 */
     Col<T1> x_t;
-    x_t = pwls_pcg1<T1,FieldCorrection<T1,T2,Ggrid<T1,T2>>,QuadPenalty<T1>>(xinit, A, W, data, R, niter);
+    x_t = solve_pwls_pcg<T1,FieldCorrection<T1,T2,Ggrid<T1,T2>>,QuadPenalty<T1>>(xinit, A, W, data, R, niter);
     
     return x_t;
     

@@ -124,7 +124,7 @@ int reconfMRIGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword
   
 
     Col<T1> img;
-    img = pwls_pcg1<T1, SENSE<cx_double,FieldCorrection<T1,T2,Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, Sg, W, data, R, niter);
+    img = solve_pwls_pcg<T1, SENSE<cx_double,FieldCorrection<T1,T2,Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, Sg, W, data, R, niter);
     savemat(testPath+"img_grid_" + name1+ "_" + name2 + ".mat","img",img);
          }
    }

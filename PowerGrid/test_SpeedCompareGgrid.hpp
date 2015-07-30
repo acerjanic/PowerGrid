@@ -105,8 +105,8 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
     W=1.0;
 
     //Col<T1> x_t;
-    //cout << "heading into PWLS_pcg1" << endl;
-    //x_t = pwls_pcg1<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
+    //cout << "heading into solve_pwls_pcg" << endl;
+    //x_t = solve_pwls_pcg<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
     //x_t = S/data;
     //savemat(testPath+"test_3D.mat","img",x_t);
 /*
@@ -132,12 +132,12 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 */
     cout << "Runing pwls with ggrid" << endl;
     Col<T1> test_pwls;
-    test_pwls = pwls_pcg1<T1,  SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,TVPenalty<T1>>(xinit, Sg, W, data, R, niter);
+    test_pwls = solve_pwls_pcg<T1,  SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,TVPenalty<T1>>(xinit, Sg, W, data, R, niter);
     savemat(testPath+"test_pwls.mat","img",test_pwls);
 /*
     cout << "Runing pwls with ggrid" << endl;
     Col<T1> test_pwls;
-    test_pwls = pwls_pcg1<T1,  Ggrid<T1,T2>,QuadPenalty<T1>>(xinit, Gg, W, data, R, niter);
+    test_pwls = solve_pwls_pcg<T1,  Ggrid<T1,T2>,QuadPenalty<T1>>(xinit, Gg, W, data, R, niter);
     savemat(testPath+"test_pwls.mat","img",test_pwls);
     */
 

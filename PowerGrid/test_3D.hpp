@@ -100,8 +100,8 @@ int test_3D(string dataPath)
     loadmat(testPath+"data.mat","data",&data);
 
     Col<T1> x_t;
-    cout << "heading into PWLS_pcg1" << endl;
-    //x_t = pwls_pcg1<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
+    cout << "heading into solve_pwls_pcg" << endl;
+    //x_t = solve_pwls_pcg<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
     x_t = S/data;
     savemat(testPath+"test_3D.mat","img",x_t);
 

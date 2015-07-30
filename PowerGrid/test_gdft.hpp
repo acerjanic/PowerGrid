@@ -80,7 +80,7 @@ Col<T1> test_gdft(const Col<T1> d,const Col<T2> kx,const Col<T2> ky, const Col<T
     //We call pwls_pcg as our nonlinear solver to minmize our cost function to find the image.
     //pwls_pcg has an implict cost function of C = G'(y - G*x) + R(x), where G is the forward transform, G' the adjoint transform, R(x) (QuadPenalty for now) the regularization penalty for image roughness,
     // y is the measured data, and x the image.
-    x_t = pwls_pcg1<T1,Gdft<T1,T2>,QuadPenalty<T1>>(xinit, G, W, TestForward, R, niter);
+    x_t = solve_pwls_pcg<T1,Gdft<T1,T2>,QuadPenalty<T1>>(xinit, G, W, TestForward, R, niter);
     
     return x_t;
     
