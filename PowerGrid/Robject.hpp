@@ -39,30 +39,9 @@ public:
     }
 
     //Class Methods - Declared virtual so they can be implemented in the base classes. Also they are virtual so that if you try to call Robject, things crash rather than give un results.
-    Col<T1> wpot(const Col<T1>& d)
-    {
-        return ones < Col < T1 >> (d.n_rows);
-    }
+    virtual Col<T1> wpot(const Col<T1>& d) const;
 
-    Col<T1> pot(const Col<T1>& d)
-    {
-        return ones < Col < T1 >> (d.n_rows);
-    }
-
-    T1 Penalty(const Col<T1>& d)
-    {
-        return 0;
-    }
-
-    Col<T1> Gradient(const Col<T1>& d)
-    {
-        return ones < Col < T1 >> (d.n_rows);
-    }
-
-    Col<T1> Denom(const Col<T1>& ddir)
-    {
-        return ones < Col < T1 >> (ddir.n_rows);
-    }
+    virtual Col<T1> pot(const Col<T1>& d) const;
 
     Col<T1>Cd(const Col<T1>& d, uword dim) const
     {
@@ -158,6 +137,77 @@ public:
 
         return out;
     }
+public:
+    double Penalty(const Col<T1>& x) const
+    {
+        Col <T1> d = zeros< Col < T1 >>(x.n_rows);
+        double penal = 0;
+        uword nd = 0;
+        if(this->Nz == 1) {
+            nd = 2;
+        } else {
+            nd = 3;
+            cout << "Setting dimension to 3 in reg." << endl;
+        }
+
+        for(uword ii = 0; ii < nd; ii++) {
+            d = this->Cd(x,ii);
+            d = this->pot(d);
+
+            penal = penal + abs(sum(d));
+        }
+
+        return (this->DeltaX*this->DeltaY*this->DeltaZ)*this->Beta*penal;
+    }
+
+    Col<T1> Gradient(const Col<T1>& x) const
+    {
+        Col <T1> g = zeros< Col < T1 >>(x.n_rows);
+        Col <T1> d = zeros< Col < T1 >>(x.n_rows);
+        uword nd = 0;
+        if(this->Nz == 1) {
+            nd = 2;
+        } else {
+            nd = 3;
+            cout << "Setting dimension to 3 in reg." << endl;
+
+        }
+
+        for(uword ii = 0; ii < nd; ii++) {
+            d = this->Cd(x,ii);
+            d = this->wpot(d);
+            d = this->Ctd(d,ii);
+            g = g + d;
+        }
+        return this->Beta*g*(this->DeltaX*this->DeltaY*this->DeltaZ);
+    }
+
+    T1 Denom(const Col<T1>& ddir,const Col<T1>& x) const
+    {
+
+        Col <T1> d = zeros< Col < T1 >>(ddir.n_rows);
+        Col <T1> Cx = zeros< Col < T1 >>(ddir.n_rows);
+        T1 penal = 0;
+        T1 temp;
+        uword nd = 0;
+        if(this->Nz == 1) {
+            nd = 2;
+        } else {
+            nd = 3;
+        }
+
+        for(uword ii = 0; ii < nd; ii++) {
+            d = this->Cd(ddir,ii);
+            Cx = this->wpot(this->Cd(x,ii));
+            Cx = Cx % this->Ctd(ddir,ii);
+            temp = as_scalar(d*Cx.t());
+            penal += temp;
+        }
+
+        return (this->DeltaX*this->DeltaY*this->DeltaZ)*this->Beta*penal;
+    }
+
+
 
 };
 
