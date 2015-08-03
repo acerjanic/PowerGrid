@@ -16,6 +16,7 @@ using namespace arma;
 template <typename T1>
 class QuadPenalty: public Robject<T1>
 {
+typedef complex<T1> CxT1;
 public:
     QuadPenalty();
 
@@ -36,12 +37,12 @@ public:
 
     //Class Methods
 
-    Col<T1> wpot(const Col<T1>& d) const
+    Col<CxT1> wpot(const Col<CxT1>& d) const
     {
-        return ones < Col < T1 >> (d.n_rows);
+        return ones < Col < CxT1 >> (d.n_rows);
     }
 
-    Col<T1> pot(const Col<T1>& d) const
+    Col<CxT1> pot(const Col< CxT1 >& d) const
     {
         return d % d / 2.0;
     }

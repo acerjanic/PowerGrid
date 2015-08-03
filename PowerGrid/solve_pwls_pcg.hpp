@@ -10,43 +10,43 @@
 
 using namespace arma;
 
-template<typename T1,typename T2>
+template<typename T1>
 inline
-T1 dot_double(const T1 &A, const T2  &B)
+complex<T1> dot_double(const Col<complex<T1>> &A,const Col<complex<T1>> &B)
 {
-    T1 sumReturn = sum(A % B);
+    complex<T1> sumReturn = accu(A % B);
     return sumReturn;
 }
 
-template<typename T1,typename T2>
+template<typename T1>
 inline
-T2 norm_grad(const Col<T1> &g,const Col<T1> &yi,const T2 &W)
+T1 norm_grad(const Col<complex<T1>> &g,const Col<complex<T1>> &yi,const Col<T1> &W)
 {
-    T1 normGrad = conv_to<T1>::from(norm(g) / real(trans(yi) * (W * yi)));
+    T1 normGrad = conv_to<T1>::from(norm(g) / real(trans(yi) * (W % yi)));
     return normGrad;
 
 }
 
 template<typename T1, typename Tobj, typename Robj>
-Col<T1> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,T1 const& W, Col<complex<T1>> const& yi, Robj const& R, uword niter)
+Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,Col<T1> const& W, Col<complex<T1>> const& yi, Robj const& R, uword niter)
 {
     typedef complex<T1> CxT1;
     // Initialize projection
     cout << "Entering pwls_pcg1" << endl;
     Col<CxT1> Ax = A*xInitial;
     Col<CxT1> x = xInitial;
-    T1 oldinprod = 0;
-    T1 gamma = 0.0;
+    CxT1 oldinprod = 0;
+    CxT1 gamma = 0.0;
     Col<CxT1> ddir;
     Col<CxT1> Adir;
-    T1 dAWAd;
-    Col<CxT1> dAWr;
-    T1 pdenom;
-    T1 denom;
+    CxT1 dAWAd;
+    CxT1 dAWr;
+    CxT1 pdenom;
+    CxT1 denom;
     
     Col<CxT1> ngrad;
     Col<CxT1> pgrad;
-    T1 pdot;
+    CxT1 pdot;
     Col<CxT1> cngrad;
     Col<CxT1> WAdir;
     Col<CxT1> proj;
@@ -59,8 +59,8 @@ Col<T1> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,T1 const&
     {
         // Compute negative gradient
         cout << "About to calculate the gradient of the cost function" << endl;
-        ngrad = A / (W * (yi - Ax));
-        if (norm_grad<T1,T2>(ngrad,yi,W) < 1e-10) {
+        ngrad = A / (W % (yi - Ax));
+        if (norm_grad<T1>(ngrad,yi,W) < 1e-10) {
             cout << "Terminating early due to zero gradient." << endl;
             return x;
         }
@@ -68,7 +68,7 @@ Col<T1> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,T1 const&
         ngrad = ngrad - pgrad;
         // Direction
         cngrad = conj(ngrad);
-        newinprod = real(dot_double(cngrad, ngrad));
+        newinprod = as_scalar(real(dot_double(cngrad, ngrad)));
         
         if (ii == 0) {
             ddir = ngrad;
@@ -85,20 +85,21 @@ Col<T1> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,T1 const&
             ddir = ngrad + gamma * ddir;
         }
         
-        Col<T1> oldgrad = ngrad;
+        Col<CxT1> oldgrad = ngrad;
         oldinprod = newinprod;
-        
+        Col<CxT1> temp = conj(ddir).eval();
         // Check if descent direction
-        if (real(dot_double(conj(ddir), ngrad)) < 0) {
+        if (as_scalar(real(dot_double(temp, ngrad))) < 0) {
             cout << " Warning descent direction not negative" << endl;
             return x;
         }
         
         // Step size in search direction
         Adir = A * ddir;
-        WAdir = W * Adir;
-        dAWAd = real(dot_double(conj(Adir).eval(),WAdir));
-        proj = Adir.t() * (W * (yi -Ax));
+        WAdir = W % Adir;
+        temp = conj(Adir).eval();
+        dAWAd = as_scalar(real(dot_double(temp,WAdir)));
+        proj = Adir.t() * (W % (yi -Ax));
         dAWr = conv_to<T1>::from(real(proj).eval());
         step = 0.0;
         
@@ -111,7 +112,7 @@ Col<T1> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,T1 const&
             denom = dAWAd + pdenom;
             
             if (std::abs(denom) < 1e-10 || std::abs(denom) > 1e25) {
-              if (real(dot_double(ngrad,ngrad)) < 1e-10) {
+              if (as_scalar(real(dot_double(ngrad,ngrad))) < 1e-10) {
                 cout << " Found exact solution" << endl;
                   return x;
               }
@@ -122,16 +123,16 @@ Col<T1> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,T1 const&
             }
 
             pgrad = R.Gradient(x+step*ddir);
-            savemat("/home/vagrant/test_reg.mat","pgrad",pgrad);
-
-            pdot = real(dot_T1(conj(ddir),pgrad));
+            //savemat("/home/vagrant/test_reg.mat","pgrad",pgrad);
+            temp = conj(ddir).eval();
+            pdot = as_scalar(real(dot_double(temp,pgrad)));
 
             stepIntermediate = (-dAWr + step * dAWAd + pdot) / denom;
             step = step - conv_to<T1>::from(stepIntermediate.eval());
         }
         
         // Check downhill direction
-        if (step < 0) {
+        if (as_scalar(abs(step)) < 0) {
             cout << "Warning downhill?" << endl;
         }
         

@@ -13,17 +13,18 @@
 #include "PowerGrid.h"
 using namespace arma;
 
-template<typename T1,typename T2>
+template<typename T1>
 int reconfMRIGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter,uword nc, uword startIndex, uword endIndex) {
+    typedef complex<T1> CxT1;
     string testPath = dataPath;
 
 
     //Setup image space coordinates/trajectory
-    Cube<T2> ix(Nx,Ny,Nz);
-    Cube<T2> iy(Nx,Ny,Nz);
-    Cube<T2> iz(Nx,Ny,Nz);
-    Col<T2> FM;
-    Col<T1> SMap;
+    Cube<T1> ix(Nx,Ny,Nz);
+    Cube<T1> iy(Nx,Ny,Nz);
+    Cube<T1> iz(Nx,Ny,Nz);
+    Col<T1> FM;
+    Col<CxT1> SMap;
     
     ix.zeros();
     iy.zeros();
@@ -35,24 +36,24 @@ int reconfMRIGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword
         for (uword jj = 0; jj < Nx; jj++) { //x
             for (uword kk = 0; kk < Nz; kk++) { //z
 
-                ix(ii, jj, kk) = ((T2) jj - (T2) Nx / 2.0) / ((T2) Nx);
-                iy(ii, jj, kk) = ((T2) ii - (T2) Ny / 2.0) / ((T2) Ny);
-                iz(ii, jj, kk) = ((T2) kk - (T2) Nz / 2.0) / ((T2) Nz);
+                ix(ii, jj, kk) = ((T1) jj - (T1) Nx / 2.0) / ((T1) Nx);
+                iy(ii, jj, kk) = ((T1) ii - (T1) Ny / 2.0) / ((T1) Ny);
+                iz(ii, jj, kk) = ((T1) kk - (T1) Nz / 2.0) / ((T1) Nz);
             }
         }
     }
 
-    Col<T2> kx;
+    Col<T1> kx;
     loadmat(testPath+"kx.mat","kx",&kx);
-    Col<T2> ky;
+    Col<T1> ky;
     loadmat(testPath+"ky.mat","ky",&ky);
-    Col<T2> kz;
+    Col<T1> kz;
     //loadmat(testPath+"kz.mat","kz",&kz);
     kz.zeros(kx.n_elem);
     uword nro;
     nro = kx.n_elem;
 
-    Col<T2> tvec;
+    Col<T1> tvec;
     loadmat(testPath+"t.mat","t",&tvec);
     
 
@@ -83,11 +84,11 @@ int reconfMRIGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword
     cout << "QuadPenalty setup successfull" << endl;
 
     //uword niter = 10;
-    Col<T1> xinit(Nx*Ny*Nz); // initial estimate of x
+    Col<CxT1> xinit(Nx*Ny*Nz); // initial estimate of x
     xinit.zeros();
-    T2 W;
+    Col<T1> W;
     //W = eye<sp_mat<T1>>(A.n1,A.n1); // Should be the size of k-space data: Is it right?
-    W=1.0;
+    W=ones(nro*nc);
     
 
     cout << " Start recon data with Gridding"<< endl;
@@ -108,23 +109,23 @@ int reconfMRIGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword
     ss2 << jj;
     name2=ss2.str();
 
-    Col<T1> data;
+    Col<CxT1> data;
     loadmat(testPath+"data_" + name1 + "_" + name2 + "_data.mat","data",&data);
      
         
-    Ggrid<T1,T2> Gg(nro,2.0,Nx,Ny,Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
+    Ggrid<T1> Gg(nro,2.0,Nx,Ny,Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
 
-    Col<T2> FM;
+    Col<T1> FM;
     loadmat(testPath+"FM_" + name2 + ".mat","FM",&FM);
-    FieldCorrection<T1, T2, Ggrid<T1,T2>> A(Gg,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L);
+    FieldCorrection<T1,Ggrid<T1>> A(Gg,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L);
   
-    Col<T1> SMap; 
+    Col<CxT1> SMap;
     loadmat(testPath+"SMap" + name2+ ".mat","SMap",&SMap);
-    SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>> Sg(A,SMap,nro,Nx*Ny*Nz,nc);
+    SENSE<T1, FieldCorrection<T1, Ggrid<T1>>> Sg(A,SMap,nro,Nx*Ny*Nz,nc);
   
 
-    Col<T1> img;
-    img = solve_pwls_pcg<T1, SENSE<cx_double,FieldCorrection<T1,T2,Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, Sg, W, data, R, niter);
+    Col<CxT1> img;
+    img = solve_pwls_pcg<T1, SENSE<T1,FieldCorrection<T1,Ggrid<T1>>>,QuadPenalty<T1>>(xinit, Sg, W, data, R, niter);
     savemat(testPath+"img_grid_" + name1+ "_" + name2 + ".mat","img",img);
          }
    }

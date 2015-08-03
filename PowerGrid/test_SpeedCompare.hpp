@@ -100,9 +100,9 @@ int test_SpeedCompare(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uw
     //uword niter = 10;
     Col<T1> xinit(Nx*Ny*Nz); // initial estimate of x
     xinit.zeros();
-    T2 W;
+    Col<T1> W;
     //W = eye<sp_mat<T1>>(A.n1,A.n1); // Should be the size of k-space data: Is it right?
-    W=1.0;
+    W=ones(nro*nc);
 
     //Col<T1> x_t;
     //cout << "heading into solve_pwls_pcg" << endl;

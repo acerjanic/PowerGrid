@@ -10,6 +10,7 @@ using namespace arma;
 template <typename T1>
 class Robject
 {
+typedef complex<T1> CxT1;
 public:
     // Robject();
     Robject() {};
@@ -39,11 +40,16 @@ public:
     }
 
     //Class Methods - Declared virtual so they can be implemented in the base classes. Also they are virtual so that if you try to call Robject, things crash rather than give un results.
-    virtual Col<T1> wpot(const Col<T1>& d) const;
+    virtual Col<CxT1> wpot(const Col<CxT1>& d) const    {
+        return ones < Col < CxT1 >> (d.n_rows);
+    }
 
-    virtual Col<T1> pot(const Col<T1>& d) const;
+    virtual Col<CxT1> pot(const Col<CxT1>& d) const
+    {
+        return d % d / 2.0;
+    }
 
-    Col<T1>Cd(const Col<T1>& d, uword dim) const
+    Col<CxT1>Cd(const Col<CxT1>& d, uword dim) const
     {
         /*
         Col<T1> out(Nx*Ny*Nz);
@@ -59,7 +65,7 @@ public:
             }
         }
         */
-        Col<T1> out(Nx*Ny*Nz);
+        Col<CxT1> out(Nx*Ny*Nz);
 
         uword ll,jj,kk;
         switch (dim)
@@ -90,7 +96,7 @@ public:
         return out;
     }
 
-    Col<T1>Ctd(const Col<T1>& d, uword dim) const
+    Col<CxT1>Ctd(const Col<CxT1>& d, uword dim) const
     {
         /*
         Col<T1> out(Nx*Ny*Nz);
@@ -107,7 +113,7 @@ public:
             }
         }
         */
-        Col<T1> out(Nx*Ny*Nz);
+        Col<CxT1> out(Nx*Ny*Nz);
 
         uword ll,jj,kk;
         switch (dim)
@@ -138,9 +144,9 @@ public:
         return out;
     }
 public:
-    double Penalty(const Col<T1>& x) const
+    double Penalty(const Col<CxT1>& x) const
     {
-        Col <T1> d = zeros< Col < T1 >>(x.n_rows);
+        Col <CxT1> d = zeros< Col < T1 >>(x.n_rows);
         double penal = 0;
         uword nd = 0;
         if(this->Nz == 1) {
@@ -157,13 +163,13 @@ public:
             penal = penal + abs(sum(d));
         }
 
-        return (this->DeltaX*this->DeltaY*this->DeltaZ)*this->Beta*penal;
+        return this->Beta*penal;
     }
 
-    Col<T1> Gradient(const Col<T1>& x) const
+    Col<CxT1> Gradient(const Col<CxT1>& x) const
     {
-        Col <T1> g = zeros< Col < T1 >>(x.n_rows);
-        Col <T1> d = zeros< Col < T1 >>(x.n_rows);
+        Col <CxT1> g = zeros< Col < CxT1 >>(x.n_rows);
+        Col <CxT1> d = zeros< Col < CxT1 >>(x.n_rows);
         uword nd = 0;
         if(this->Nz == 1) {
             nd = 2;
@@ -179,16 +185,16 @@ public:
             d = this->Ctd(d,ii);
             g = g + d;
         }
-        return this->Beta*g*(this->DeltaX*this->DeltaY*this->DeltaZ);
+        return this->Beta*g;
     }
 
-    T1 Denom(const Col<T1>& ddir,const Col<T1>& x) const
+    CxT1 Denom(const Col<CxT1>& ddir,const Col<CxT1>& x) const
     {
 
-        Col <T1> d = zeros< Col < T1 >>(ddir.n_rows);
-        Col <T1> Cx = zeros< Col < T1 >>(ddir.n_rows);
-        T1 penal = 0;
-        T1 temp;
+        Col <CxT1> d = zeros< Col < CxT1 >>(ddir.n_rows);
+        Col <CxT1> Cx = zeros< Col < CxT1 >>(ddir.n_rows);
+        CxT1 penal = 0;
+        CxT1 temp;
         uword nd = 0;
         if(this->Nz == 1) {
             nd = 2;
@@ -197,14 +203,14 @@ public:
         }
 
         for(uword ii = 0; ii < nd; ii++) {
-            d = this->Cd(ddir,ii);
+            d = this->Ctd(ddir,ii);
             Cx = this->wpot(this->Cd(x,ii));
-            Cx = Cx % this->Ctd(ddir,ii);
-            temp = as_scalar(d*Cx.t());
+            Cx = Cx % this->Cd(ddir,ii);
+            temp = as_scalar(d.t()*Cx);
             penal += temp;
         }
 
-        return (this->DeltaX*this->DeltaY*this->DeltaZ)*this->Beta*penal;
+        return penal;
     }
 
 
