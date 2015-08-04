@@ -58,7 +58,7 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
     Col<T1> tvec;
     loadmat(testPath+"t.mat","t",&tvec);
     
-    //uword L = 1;
+
     loadmat(testPath+"FM.mat","FM",&FM);
     //FM.zeros();
 
@@ -69,8 +69,11 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
     Ggrid<T1> Gg(nro,2.0,Nx,Ny,Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
 
     // Field correction operation
+
+    uword type = 2; // 2 for min max time seg and 1 for Hanning
+    //uword L = 4;
     cout << "Initializing FieldCorrection" << endl;
-    FieldCorrection<T1, Ggrid<T1>> A(Gg,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L);
+    FieldCorrection<T1, Ggrid<T1>> A(Gg,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L,type);
 
     //cout << "Initializing Gdft" << endl;
     //Gdft<T1,T2> Gd(nro,Nx*Ny*Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM),vectorise(tvec));

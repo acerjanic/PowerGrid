@@ -64,8 +64,8 @@ local.properties
 .idea/
 
 # Exclude build folder
-build/
 .vagrant/
 
 # Exclude archives
 *.zip
+/simu3D_128/
