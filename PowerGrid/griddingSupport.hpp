@@ -25,7 +25,7 @@ T1 bessi0(T1 x)
 	T1 ax,ans;
 	T1 y;
 
-	if ((ax=abs(x)) < 3.75)
+	if ((ax=std::abs(x)) < 3.75)
 	{
 		y=x/3.75;
 		y=y*y;
@@ -35,7 +35,7 @@ T1 bessi0(T1 x)
 	else
 	{
 		y=3.75/ax;
-		ans=(exp(ax)/sqrt(ax))*(0.39894228+y*(0.1328592e-1+y*(0.225319e-2+
+		ans=(std::exp(ax)/std::sqrt(ax))*(0.39894228+y*(0.1328592e-1+y*(0.225319e-2+
 															  y*(-0.157565e-2+y*(0.916281e-2+y*(-0.2057706e-1+y*(0.2635537e-1+
 																												 y*(-0.1647633e-1+y*0.392377e-2))))))));
 	}
@@ -87,7 +87,7 @@ void calculateLUT(T1 beta, T1 width, T1 *&LUT, uword &sizeLUT) {
 			v = static_cast<T1>(k) / static_cast<T1>(sizeLUT);
 
 			// compute kernel value and store
-			LUT[k] = bessi0(beta * sqrt(1.0 - (v))) / width;
+			LUT[k] = bessi0(beta * std::sqrt(1.0 - (v))) / width;
 
 		}
 	}
@@ -275,14 +275,14 @@ deapodization2d(
 			    common_exprY = (MRI_PI*MRI_PI*kernelWidth*kernelWidth*gridKernelY*gridKernelY - beta*beta);
 
 			    if(common_exprX>=0)
-			        common_exprX1 = (sin(sqrt(common_exprX))/sqrt(common_exprX));
+			        common_exprX1 = (std::sin(std::sqrt(common_exprX))/std::sqrt(common_exprX));
 			    else
-			        common_exprX1 = (sinh(sqrt(-1.0f*common_exprX))/sqrt(-1.0f*common_exprX));
+			        common_exprX1 = (std::sinh(std::sqrt(-1.0f*common_exprX))/std::sqrt(-1.0f*common_exprX));
 
 			    if(common_exprY>=0)
-			        common_exprY1 = (sin(sqrt(common_exprY))/sqrt(common_exprY));
+			        common_exprY1 = (std::sin(std::sqrt(common_exprY))/std::sqrt(common_exprY));
 			    else
-			        common_exprY1 = (sinh(sqrt(-1.0f*common_exprY))/sqrt(-1.0f*common_exprY));
+			        common_exprY1 = (std::sinh(std::sqrt(-1.0f*common_exprY))/std::sqrt(-1.0f*common_exprY));
 
 			    gridKernel =  common_exprX1 * common_exprY1;
 
@@ -412,19 +412,19 @@ deapodization3d(
     		    common_exprZ = (MRI_PI*MRI_PI*kernelWidth*kernelWidth*gridKernelZ*gridKernelZ - beta*beta);
 
     		    if(common_exprX>=0)
-    		        common_exprX1 = (sin(sqrt(common_exprX))/sqrt(common_exprX));
+    		        common_exprX1 = (std::sin(std::sqrt(common_exprX))/std::sqrt(common_exprX));
     		    else
-    		        common_exprX1 = (sinh(sqrt(-1.0f*common_exprX))/sqrt(-1.0f*common_exprX));
+    		        common_exprX1 = (std::sinh(std::sqrt(-1.0f*common_exprX))/std::sqrt(-1.0f*common_exprX));
 
     		    if(common_exprY>=0)
-    		        common_exprY1 = (sin(sqrt(common_exprY))/sqrt(common_exprY));
+    		        common_exprY1 = (std::sin(std::sqrt(common_exprY))/std::sqrt(common_exprY));
     		    else
-    		        common_exprY1 = (sinh(sqrt(-1.0f*common_exprY))/sqrt(-1.0f*common_exprY));
+    		        common_exprY1 = (std::sinh(std::sqrt(-1.0f*common_exprY))/std::sqrt(-1.0f*common_exprY));
 
     		    if(common_exprZ>=0)
-    		        common_exprZ1 = (sin(sqrt(common_exprZ))/sqrt(common_exprZ));
+    		        common_exprZ1 = (std::sin(std::sqrt(common_exprZ))/std::sqrt(common_exprZ));
     		    else
-    		        common_exprZ1 = (sinh(sqrt(-1.0f*common_exprZ))/sqrt(-1.0f*common_exprZ));
+    		        common_exprZ1 = (std::sinh(std::sqrt(-1.0f*common_exprZ))/std::sqrt(-1.0f*common_exprZ));
 
     		    T1 gridKernel =  common_exprX1 * common_exprY1 * common_exprZ1;
 
@@ -798,7 +798,7 @@ fft2shift_grid(
 		for (int dX_dst = 0; dX_dst < dimX; dX_dst++)
 		{
 			common_index_dst = dY_dst*dimX + dX_dst;
-			src[common_index_dst] = pow(-1.0,(T1)(dY_dst+dX_dst))*src[common_index_dst];
+			src[common_index_dst] = std::pow(-1.0,(T1)(dY_dst+dX_dst))*src[common_index_dst];
 		}
 	}
 
@@ -819,7 +819,7 @@ fft3shift_grid(
 		for (int dX_dst = 0; dX_dst < dimX; dX_dst++) {
 			for (int dZ_dst = 0; dZ_dst < dimZ; dZ_dst++) {
 				common_index_dst = dY_dst * dimX * dimZ + dX_dst * dimZ + dZ_dst;
-				src[common_index_dst] = pow(-1.0,(T1)(dY_dst + dX_dst + dZ_dst)) * src[common_index_dst];
+				src[common_index_dst] = std::pow(-1.0,(T1)(dY_dst + dX_dst + dZ_dst)) * src[common_index_dst];
 			}
 		}
 	}

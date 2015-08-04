@@ -15,7 +15,6 @@
 #include "../Support/CeempleComplex.h"
 #include "../Support/CeempleArmadillo.h"
 #include "../Support/CeempleMatio.h"
-#include "test_pwls_pcg.h"
 #include "impatientTypes.h"
 #include "fftw3.h" //for fft library
 #include "config.hxx"
@@ -46,6 +45,7 @@ namespace arma {
 #include "test_3D.hpp"
 #include "test_SpeedCompareGgrid.hpp"
 #include "test_SpeedCompareGdft.hpp"
+#include "test_pwls_pcg.hpp"
 #include "reconfMRIGdft.hpp"
 #include "reconfMRIGgrid.hpp"
 

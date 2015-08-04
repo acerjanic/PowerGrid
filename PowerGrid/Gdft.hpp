@@ -8,14 +8,14 @@
 
 #ifndef PowerGrid_Gdft_hpp
 #define PowerGrid_Gdft_hpp
-template<typename T1,typename T2> //This is of type complex<double> or complex<float>, or any other type like float or single
+template<typename T1> //This is of type complex<double> or complex<float>, or any other type like float or single
 class Gdft {
-
+typedef complex<T1> CxT1;
 public:
     //Default Class Constructor and Destructor
     Gdft();
     //Class Constructor
-    Gdft(uword a, uword b, const Col<T2> &k1, const Col<T2> &k2, const Col<T2> &k3, const Col<T2> &i1, const Col<T2> &i2, const Col<T2> &i3,const Col<T2> &f1, const Col<T2> &t1) //Change these argumenst as you need to setup the object
+    Gdft(uword a, uword b, const Col<T1> &k1, const Col<T1> &k2, const Col<T1> &k3, const Col<T1> &i1, const Col<T1> &i2, const Col<T1> &i3,const Col<T1> &f1, const Col<T1> &t1) //Change these argumenst as you need to setup the object
     {
         n1 = a;
         n2 = b;
@@ -33,39 +33,39 @@ public:
     uword n1 = 0;
     uword n2 = 0;
 
-    Col<T2> kx; //k-space coordinates
-    Col<T2> ky;
-    Col<T2> kz;
-    Col<T2> ix; //image space coordinates 
-    Col<T2> iy;
-    Col<T2> iz;
-    Col<T2> FM;
-    Col<T2> t;
+    Col<T1> kx; //k-space coordinates
+    Col<T1> ky;
+    Col<T1> kz;
+    Col<T1> ix; //image space coordinates
+    Col<T1> iy;
+    Col<T1> iz;
+    Col<T1> FM;
+    Col<T1> t;
 
     //Overloaded methods for forward and adjoint transform
     //Forward transform operation
-    Col<T1> operator*(const Col<T1>& d) const//Don't change these arguments
+    Col<CxT1> operator*(const Col<CxT1>& d) const //Don't change these arguments, they are defined as part of the C++ language spec
     {
         //This is just specifying size assuming things are the same size, change as necessary
-        Col<T2> realData = real(d);
-        Col<T2> imagData = imag(d);
+        Col<T1> realData = real(d);
+        Col<T1> imagData = imag(d);
         //Now we grab the data out of armadillo with the memptr() function
         //This returns a pointer of the type of the elements of the array/vector/matrix/cube (3d matrix)
         //Armadillo uses column major like MATLAB and Fortran, but different from 2D C++ arrays which are row major.
-        T2* realDataPtr = realData.memptr();
-        T2* imagDataPtr = imagData.memptr();
+        T1* realDataPtr = realData.memptr();
+        T1* imagDataPtr = imagData.memptr();
 
-        Col<T2> realXformedData;
-        Col<T2> imagXformedData;
+        Col<T1> realXformedData;
+        Col<T1> imagXformedData;
         realXformedData.zeros(this->n1);
         imagXformedData.zeros(this->n1);
 
-        T2* realXformedDataPtr = realXformedData.memptr();
-        T2* imagXformedDataPtr = imagXformedData.memptr();
+        T1* realXformedDataPtr = realXformedData.memptr();
+        T1* imagXformedDataPtr = imagXformedData.memptr();
         //Process data here, like calling a brute force transform, dft...
         // I assume you create the pointers to the arrays where the transformed data will be stored
         // realXformedDataPtr and imagXformedDataPtr and they are of type float*
-        ftCpu<T2>(realXformedDataPtr,imagXformedDataPtr,
+        ftCpu<T1>(realXformedDataPtr,imagXformedDataPtr,
                   realDataPtr, imagDataPtr, kx.memptr(),
                   ky.memptr(), kz.memptr(),
                   ix.memptr(), iy.memptr(), iz.memptr(),
@@ -80,35 +80,35 @@ public:
 
         //We can free the realDataXformPtr and imagDataXformPtr at this point and Armadillo will manage armadillo object memory as things change size or go out of scope and need to be destroyed
 
-        Col<T1> XformedData(this->n1);
+        Col<CxT1> XformedData(this->n1);
         XformedData.set_real(realXformedData);
         XformedData.set_imag(imagXformedData);
 
-        return conv_to<Col<T1>>::from(XformedData); //Return a vector of type T1
+        return conv_to<Col<CxT1>>::from(XformedData); //Return a vector of type T1
 
     }
 
     //Adjoint transform operation
-    Col<T1> operator/(const Col<T1>& d) const
+    Col<CxT1> operator/(const Col<CxT1>& d) const
     {
 
-        Col<T2> realData = real(d);
-        Col<T2> imagData = imag(d);
+        Col<T1> realData = real(d);
+        Col<T1> imagData = imag(d);
 
-        T2* realDataPtr = realData.memptr();
-        T2* imagDataPtr = imagData.memptr();
+        T1* realDataPtr = realData.memptr();
+        T1* imagDataPtr = imagData.memptr();
 
-        Col<T2> realXformedData;
-        Col<T2> imagXformedData;
+        Col<T1> realXformedData;
+        Col<T1> imagXformedData;
         realXformedData.zeros(this->n2);
         imagXformedData.zeros(this->n2);
 
-        T2* realXformedDataPtr = realXformedData.memptr();
-        T2* imagXformedDataPtr = imagXformedData.memptr();
+        T1* realXformedDataPtr = realXformedData.memptr();
+        T1* imagXformedDataPtr = imagXformedData.memptr();
         //Process data here, like calling a brute force transform, dft...
         // I assume you create the pointers to the arrays where the transformed data will be stored
         // realXformedDataPtr and imagXformedDataPtr and they are of type float*
-        iftCpu<T2>(realXformedDataPtr,imagXformedDataPtr,
+        iftCpu<T1>(realXformedDataPtr,imagXformedDataPtr,
                    realDataPtr, imagDataPtr, kx.memptr(),
                    ky.memptr(), kz.memptr(),
                    ix.memptr(), iy.memptr(), iz.memptr(),
@@ -121,11 +121,11 @@ public:
 
         //We can free the realDataXformPtr and imagDataXformPtr at this point and Armadillo will manage armadillo object memory as things change size or go out of scope and need to be destroyed
 
-        Col<T1> XformedData(this->n2);
+        Col<CxT1> XformedData(this->n2);
         XformedData.set_real(realXformedData);
         XformedData.set_imag(imagXformedData);
 
-        return conv_to<Col<T1>>::from(XformedData); //Return a vector of type T1
+        return conv_to<Col<CxT1>>::from(XformedData); //Return a vector of type T1
 
     }
 

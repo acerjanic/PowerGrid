@@ -10,7 +10,7 @@
 //We want to operate on many types of variables (assume of type Col<type>)
 template<typename T1>
 class Gfft {
-    
+    typedef complex<T1> CxT1;
 public:
     //Default Class Constructor and Destructor
     Gfft();
@@ -27,28 +27,28 @@ public:
 
     //Overloaded methods for forward and adjoint transform
     //Forward transform operation
-    Col<T1> operator*(const Col<T1>& d) const
+    Col<CxT1> operator*(const Col<CxT1>& d) const
     {
         uword stx = (this->n2-this->n1)/2;
 
         //Create 2D array object for use with the fft
-        Mat<T1> d2D = reshape(d,this->n2,this->n2);
+        Mat<CxT1> d2D = reshape(d,this->n2,this->n2);
         
         d2D = fftshift(fft2(fftshift(d2D)));
-        Mat<T1> d2Dtrimmed = d2D(span(stx,stx+this->n1-1),span(stx,stx+this->n1-1));
+        Mat<CxT1> d2Dtrimmed = d2D(span(stx,stx+this->n1-1),span(stx,stx+this->n1-1));
         //equivalent to returning col(output) in MATLAB with IRT
         return vectorise(d2Dtrimmed);
         
     }
     
     //Adjoint transform operation
-    Col<T1> operator/(const Col<T1>& d) const
+    Col<CxT1> operator/(const Col<CxT1>& d) const
     {
         uword stx = (this->n2-this->n1)/2;
 
         //Create 2D array object for use with the fft
-        Mat<T1> d2D = reshape(d,this->n1,this->n1);
-        Mat<T1> d2Dtrimmed = zeros<Mat<T1>>(this->n2,this->n2);
+        Mat<CxT1> d2D = reshape(d,this->n1,this->n1);
+        Mat<CxT1> d2Dtrimmed = zeros<Mat<T1>>(this->n2,this->n2);
 
         d2Dtrimmed = d2D(span(stx,stx+this->n1-1),span(stx,stx+this->n1-1));
 

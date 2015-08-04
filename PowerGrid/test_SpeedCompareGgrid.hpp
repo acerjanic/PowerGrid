@@ -13,20 +13,20 @@
 
 using namespace arma;
 
-template<typename T1,typename T2>
+template<typename T1>
 int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter,uword nc) {
     string testPath = dataPath;
-
+    typedef complex<T1> CxT1;
     //uword Nx =64;
     //uword Ny =64;
     //uword Nz =16;
 
     //Setup image space coordinates/trajectory
-    Cube<T2> ix(Nx,Ny,Nz);
-    Cube<T2> iy(Nx,Ny,Nz);
-    Cube<T2> iz(Nx,Ny,Nz);
-    Col<T2> FM;
-    Col<T1> SMap;
+    Cube<T1> ix(Nx,Ny,Nz);
+    Cube<T1> iy(Nx,Ny,Nz);
+    Cube<T1> iz(Nx,Ny,Nz);
+    Col<T1> FM;
+    Col<CxT1> SMap;
     
     ix.zeros();
     iy.zeros();
@@ -38,39 +38,39 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
         for (uword jj = 0; jj < Nx; jj++) { //x
             for (uword kk = 0; kk < Nz; kk++) { //z
 
-                ix(ii, jj, kk) = ((T2) jj - (T2) Nx / 2.0) / ((T2) Nx);
-                iy(ii, jj, kk) = ((T2) ii - (T2) Ny / 2.0) / ((T2) Ny);
-                iz(ii, jj, kk) = ((T2) kk - (T2) Nz / 2.0) / ((T2) Nz);
+                ix(ii, jj, kk) = ((T1) jj - (T1) Nx / 2.0) / ((T1) Nx);
+                iy(ii, jj, kk) = ((T1) ii - (T1) Ny / 2.0) / ((T1) Ny);
+                iz(ii, jj, kk) = ((T1) kk - (T1) Nz / 2.0) / ((T1) Nz);
             }
         }
     }
 
-    Col<T2> kx;
+    Col<T1> kx;
     loadmat(testPath+"kx.mat","kx",&kx);
-    Col<T2> ky;
+    Col<T1> ky;
     loadmat(testPath+"ky.mat","ky",&ky);
-    Col<T2> kz;
+    Col<T1> kz;
     loadmat(testPath+"kz.mat","kz",&kz);
 
     uword nro;
     nro = kx.n_elem;
 
-    Col<T2> tvec;
+    Col<T1> tvec;
     loadmat(testPath+"t.mat","t",&tvec);
     
     //uword L = 1;
     loadmat(testPath+"FM.mat","FM",&FM);
-    FM.zeros();
+    //FM.zeros();
 
 
 
     // Fourier transfrom operator
     cout << "Initializing Ggrid" << endl;
-    Ggrid<T1,T2> Gg(nro,2.0,Nx,Ny,Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
+    Ggrid<T1> Gg(nro,2.0,Nx,Ny,Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
 
     // Field correction operation
     cout << "Initializing FieldCorrection" << endl;
-    FieldCorrection<T1, T2, Ggrid<T1,T2>> A(Gg,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L);
+    FieldCorrection<T1, Ggrid<T1>> A(Gg,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L);
 
     //cout << "Initializing Gdft" << endl;
     //Gdft<T1,T2> Gd(nro,Nx*Ny*Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM),vectorise(tvec));
@@ -83,10 +83,10 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 
     // Sense operation
     cout << "Iniitalizing SENSE Ggrid" << endl;
-    SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>> Sg(A,SMap,nro,Nx*Ny*Nz,nc);
+    SENSE<T1, FieldCorrection<T1, Ggrid<T1>>> Sg(A,SMap,nro,Nx*Ny*Nz,nc);
 
     cout << "loading data" << endl;
-    Col<T1> data;
+    Col<CxT1> data;
     loadmat(testPath+"data.mat","data",&data);
 
     // Variables needed for the recon: Penalty object, num of iterations
@@ -94,15 +94,15 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
     //ReconMask.ones();
 
     cout << "Iniitalizing QuadPenalty" << endl;
-    TVPenalty<T1>R(Nx,Ny,Nz,100000000.0,.01);
+    TVPenalty<T1>R(Nx,Ny,Nz,1e-5,1e-7);
     cout << "QuadPenalty setup successfull" << endl;
 
     //uword niter = 10;
-    Col<T1> xinit(Nx*Ny*Nz); // initial estimate of x
+    Col<CxT1> xinit(Nx*Ny*Nz); // initial estimate of x
     xinit.zeros();
-    T2 W;
+    Col<T1> W;
     //W = eye<sp_mat<T1>>(A.n1,A.n1); // Should be the size of k-space data: Is it right?
-    W=1.0;
+    W = ones(nro*nc);
 
     //Col<T1> x_t;
     //cout << "heading into solve_pwls_pcg" << endl;
@@ -131,8 +131,8 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
     savemat(testPath+"test_forward_Sdft.mat","img",x_Sd_forward);
 */
     cout << "Runing pwls with ggrid" << endl;
-    Col<T1> test_pwls;
-    test_pwls = solve_pwls_pcg<T1,  SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,TVPenalty<T1>>(xinit, Sg, W, data, R, niter);
+    Col<CxT1> test_pwls;
+    test_pwls = solve_pwls_pcg<T1,  SENSE<T1, FieldCorrection<T1, Ggrid<T1>>>,TVPenalty<T1>>(xinit, Sg, W, data, R, niter);
     savemat(testPath+"test_pwls.mat","img",test_pwls);
 /*
     cout << "Runing pwls with ggrid" << endl;

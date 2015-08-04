@@ -54,7 +54,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-        int test = reconfMRIGdft<cx_double,double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils,startIndex,endIndex);
+        int test = reconfMRIGdft<double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils,startIndex,endIndex);
 
     } else {
 
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
             return 1;
         }
 
-        int test = test_SpeedCompareGdft<cx_double,double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils);
+        int test = test_SpeedCompareGdft<double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils);
 
     }
   

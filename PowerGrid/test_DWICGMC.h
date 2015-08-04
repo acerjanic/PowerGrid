@@ -13,9 +13,10 @@
 
 using namespace arma;
 
-template<typename T1,typename T2>
+template<typename T1>
 int test_SpeedCompare(string dataPath)
 {
+    typedef complex<T1> CxT1;
     string testPath = dataPath;
 
     uword Nx =120;
@@ -23,12 +24,12 @@ int test_SpeedCompare(string dataPath)
     uword Nz =4;
 
     //Setup image space coordinates/trajectory
-    Cube<T2> ix(Nx,Ny,Nz);
-    Cube<T2> iy(Nx,Ny,Nz);
-    Cube<T2> iz(Nx,Ny,Nz);
-    Col<T2> FM;
-    Col<T1> SMap;
-    Col<T2> PMap;
+    Cube<T1> ix(Nx,Ny,Nz);
+    Cube<T1> iy(Nx,Ny,Nz);
+    Cube<T1> iz(Nx,Ny,Nz);
+    Col<T1> FM;
+    Col<CxT1> SMap;
+    Col<T1> PMap;
     
     ix.zeros();
     iy.zeros();
@@ -47,17 +48,17 @@ int test_SpeedCompare(string dataPath)
         }
     }
 
-    Col<T2> kx;
+    Col<T1> kx;
     loadmat(testPath+"kx.mat","kx",&kx);
-    Col<T2> ky;
+    Col<T1> ky;
     loadmat(testPath+"ky.mat","ky",&ky);
-    Col<T2> kz;
+    Col<T1> kz;
     loadmat(testPath+"kz.mat","kz",&kz);
 
     uword nro;
     nro = kx.n_elem;
 
-    Col<T2> tvec;
+    Col<T1> tvec;
     loadmat(testPath+"t.mat","t",&tvec);
     
     uword L = 1;
@@ -68,34 +69,34 @@ int test_SpeedCompare(string dataPath)
 
     // Fourier transfrom operator
     cout << "Initializing Ggrid" << endl;
-    Ggrid<T1,T2> Gg(nro,2.0,Nx,Ny,Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
+    Ggrid<T1> Gg(nro,2.0,Nx,Ny,Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
 
     // Field correction operation
     cout << "Initializing FieldCorrection" << endl;
-    FieldCorrection<T1, T2, Ggrid<T1,T2>> A(Gg,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L);
+    FieldCorrection<T1, Ggrid<T1>> A(Gg,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L);
 
     cout << "Initializing Gdft" << endl;
-    Gdft<T1,T2> Gd(nro,Nx*Ny*Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM),vectorise(tvec));
+    Gdft<T1> Gd(nro,Nx*Ny*Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM),vectorise(tvec));
 
     uword nc = 32;
     loadmat(testPath+"SMap.mat","SMap",&SMap);
 
     cout << "Iniitalizing SENSE gdft" << endl;
-    SENSE<cx_double, Gdft<T1,T2>> Sd(Gd,SMap,nro,Nx*Ny*Nz,nc);
+    SENSE<T1, Gdft<T1>> Sd(Gd,SMap,nro,Nx*Ny*Nz,nc);
 
     // Sense operation
     cout << "Iniitalizing SENSE Ggrid" << endl;
-    SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>> Sg(A,SMap,nro,Nx*Ny*Nz,nc);
+    SENSE<T1, FieldCorrection<T1, Ggrid<T1>>> Sg(A,SMap,nro,Nx*Ny*Nz,nc);
 
     cout << "Initializing motin correction" << endl;
     //Col<T2> ShotPhaseMap;
     //ShotPhaseMap.zeros(Nx*Ny*Nz*Nz);
     //Col<T2> t_tmp;
     //t_tmp.zeros(t_tmp.n_elem/Nz);
-    DWICGMC<T1,T2> S_DWI( kx, ky, kz, Nx, Ny, Nz, nc, tvec, SMap, vectorise(FM), PMap);
+    DWICGMC<T1> S_DWI( kx, ky, kz, Nx, Ny, Nz, nc, tvec, SMap, vectorise(FM), PMap);
 
     cout << "loading data" << endl;
-    Col<T1> data;
+    Col<CxT1> data;
     loadmat(testPath+"data.mat","data",&data);
 
     // Variables needed for the recon: Penalty object, num of iterations
@@ -107,11 +108,11 @@ int test_SpeedCompare(string dataPath)
     cout << "QuadPenalty setup successfull" << endl;
 
     uword niter = 10;
-    Col<T1> xinit(Nx*Ny*Nz); // initial estimate of x
+    Col<CxT1> xinit(Nx*Ny*Nz); // initial estimate of x
     xinit.zeros();
-    T2 W;
+    Col<T1> W;
     //W = eye<sp_mat<T1>>(A.n1,A.n1); // Should be the size of k-space data: Is it right?
-    W=1.0;
+    W=ones(nro*nc);
 
     //Col<T1> x_t;
     //cout << "heading into solve_pwls_pcg" << endl;
@@ -148,7 +149,7 @@ int test_SpeedCompare(string dataPath)
 
     cout << "Runing pwls with ggrid" << endl;
     Col<T1> test_pwls;
-    test_pwls = solve_pwls_pcg<T1,  DWICGMC<T1,T2> ,QuadPenalty<T1>>(xinit, S_DWI, W, data, R, niter);
+    test_pwls = solve_pwls_pcg<T1,  DWICGMC<T1, QuadPenalty<T1>>(xinit, S_DWI, W, data, R, niter);
     savemat(testPath+"test_pwls.mat","img",test_pwls);
 
      /*

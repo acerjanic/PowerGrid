@@ -13,6 +13,19 @@
 #ifdef _OPENACC
 #include "openacc.h"
 #include "accelmath.h"
+    #define MIN std::min
+    #define MAX std::max
+    #define SQRT std::sqrt
+    #define CEIL std::ceil
+    #define FLOOR std::floor
+    #define ABS std::abs
+#else
+    #define MIN std::min
+    #define MAX std::max
+    #define SQRT std::sqrt
+    #define CEIL std::ceil
+    #define FLOOR std::floor
+    #define ABS std::abs
 #endif
 
 using namespace arma;
@@ -23,7 +36,7 @@ template<typename T1>
 int
 gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionSample<T1> *__restrict sample,
                  const T1 *LUT, const uword sizeLUT,
-                 complex<T1> *__restrict gridData, T1 *__restrict sampleDensity)
+                 complex<T1> *__restrict gridData)
 {
 
     unsigned int NxL, NxH;
@@ -55,7 +68,7 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
     //Jiading GAI
     //float t0 = t[0];
 
-    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(sampleDensity[0:gridNumElems], pGData[0:gridNumElems*2])
+    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(pGData[0:gridNumElems*2])
     for (int i=0; i < n; i++)
     {
         ReconstructionSample<T1> pt = sample[i];
@@ -63,8 +76,8 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
         //Jiading GAI
         //float atm = hanning_d(t[i], tau, l, t0);//a_l(t_m)
         
-        shiftedKx = (gridOS)*(pt.kX+((T1)Nx)/2.0f);
-        shiftedKy = (gridOS)*(pt.kY+((T1)Ny)/2.0f);
+        shiftedKx = (gridOS)*(pt.kX+((T1)Nx)/(T1)2.0);
+        shiftedKy = (gridOS)*(pt.kY+((T1)Ny)/(T1)2.0);
         //shiftedKz = ((float)gridOS)*(pt.kZ+((float)Nz)/2);
         
         //if(shiftedKx < 0.0f)
@@ -77,11 +90,11 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
         //   shiftedKy = ((float)gridOS)*((float)Ny);
         
         
-        NxL = (int)(fmax(0.0f,std::ceil(shiftedKx - kernelWidth*(gridOS)/2.0f)));
-        NxH = (int)(fmin((gridOS*(T1)Nx-1.0f),std::floor(shiftedKx + kernelWidth*(gridOS)/2.0f)));
+        NxL = (int)(MAX((T1)0.0,CEIL(shiftedKx - kernelWidth*(gridOS)/(T1)2.0)));
+        NxH = (int)(MIN((gridOS*(T1)Nx-(T1)1.0),FLOOR(shiftedKx + kernelWidth*(gridOS)/(T1)2.0)));
         
-        NyL = (int)(fmax(0.0f,std::ceil(shiftedKy - kernelWidth*(gridOS)/2.0f)));
-        NyH = (int)(fmin((gridOS*(T1)Ny-1.0f),std::floor(shiftedKy + kernelWidth*(gridOS)/2.0f)));
+        NyL = (int)(MAX((T1)0.0,CEIL(shiftedKy - kernelWidth*(gridOS)/(T1)2.0)));
+        NyH = (int)(MIN((gridOS*(T1)Ny-(T1)1.0),FLOOR(shiftedKy + kernelWidth*(gridOS)/(T1)2.0)));
         
         //NzL = (int)(fmax(0.0f,ceil(shiftedKz - kernelWidth*((float)gridOS)/2)));
         //NzH = (int)(fmin((float)(gridOS*Nz-1),floor(shiftedKz + kernelWidth*((float)gridOS)/2)));
@@ -90,18 +103,18 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
         for(nx=NxL; nx<=NxH; ++nx)
         {
             int k0;
-            distX = fabs(shiftedKx - ((T1)nx))/(gridOS);
+            distX = ABS(shiftedKx - ((T1)nx))/(gridOS);
             if (params.useLUT) {
-                k0 = (int)((distX*distX*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                k0 = (int)((distX*distX*(T1)4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
                 if (k0 >= sizeLUT)
-                    kbY = 0.0;
+                    kbY = (T1)0.0;
                 else
                     kbY = LUT[k0];
                 kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
                 //cout << "KBX = " << kbX << endl;
 
             } else {
-                kbX = bessi0(beta * std::sqrt(1.0 - (2.0 * distX / kernelWidth) * (2.0 * distX / kernelWidth))) /
+                kbX = bessi0(beta * SQRT((T1)1.0 - ((T1)2.0 * distX / kernelWidth) * ((T1)2.0 * distX / kernelWidth))) /
                       kernelWidth;
 
             }
@@ -113,23 +126,23 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
 
             for(ny=NyL; ny<=NyH; ++ny)
             {
-                distY = fabs(shiftedKy - ((T1)ny))/(gridOS);
+                distY = ABS(shiftedKy - ((T1)ny))/(gridOS);
                 if (params.useLUT){
 
-                    k0 = (int)((distY*distY*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                    k0 = (int)((distY*distY*(T1)4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
 
                     if (k0 >= sizeLUT)
-                        kbY = 0.0;
+                        kbY = (T1)0.0;
                     else
                         kbY = LUT[k0];
 
                 } else {
-                    kbY = bessi0(beta * std::sqrt(1.0 - (2.0 * distY / kernelWidth) * (2.0 * distY / kernelWidth))) /
+                    kbY = bessi0(beta * SQRT((T1)1.0 - ((T1)2.0 * distY / kernelWidth) * ((T1)2.0 * distY / kernelWidth))) /
                           kernelWidth;
                 }
 
                 if (kbY != kbY) {//if kbY = NaN
-                    kbY = 0;
+                    kbY = (T1)0.0;
                 }
 
                 /* kernel weighting value */
@@ -156,8 +169,8 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
                 //gridData[idx].real(gridData[idx].real()+w*pt.real);
                 //gridData[idx].imag(gridData[idx].imag()+w*pt.imag);
                 /* estimate sample density */
-                #pragma acc atomic update
-                sampleDensity[idx] += w;
+                //#pragma acc atomic update
+                //sampleDensity[idx] += w;
                 //atomicAdd(sampleDensity+idx, w);
             }
         }
@@ -193,7 +206,7 @@ template<typename T1>
 int
 gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSample<T1> *__restrict  sample,
                  const T1 *LUT, const uword sizeLUT,
-                 complex<T1> *gridData, T1 *__restrict  sampleDensity)
+                 complex<T1> *gridData)
 {
     int NxL, NxH;
     int NyL, NyH;
@@ -223,7 +236,7 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
     //float t0 = t[0];
     pGData = reinterpret_cast<T1 *>(gridData);
     
-    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(sampleDensity[0:gridNumElems], pGData[0:gridNumElems*2])
+    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(pGData[0:gridNumElems*2])
     for (int i=0; i < n; i++)
     {
         ReconstructionSample<T1> pt = sample[i];
@@ -231,9 +244,9 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
         //Jiading GAI
         //float atm = hanning_d(t[i], tau, l, t0);//a_l(t_m)
         
-        shiftedKx = (gridOS)*(pt.kX+((T1)Nx)/2.0f);
-        shiftedKy = (gridOS)*(pt.kY+((T1)Ny)/2.0f);
-        shiftedKz = (gridOS)*(pt.kZ+((T1)Nz)/2.0f);
+        shiftedKx = (gridOS)*(pt.kX+((T1)Nx)/(T1)2.0);
+        shiftedKy = (gridOS)*(pt.kY+((T1)Ny)/(T1)2.0);
+        shiftedKz = (gridOS)*(pt.kZ+((T1)Nz)/(T1)2.0);
 
         //	if(shiftedKx < 0.0f)
         //	   shiftedKx = 0.0f;
@@ -248,61 +261,61 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
         //	if(shiftedKz > ((float)gridOS)*((float)Nz));
         //	   shiftedKz = ((float)gridOS)*((float)Nz);
 
-        NxL = (int)(fmax(0.0f,std::ceil(shiftedKx - kernelWidth*(gridOS)/2.0f)));
-        NxH = (int)(fmin((gridOS*(T1)Nx-1.0f),std::floor(shiftedKx + kernelWidth*(gridOS)/2.0f)));
+        NxL = (int)(MAX((T1)0.0,CEIL(shiftedKx - kernelWidth*(gridOS)/(T1)2.0)));
+        NxH = (int)(MIN((gridOS*(T1)Nx-(T1)1.0),FLOOR(shiftedKx + kernelWidth*(gridOS)/(T1)2.0)));
 
-        NyL = (int)(fmax(0.0f,std::ceil(shiftedKy - kernelWidth*(gridOS)/2.0f)));
-        NyH = (int)(fmin((gridOS*(T1)Ny-1.0f),std::floor(shiftedKy + kernelWidth*(gridOS)/2.0f)));
+        NyL = (int)(MAX((T1)0.0,CEIL(shiftedKy - kernelWidth*(gridOS)/(T1)2.0)));
+        NyH = (int)(MIN((gridOS*(T1)Ny-(T1)1.0),FLOOR(shiftedKy + kernelWidth*(gridOS)/(T1)2.0)));
 
-        NzL = (int)(fmax(0.0f,std::ceil(shiftedKz - kernelWidth*(gridOS)/2.0f)));
-        NzH = (int)(fmin((gridOS*(T1)Nz-1.0f),std::floor(shiftedKz + kernelWidth*(gridOS)/2.0f)));
+        NzL = (int)(MAX((T1)0.0,CEIL(shiftedKz - kernelWidth*(gridOS)/(T1)2.0)));
+        NzH = (int)(MIN((gridOS*(T1)Nz-(T1)1.0),FLOOR(shiftedKz + kernelWidth*(gridOS)/(T1)2.0)));
         #pragma acc loop independent seq
         for(nz=NzL; nz<=NzH; ++nz)
         {
             int k0;
-            distZ = fabs(shiftedKz - ((T1)nz))/(gridOS);
+            distZ = ABS(shiftedKz - ((T1)nz))/(gridOS);
             if (params.useLUT) {
               // kbZ = kernel_value_LUT(distZ, LUT, sizeLUT, kernelWidth);
-              k0 = (int)((distZ*distZ*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+              k0 = (int)((distZ*distZ*(T1)4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
               if (k0 >= sizeLUT)
-                kbZ = 0.0;
+                kbZ = (T1)0.0;
               else
                 kbZ = LUT[k0];
             } else {
-                kbZ = bessi0(beta * std::sqrt(1.0 - (2.0 * distZ / kernelWidth) *
-                                               (2.0 * distZ / kernelWidth))) / kernelWidth;
+                kbZ = bessi0(beta * SQRT((T1)1.0 - ((T1)2.0 * distZ / kernelWidth) *
+                                               ((T1)2.0 * distZ / kernelWidth))) / kernelWidth;
             }
 
             #pragma acc loop seq
             for(nx=NxL; nx<=NxH; ++nx)
             {
-                distX = fabs(shiftedKx - ((T1) nx)) / (gridOS);
+                distX = ABS(shiftedKx - ((T1) nx)) / (gridOS);
                 if (params.useLUT) {
 //                    kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
-                  k0 = (int)((distX*distX*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                  k0 = (int)((distX*distX*(T1)4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
                   if (k0 >= sizeLUT)
-                    kbX = 0.0;
+                    kbX = (T1)0.0;
                   else
                     kbX = LUT[k0];
                 } else {
-                    kbX = bessi0(beta * std::sqrt(1.0 - (2.0 * distX / kernelWidth) *
-                                            (2.0 * distX / kernelWidth))) / kernelWidth;
+                    kbX = bessi0(beta * SQRT((T1)1.0 - ((T1)2.0 * distX / kernelWidth) *
+                                            ((T1)2.0 * distX / kernelWidth))) / kernelWidth;
                 }
 
                 #pragma acc loop seq
                 for(ny=NyL; ny<=NyH; ++ny)
                 {
-                    distY = fabs(shiftedKy - ((T1) ny)) / (gridOS);
+                    distY = ABS(shiftedKy - ((T1) ny)) / (gridOS);
                     if (params.useLUT){
 //                      kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
-                      k0 = (int)((distY*distY*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                      k0 = (int)((distY*distY*(T1)4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
                       if (k0 >= sizeLUT)
-                        kbY = 0.0;
+                        kbY = (T1)0.0;
                       else
                         kbY = LUT[k0];
                     } else {
-                        kbY = bessi0(beta * std::sqrt(1.0 - (2.0 * distY / kernelWidth) *
-                                              (2.0 * distY / kernelWidth))) / kernelWidth;
+                        kbY = bessi0(beta * SQRT((T1)1.0 - ((T1)2.0 * distY / kernelWidth) *
+                                              ((T1)2.0 * distY / kernelWidth))) / kernelWidth;
                     }
 
                     w = kbX * kbY * kbZ;
@@ -321,8 +334,8 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
                     //gridData[idx].imag(gridData[idx].imag()+w*pt.imag);
                     
                     /* estimate sample density */
-                    #pragma acc atomic update
-                    sampleDensity[idx] += w;
+                    //#pragma acc atomic update
+                    //sampleDensity[idx] += w;
                 }
             }
         }
@@ -357,7 +370,7 @@ template<typename T1>
 int
 gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1 *ky, T1 beta, complex<T1> *__restrict sample,
                    const T1 *LUT, const uword sizeLUT,
-                 complex<T1> * __restrict gridData, T1 *__restrict sampleDensity)
+                 complex<T1> * __restrict gridData)
 {
 
     int NxL, NxH;
@@ -391,7 +404,7 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
     pGridData = reinterpret_cast<T1 *>(gridData);
     //Jiading GAI
     //float t0 = t[0];
-    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(sampleDensity[0:n], pGridData[0:gridNumElems*2], pSamples[0:n*2])
+    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(pGridData[0:gridNumElems*2], pSamples[0:n*2])
     for (int i=0; i < n; i++)
     {
         //complex<T1> pt = sample[i];
@@ -399,8 +412,8 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
         //Jiading GAI
         //float atm = hanning_d(t[i], tau, l, t0);//a_l(t_m)
 
-        shiftedKx = (gridOS)*(kx[i]+((T1)Nx)/2.0f);
-        shiftedKy = (gridOS)*(ky[i]+((T1)Ny)/2.0f);
+        shiftedKx = (gridOS)*(kx[i]+((T1)Nx)/(T1)2.0);
+        shiftedKy = (gridOS)*(ky[i]+((T1)Ny)/(T1)2.0);
 
         //shiftedKz = ((float)gridOS)*(pt.kZ+((float)Nz)/2);
 
@@ -414,11 +427,11 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
         //   shiftedKy = ((float)gridOS)*((float)Ny);
 
 
-        NxL = (int)(fmax(0.0f,std::ceil(shiftedKx - kernelWidth*(gridOS)/2.0f)));
-        NxH = (int)(fmin((gridOS*(T1)Nx-1.0f),std::floor(shiftedKx + kernelWidth*(gridOS)/2.0f)));
+        NxL = (int)(MAX((T1)0.0,CEIL(shiftedKx - kernelWidth*(gridOS)/(T1)2.0)));
+        NxH = (int)(MIN((gridOS*(T1)Nx-(T1)1.0),FLOOR(shiftedKx + kernelWidth*(gridOS)/(T1)2.0)));
 
-        NyL = (int)(fmax(0.0f,std::ceil(shiftedKy - kernelWidth*(gridOS)/2.0f)));
-        NyH = (int)(fmin((gridOS*(T1)Ny-1.0f),std::floor(shiftedKy + kernelWidth*(gridOS)/2.0f)));
+        NyL = (int)(MAX((T1)0.0,CEIL(shiftedKy - kernelWidth*(gridOS)/(T1)2.0)));
+        NyH = (int)(MIN((gridOS*(T1)Ny-(T1)1.0),FLOOR(shiftedKy + kernelWidth*(gridOS)/(T1)2.0)));
 
         //NzL = (int)(fmax(0.0f,ceil(shiftedKz - kernelWidth*((float)gridOS)/2)));
         //NzH = (int)(fmin((float)(gridOS*Nz-1),floor(shiftedKz + kernelWidth*((float)gridOS)/2)));
@@ -427,18 +440,18 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
         for(nx=NxL; nx<=NxH; ++nx)
         {
             int k0;
-            distX = fabs(shiftedKx - ((T1)nx))/(gridOS);
+            distX = ABS(shiftedKx - ((T1)nx))/(gridOS);
             if (params.useLUT){
                 //kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
 
-                k0 = (int)((distX*distX*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                k0 = (int)((distX*distX*(T1)4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
                 if (k0 >= sizeLUT)
-                    kbX = 0.0;
+                    kbX = (T1)0.0;
                 else
                     kbX = LUT[k0];
 
             } else {
-                kbX = bessi0(beta*std::sqrt(1.0-(2.0*distX/kernelWidth)*(2.0*distX/kernelWidth)))/kernelWidth;
+                kbX = bessi0(beta*SQRT((T1)1.0-((T1)2.0*distX/kernelWidth)*((T1)2.0*distX/kernelWidth)))/kernelWidth;
 
             }
 
@@ -449,18 +462,18 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
             #pragma acc loop seq
             for(ny=NyL; ny<=NyH; ++ny)
             {
-                distY = fabs(shiftedKy - ((T1)ny))/(gridOS);
+                distY = ABS(shiftedKy - ((T1)ny))/(gridOS);
                 if (params.useLUT){
                     //kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
 
-                    k0 = (int)((distY*distY*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                    k0 = (int)((distY*distY*(T1)4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
                     if (k0 >= sizeLUT)
-                        kbY = 0.0;
+                        kbY = (T1)0.0;
                     else
                         kbY = LUT[k0];
 
                 } else {
-                    kbY = bessi0(beta*std::sqrt(1.0-(2.0*distY/kernelWidth)*(2.0*distY/kernelWidth)))/kernelWidth;
+                    kbY = bessi0(beta*SQRT((T1)1.0-((T1)2.0*distY/kernelWidth)*((T1)2.0*distY/kernelWidth)))/kernelWidth;
                 }
 
                 if (kbY != kbY) {//if kbY = NaN
@@ -488,8 +501,8 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
                 //sample[i].imag(sample[i].imag()+w*gridData[idx].imag());
                 /* estimate sample density */
 
-                #pragma acc atomic update
-                sampleDensity[i] += w;
+                //#pragma acc atomic update
+                //sampleDensity[i] += w;
             }
         }
     }
@@ -524,7 +537,7 @@ template<typename T1>
 int
 gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1 *ky, const T1 *kz, T1 beta, complex<T1> *__restrict  sample,
                    const T1 *LUT, const uword sizeLUT,
-                 complex<T1> *__restrict  gridData, T1 *__restrict  sampleDensity)
+                 complex<T1> *__restrict  gridData)
 {
     int NxL, NxH;
     int NyL, NyH;
@@ -556,7 +569,7 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
     //Jiading GAI
     //float t0 = t[0];
 
-    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(sampleDensity[0:n], pSamples[0:n*2], pGridData[0:gridNumElems*2])
+    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(pSamples[0:n*2], pGridData[0:gridNumElems*2])
     for (int i=0; i < n; i++)
     {
         //complex<T1> pt = sample[i];
@@ -564,9 +577,9 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
         //Jiading GAI
         //float atm = hanning_d(t[i], tau, l, t0);//a_l(t_m)
 
-        shiftedKx = (gridOS)*(kx[i]+((T1)Nx)/2.0f);
-        shiftedKy = (gridOS)*(ky[i]+((T1)Ny)/2.0f);
-        shiftedKz = (gridOS)*(kz[i]+((T1)Nz)/2.0f);
+        shiftedKx = (gridOS)*(kx[i]+((T1)Nx)/(T1)2.0);
+        shiftedKy = (gridOS)*(ky[i]+((T1)Ny)/(T1)2.0);
+        shiftedKz = (gridOS)*(kz[i]+((T1)Nz)/(T1)2.0);
 
         //	if(shiftedKx < 0.0f)
         //	   shiftedKx = 0.0f;
@@ -582,31 +595,31 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
         //	   shiftedKz = ((float)gridOS)*((float)Nz);
 
 
-        NxL = (int)(fmax(0.0f,std::ceil(shiftedKx - kernelWidth*(gridOS)/2.0f)));
-        NxH = (int)(fmin((gridOS*(T1)Nx-1.0f),std::floor(shiftedKx + kernelWidth*((float)gridOS)/2.0f)));
+        NxL = (int)(MAX((T1)0.0,CEIL(shiftedKx - kernelWidth*(gridOS)/(T1)2.0)));
+        NxH = (int)(MIN((gridOS*(T1)Nx-(T1)1.0),FLOOR(shiftedKx + kernelWidth*((T1)gridOS)/(T1)2.0)));
 
-        NyL = (int)(fmax(0.0f,std::ceil(shiftedKy - kernelWidth*(gridOS)/2.0f)));
-        NyH = (int)(fmin((gridOS*(T1)Ny-1.0f),std::floor(shiftedKy + kernelWidth*((float)gridOS)/2.0f)));
+        NyL = (int)(MAX((T1)0.0,CEIL(shiftedKy - kernelWidth*(gridOS)/(T1)2.0)));
+        NyH = (int)(MIN((gridOS*(T1)Ny-(T1)1.0),FLOOR(shiftedKy + kernelWidth*((T1)gridOS)/(T1)2.0)));
 
-        NzL = (int)(fmax(0.0f,std::ceil(shiftedKz - kernelWidth*(gridOS)/2.0f)));
-        NzH = (int)(fmin((gridOS*(T1)Nz-1.0f),std::floor(shiftedKz + kernelWidth*((float)gridOS)/2.0f)));
+        NzL = (int)(MAX((T1)0.0,CEIL(shiftedKz - kernelWidth*(gridOS)/2.0f)));
+        NzH = (int)(MIN((gridOS*(T1)Nz-(T1)1.0),FLOOR(shiftedKz + kernelWidth*((T1)gridOS)/(T1)2.0)));
 
         #pragma acc loop independent seq
         for(nz=NzL; nz<=NzH; ++nz)
         {
             int k0;
-            distZ = fabs(shiftedKz - ((T1)nz))/(gridOS);
+            distZ = ABS(shiftedKz - ((T1)nz))/(gridOS);
             if (params.useLUT) {
                 //kbZ = kernel_value_LUT(distZ, LUT, sizeLUT, kernelWidth);
-                k0 = (int)((distZ*distZ*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                k0 = (int)((distZ*distZ*(T1)4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
                 if (k0 >= sizeLUT)
-                    kbZ = 0.0;
+                    kbZ = (T1)0.0;
                 else
                     kbZ = LUT[k0];
                 //cout << "KBX = " << kbX << endl;
 
             } else {
-                kbZ = bessi0(beta * std::sqrt(1.0 - (2.0 * distZ / kernelWidth) * (2.0 * distZ / kernelWidth))) /
+                kbZ = bessi0(beta * SQRT((T1)1.0 - ((T1)2.0 * distZ / kernelWidth) * ((T1)2.0 * distZ / kernelWidth))) /
                       kernelWidth;
 
             }
@@ -618,18 +631,18 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
             #pragma acc loop seq
             for(nx=NxL; nx<=NxH; ++nx)
             {
-                distX = fabs(shiftedKx - ((T1) nx)) / (gridOS);
+                distX = ABS(shiftedKx - ((T1) nx)) / (gridOS);
                 if (params.useLUT) {
                     //kbX = kernel_value_LUT(distX, LUT, sizeLUT, kernelWidth);
-                    k0 = (int)((distX*distX*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                    k0 = (int)((distX*distX*(T1)4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
                     if (k0 >= sizeLUT)
-                        kbX = 0.0;
+                        kbX = (T1)0.0;
                     else
                         kbX = LUT[k0];
                     //cout << "KBX = " << kbX << endl;
 
                 } else {
-                    kbX = bessi0(beta * std::sqrt(1.0 - (2.0 * distX / kernelWidth) * (2.0 * distX / kernelWidth))) /
+                    kbX = bessi0(beta * SQRT((T1)1.0 - ((T1)2.0 * distX / kernelWidth) * ((T1)2.0 * distX / kernelWidth))) /
                           kernelWidth;
 
                 }
@@ -640,19 +653,19 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
 
                 #pragma acc loop seq
                 for (ny = NyL; ny <= NyH; ++ny) {
-                    distY = fabs(shiftedKy - ((T1) ny)) / (gridOS);
+                    distY = ABS(shiftedKy - ((T1) ny)) / (gridOS);
                     if (params.useLUT) {
                         //kbY = kernel_value_LUT(distY, LUT, sizeLUT, kernelWidth);
 
-                        k0 = (int)((distY*distY*4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                        k0 = (int)((distY*distY*(T1)4.0/(kernelWidth * kernelWidth)) * (T1)sizeLUT);
                         if (k0 >= sizeLUT)
-                            kbY = 0.0;
+                            kbY = (T1)0.0;
                         else
                             kbY = LUT[k0];
 
                     } else {
                         kbY = bessi0(
-                                beta * std::sqrt(1.0 - (2.0 * distY / kernelWidth) * (2.0 * distY / kernelWidth))) /
+                                beta * SQRT(1.0 - (2.0 * distY / kernelWidth) * (2.0 * distY / kernelWidth))) /
                               kernelWidth;
                     }
 
@@ -681,8 +694,8 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
 
                     /* estimate sample density */
 
-                    #pragma acc atomic update
-                    sampleDensity[i] += w;
+                    //#pragma acc atomic update
+                    //sampleDensity[i] += w;
                 }
             }
         }
@@ -747,16 +760,16 @@ computeFH_CPU_Grid(
     params.imageSize[0] = Nx;//gridSize is gridOS times larger than imageSize.
     params.imageSize[1] = Ny;
     params.imageSize[2] = Nz;
-    params.gridSize[0] = std::ceil(gridOS * (T1) Nx);
-    params.gridSize[1] = std::ceil(gridOS * (T1) Ny);
+    params.gridSize[0] = CEIL(gridOS * (T1) Nx);
+    params.gridSize[1] = CEIL(gridOS * (T1) Ny);
     if (params.gridSize[0] % 2)//3D case, gridOS is adjusted on the z dimension:
         params.gridSize[0] += 1;//That why we need to make sure here that the xy
     if (params.gridSize[1] % 2)//dimensions have even sizes.
         params.gridSize[1] += 1;
-    params.gridSize[2] = (Nz == 1) ? Nz : (std::ceil(gridOS * (T1) Nz));// 2D or 3D
+    params.gridSize[2] = (Nz == 1) ? Nz : (CEIL(gridOS * (T1) Nz));// 2D or 3D
     params.numSamples = numK_per_coil;
 
-    T1 *sampleDensity;
+    //T1 *sampleDensity;
     complex <T1> *gridData_d;
 
     ReconstructionSample <T1> *samples; //Input Data
@@ -772,9 +785,9 @@ computeFH_CPU_Grid(
     unsigned int n = params.numSamples;
     //
     for (int i = 0; i < params.numSamples; i++) {
-        if (std::abs(kx[i]) > (Nx / 2.0) ||
-            std::abs(ky[i]) > (Ny / 2.0) ||
-            std::abs(kz[i]) > (Nz / 2.0)
+        if (ABS(kx[i]) > (Nx / (T1)2.0) ||
+            ABS(ky[i]) > (Ny / (T1)2.0) ||
+            ABS(kz[i]) > (Nz / (T1)2.0)
                 ) {
 
             printf("\nError:k-space trajectory out of range [-N/2,N/2]:\n      gridding requires that k-space should be contained within the window -N/2 to N/2.\n");
@@ -790,7 +803,7 @@ computeFH_CPU_Grid(
             samples[i].real = dR[i];
             samples[i].imag = dI[i];
 
-            samples[i].sdc = 1.0f;
+            samples[i].sdc = (T1)1.0;
             //samples[i].t = t[i];
         }
     }    ///*
@@ -800,11 +813,11 @@ computeFH_CPU_Grid(
     //       (required by the function gridding_GPU_3D(.))
     if (1 == Nz) {
         //round grid size (xy-axis) to the next divisible-by-two.
-        gridOS = 2.0f * std::ceil((gridOS * (T1) Nx) / 2.0f) / (T1) Nx;
+        gridOS = (T1)2.0 * CEIL((gridOS * (T1) Nx) / (T1)2.0) / (T1) Nx;
     }
     else {
         //round grid size (z-axis) to the next divisible-by-four.
-        gridOS = 4.0f * std::ceil((gridOS * (T1) Nz) / 4.0f) / (T1) Nz;
+        gridOS = (T1)4.0 * CEIL((gridOS * (T1) Nz) / (T1)4.0) / (T1) Nz;
     }
     // */
     int gridNumElems = params.gridSize[0] *
@@ -821,8 +834,8 @@ computeFH_CPU_Grid(
 
     complex <T1> *gridData = new complex <T1>[gridNumElems];
     cout << "Finished allocating gridData and now allocating sampleDensity" << endl;
-    sampleDensity = new T1[gridNumElems];
-    cout << "Finished allocating sampleDensity" << endl;
+    //sampleDensity = new T1[gridNumElems];
+    //cout << "Finished allocating sampleDensity" << endl;
     //#pragma acc data create(gridData[0:gridNumElems]) pcreate(sampleDensity[0:gridNumElems])
     //{
 
@@ -832,19 +845,19 @@ computeFH_CPU_Grid(
         // inside gridding functions.
         //#pragma acc parallel loop
         for (int i = 0; i < gridNumElems; i++) {
-            gridData[i].real(0.0);
-            gridData[i].imag(0.0);
-            sampleDensity[i] = 0.0;
+            gridData[i].real((T1)0.0);
+            gridData[i].imag((T1)0.0);
+            //sampleDensity[i] = (T1)0.0;
         }
 
         // Gridding with CPU - gold
         if (Nz == 1) {
             gridding_Gold_2D<T1>(n, params, beta, samples, LUT, sizeLUT,
-                             gridData, sampleDensity);
+                             gridData);
         }
         else {
             gridding_Gold_3D<T1>(n, params, beta, samples, LUT, sizeLUT,
-                             gridData, sampleDensity);
+                             gridData);
 
         }
         //cx_vec temp(gridData,gridNumElems);
@@ -957,8 +970,8 @@ computeFH_CPU_Grid(
     delete[] gridData;
     #pragma acc exit data delete(gridData_d)
     delete[] gridData_d;
-    #pragma acc exit data delete(sampleDensity)
-    delete[] sampleDensity;
+    //#pragma acc exit data delete(sampleDensity)
+    //delete[] sampleDensity;
 
 }
 //Calculates the gridded forward fourier transform
@@ -995,16 +1008,16 @@ computeFd_CPU_Grid(
     params.imageSize[0] = Nx;//gridSize is gridOS times larger than imageSize.
     params.imageSize[1] = Ny;
     params.imageSize[2] = Nz;
-    params.gridSize[0]  = std::ceil(gridOS*(T1)Nx);
-    params.gridSize[1]  = std::ceil(gridOS*(T1)Ny);
+    params.gridSize[0]  = CEIL(gridOS*(T1)Nx);
+    params.gridSize[1]  = CEIL(gridOS*(T1)Ny);
     if(params.gridSize[0]%2)//3D case, gridOS is adjusted on the z dimension:
         params.gridSize[0] += 1;//That why we need to make sure here that the xy
     if(params.gridSize[1]%2)//dimensions have even sizes.
         params.gridSize[1] += 1;
-    params.gridSize[2]  = (Nz==1)?Nz:(std::ceil(gridOS*(T1)Nz));// 2D or 3D
+    params.gridSize[2]  = (Nz==1)?Nz:(CEIL(gridOS*(T1)Nz));// 2D or 3D
     params.numSamples = numK_per_coil;
 
-    T1 *sampleDensity;
+    //T1 *sampleDensity;
 
 
     complex<T1>* samples; //Input Data
@@ -1021,9 +1034,9 @@ computeFd_CPU_Grid(
     unsigned int n =  params.numSamples;
     //
     for(int i=0; i<params.numSamples; i++){
-        if( std::abs(kx[i])>(Nx/2.0) ||
-            std::abs(ky[i])>(Ny/2.0) ||
-            std::abs(kz[i])>(Nz/2.0)
+        if( ABS(kx[i])>(Nx/(T1)2.0) ||
+            ABS(ky[i])>(Ny/(T1)2.0) ||
+            ABS(kz[i])>(Nz/(T1)2.0)
                 ) {
 
             printf("\nError:k-space trajectory out of range [-N/2,N/2]:\n      gridding requires that k-space should be contained within the window -N/2 to N/2.\n");
@@ -1034,8 +1047,8 @@ computeFd_CPU_Grid(
 
 
 
-            samples[i].real(0.0);
-            samples[i].imag(0.0);
+            samples[i].real((T1)0.0);
+            samples[i].imag((T1)0.0);
 
         }
     }
@@ -1049,11 +1062,11 @@ computeFd_CPU_Grid(
 
     if(1==Nz) {
         //round grid size (xy-axis) to the next divisible-by-two.
-        gridOS = 2.0f * std::ceil((gridOS * (T1)Nx) / 2.0f) / (T1) Nx;
+        gridOS = (T1)2.0 * CEIL((gridOS * (T1)Nx) / (T1)2.0) / (T1) Nx;
     }
     else {
         //round grid size (z-axis) to the next divisible-by-four.
-        gridOS = 4.0f * std::ceil((gridOS * (T1)Nz) / 4.0f) / (T1) Nz;
+        gridOS = (T1)4.0 * CEIL((gridOS * (T1)Nz) / (T1)4.0) / (T1) Nz;
     }
     //
 
@@ -1070,8 +1083,8 @@ computeFd_CPU_Grid(
     cout << "Allocating memory for gridData" << endl;
     complex<T1> *gridData = new complex<T1>[imageNumElems];
     cout << "Finished allocating memory for gridData and allocating memory for sampleDensity" << endl;
-    sampleDensity = new T1[gridNumElems];
-    cout << "Finished allocating memory for sampleDensity" << endl;
+    //sampleDensity = new T1[gridNumElems];
+    //cout << "Finished allocating memory for sampleDensity" << endl;
     // Have to set 'gridData' and 'sampleDensity' to zero.
     // Because they will be involved in accumulative operations
     // inside gridding functions.
@@ -1079,7 +1092,7 @@ computeFd_CPU_Grid(
     {
         gridData[i].real(dR[i]);
         gridData[i].imag(dI[i]);
-        sampleDensity[i] = 0.0;
+        //sampleDensity[i] = (T1)0.0;
     }
     cout << "Allocating memory for gridData_d" << endl;
     complex<T1> *gridData_d = new complex<T1>[imageNumElems];
@@ -1166,12 +1179,12 @@ computeFd_CPU_Grid(
     if(Nz==1)
     {
         gridding_Silver_2D<T1>(n, params, kx, ky, beta, samples, LUT, sizeLUT,
-                               gridData_os, sampleDensity);
+                               gridData_os);
     }
     else
     {
         gridding_Silver_3D<T1>(n, params, kx, ky, kz, beta, samples, LUT, sizeLUT,
-                               gridData_os, sampleDensity);
+                               gridData_os);
     }
 
 
@@ -1214,7 +1227,7 @@ computeFd_CPU_Grid(
     delete[] gridData_d;
     delete[] gridData_os;
     delete[] gridData_os_d;
-    delete[] sampleDensity;
+    //delete[] sampleDensity;
     //delete(gridData_crop_d);
 }
 
