@@ -36,7 +36,7 @@ template<typename T1>
 int
 gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionSample<T1> *__restrict sample,
                  const T1 *LUT, const uword sizeLUT,
-                 complex<T1> *__restrict gridData, T1 *__restrict sampleDensity)
+                 complex<T1> *__restrict gridData)
 {
 
     unsigned int NxL, NxH;
@@ -68,7 +68,7 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
     //Jiading GAI
     //float t0 = t[0];
 
-    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(sampleDensity[0:gridNumElems], pGData[0:gridNumElems*2])
+    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(pGData[0:gridNumElems*2])
     for (int i=0; i < n; i++)
     {
         ReconstructionSample<T1> pt = sample[i];
@@ -169,8 +169,8 @@ gridding_Gold_2D(unsigned int n, parameters<T1> params, T1 beta, ReconstructionS
                 //gridData[idx].real(gridData[idx].real()+w*pt.real);
                 //gridData[idx].imag(gridData[idx].imag()+w*pt.imag);
                 /* estimate sample density */
-                #pragma acc atomic update
-                sampleDensity[idx] += w;
+                //#pragma acc atomic update
+                //sampleDensity[idx] += w;
                 //atomicAdd(sampleDensity+idx, w);
             }
         }
@@ -206,7 +206,7 @@ template<typename T1>
 int
 gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSample<T1> *__restrict  sample,
                  const T1 *LUT, const uword sizeLUT,
-                 complex<T1> *gridData, T1 *__restrict  sampleDensity)
+                 complex<T1> *gridData)
 {
     int NxL, NxH;
     int NyL, NyH;
@@ -236,7 +236,7 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
     //float t0 = t[0];
     pGData = reinterpret_cast<T1 *>(gridData);
     
-    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(sampleDensity[0:gridNumElems], pGData[0:gridNumElems*2])
+    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(pGData[0:gridNumElems*2])
     for (int i=0; i < n; i++)
     {
         ReconstructionSample<T1> pt = sample[i];
@@ -334,8 +334,8 @@ gridding_Gold_3D(unsigned int n, parameters<T1> params,T1 beta, ReconstructionSa
                     //gridData[idx].imag(gridData[idx].imag()+w*pt.imag);
                     
                     /* estimate sample density */
-                    #pragma acc atomic update
-                    sampleDensity[idx] += w;
+                    //#pragma acc atomic update
+                    //sampleDensity[idx] += w;
                 }
             }
         }
@@ -370,7 +370,7 @@ template<typename T1>
 int
 gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1 *ky, T1 beta, complex<T1> *__restrict sample,
                    const T1 *LUT, const uword sizeLUT,
-                 complex<T1> * __restrict gridData, T1 *__restrict sampleDensity)
+                 complex<T1> * __restrict gridData)
 {
 
     int NxL, NxH;
@@ -404,7 +404,7 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
     pGridData = reinterpret_cast<T1 *>(gridData);
     //Jiading GAI
     //float t0 = t[0];
-    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(sampleDensity[0:n], pGridData[0:gridNumElems*2], pSamples[0:n*2])
+    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(pGridData[0:gridNumElems*2], pSamples[0:n*2])
     for (int i=0; i < n; i++)
     {
         //complex<T1> pt = sample[i];
@@ -501,8 +501,8 @@ gridding_Silver_2D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
                 //sample[i].imag(sample[i].imag()+w*gridData[idx].imag());
                 /* estimate sample density */
 
-                #pragma acc atomic update
-                sampleDensity[i] += w;
+                //#pragma acc atomic update
+                //sampleDensity[i] += w;
             }
         }
     }
@@ -537,7 +537,7 @@ template<typename T1>
 int
 gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1 *ky, const T1 *kz, T1 beta, complex<T1> *__restrict  sample,
                    const T1 *LUT, const uword sizeLUT,
-                 complex<T1> *__restrict  gridData, T1 *__restrict  sampleDensity)
+                 complex<T1> *__restrict  gridData)
 {
     int NxL, NxH;
     int NyL, NyH;
@@ -569,7 +569,7 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
     //Jiading GAI
     //float t0 = t[0];
 
-    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(sampleDensity[0:n], pSamples[0:n*2], pGridData[0:gridNumElems*2])
+    #pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(pSamples[0:n*2], pGridData[0:gridNumElems*2])
     for (int i=0; i < n; i++)
     {
         //complex<T1> pt = sample[i];
@@ -694,8 +694,8 @@ gridding_Silver_3D(unsigned int n, parameters<T1> params,const T1  *kx, const T1
 
                     /* estimate sample density */
 
-                    #pragma acc atomic update
-                    sampleDensity[i] += w;
+                    //#pragma acc atomic update
+                    //sampleDensity[i] += w;
                 }
             }
         }
@@ -769,7 +769,7 @@ computeFH_CPU_Grid(
     params.gridSize[2] = (Nz == 1) ? Nz : (CEIL(gridOS * (T1) Nz));// 2D or 3D
     params.numSamples = numK_per_coil;
 
-    T1 *sampleDensity;
+    //T1 *sampleDensity;
     complex <T1> *gridData_d;
 
     ReconstructionSample <T1> *samples; //Input Data
@@ -834,8 +834,8 @@ computeFH_CPU_Grid(
 
     complex <T1> *gridData = new complex <T1>[gridNumElems];
     cout << "Finished allocating gridData and now allocating sampleDensity" << endl;
-    sampleDensity = new T1[gridNumElems];
-    cout << "Finished allocating sampleDensity" << endl;
+    //sampleDensity = new T1[gridNumElems];
+    //cout << "Finished allocating sampleDensity" << endl;
     //#pragma acc data create(gridData[0:gridNumElems]) pcreate(sampleDensity[0:gridNumElems])
     //{
 
@@ -847,17 +847,17 @@ computeFH_CPU_Grid(
         for (int i = 0; i < gridNumElems; i++) {
             gridData[i].real((T1)0.0);
             gridData[i].imag((T1)0.0);
-            sampleDensity[i] = (T1)0.0;
+            //sampleDensity[i] = (T1)0.0;
         }
 
         // Gridding with CPU - gold
         if (Nz == 1) {
             gridding_Gold_2D<T1>(n, params, beta, samples, LUT, sizeLUT,
-                             gridData, sampleDensity);
+                             gridData);
         }
         else {
             gridding_Gold_3D<T1>(n, params, beta, samples, LUT, sizeLUT,
-                             gridData, sampleDensity);
+                             gridData);
 
         }
         //cx_vec temp(gridData,gridNumElems);
@@ -970,8 +970,8 @@ computeFH_CPU_Grid(
     delete[] gridData;
     #pragma acc exit data delete(gridData_d)
     delete[] gridData_d;
-    #pragma acc exit data delete(sampleDensity)
-    delete[] sampleDensity;
+    //#pragma acc exit data delete(sampleDensity)
+    //delete[] sampleDensity;
 
 }
 //Calculates the gridded forward fourier transform
@@ -1017,7 +1017,7 @@ computeFd_CPU_Grid(
     params.gridSize[2]  = (Nz==1)?Nz:(CEIL(gridOS*(T1)Nz));// 2D or 3D
     params.numSamples = numK_per_coil;
 
-    T1 *sampleDensity;
+    //T1 *sampleDensity;
 
 
     complex<T1>* samples; //Input Data
@@ -1083,8 +1083,8 @@ computeFd_CPU_Grid(
     cout << "Allocating memory for gridData" << endl;
     complex<T1> *gridData = new complex<T1>[imageNumElems];
     cout << "Finished allocating memory for gridData and allocating memory for sampleDensity" << endl;
-    sampleDensity = new T1[gridNumElems];
-    cout << "Finished allocating memory for sampleDensity" << endl;
+    //sampleDensity = new T1[gridNumElems];
+    //cout << "Finished allocating memory for sampleDensity" << endl;
     // Have to set 'gridData' and 'sampleDensity' to zero.
     // Because they will be involved in accumulative operations
     // inside gridding functions.
@@ -1092,7 +1092,7 @@ computeFd_CPU_Grid(
     {
         gridData[i].real(dR[i]);
         gridData[i].imag(dI[i]);
-        sampleDensity[i] = (T1)0.0;
+        //sampleDensity[i] = (T1)0.0;
     }
     cout << "Allocating memory for gridData_d" << endl;
     complex<T1> *gridData_d = new complex<T1>[imageNumElems];
@@ -1179,12 +1179,12 @@ computeFd_CPU_Grid(
     if(Nz==1)
     {
         gridding_Silver_2D<T1>(n, params, kx, ky, beta, samples, LUT, sizeLUT,
-                               gridData_os, sampleDensity);
+                               gridData_os);
     }
     else
     {
         gridding_Silver_3D<T1>(n, params, kx, ky, kz, beta, samples, LUT, sizeLUT,
-                               gridData_os, sampleDensity);
+                               gridData_os);
     }
 
 
@@ -1227,7 +1227,7 @@ computeFd_CPU_Grid(
     delete[] gridData_d;
     delete[] gridData_os;
     delete[] gridData_os_d;
-    delete[] sampleDensity;
+    //delete[] sampleDensity;
     //delete(gridData_crop_d);
 }
 
