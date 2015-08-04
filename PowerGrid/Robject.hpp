@@ -210,7 +210,7 @@ public:
             penal += temp;
         }
 
-        return penal;
+        return this->Beta*penal;
     }
 
 
