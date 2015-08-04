@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 project("PowerGrid" CXX)
 
 
-option(OPENACC "Enable OpenACC support" OFF)
+option(OPENACC "Enable OpenACC support" ON)
 option(ISMRMD "Enable ISMRMRD Suppport" OFF)
 
 #set(CMAKE_CXX_STANDARD 11)
@@ -68,7 +68,7 @@ endif()
 #PGI chokes on link because it does not understand the -rdynamic flag
 #Why CMake insists on passing this flag, I don't know...
 #SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
-SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS} -lfftw3")
+#SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS} -lfftw3")
 
 #include(CheckCXXCompilerFlag)
 #CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)

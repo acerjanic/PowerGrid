@@ -11,7 +11,7 @@
 
  template<typename T1>
 class DWICGMC{
-ttypedef complex<T1> CxT1;
+typedef complex<T1> CxT1;
 public:
     DWICGMC();
     

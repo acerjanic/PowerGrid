@@ -94,7 +94,7 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
     //ReconMask.ones();
 
     cout << "Iniitalizing QuadPenalty" << endl;
-    TVPenalty<T1>R(Nx,Ny,Nz,10000,1e-7);
+    TVPenalty<T1>R(Nx,Ny,Nz,1e-5,1e-7);
     cout << "QuadPenalty setup successfull" << endl;
 
     //uword niter = 10;
