@@ -9,9 +9,9 @@
 #ifndef PowerGrid_DWICGMC_hpp
 #define PowerGrid_DWICGMC_hpp
 
- template<typename T1,typename T2>
+ template<typename T1>
 class DWICGMC{
-
+typedef complex<T1> CxT1;
 public:
     DWICGMC();
     
@@ -20,25 +20,25 @@ public:
     uword Ni = 0; //Image size
     uword Nc = 0; //number of coils
     uword Ns = 0; //number of shots
-    Mat<T1> SMap; //coil sensitivity, dimensions Image size(n1) by number of coils (nc)
-    Mat<T2> PMap; //shot phase, dimensions Image size(n1) by number of shots. in radians.
-    Col<T2> FMap; //Fieldmap
-    Mat<T2> Kx; //kspace coordinates in x direction
-    Mat<T2> Ky; //kspace coordinates in y direction
-    Mat<T2> Kz; //kspace coordinates in z direction
-    Col<T2> Tvec; //timing vector for a single shot (all shots assumed to have same timing vector)
+    Mat<CxT1> SMap; //coil sensitivity, dimensions Image size(n1) by number of coils (nc)
+    Mat<T1> PMap; //shot phase, dimensions Image size(n1) by number of shots. in radians.
+    Col<T1> FMap; //Fieldmap
+    Mat<T1> Kx; //kspace coordinates in x direction
+    Mat<T1> Ky; //kspace coordinates in y direction
+    Mat<T1> Kz; //kspace coordinates in z direction
+    Col<T1> Tvec; //timing vector for a single shot (all shots assumed to have same timing vector)
     uword Nx;
     uword Ny;
     uword Nz;
-    Col<T2> Ix;
-    Col<T2> Iy;
-    Col<T2> Iz;
-    T1 i = T1(0.,1.);
+    Col<T1> Ix;
+    Col<T1> Iy;
+    Col<T1> Iz;
+    CxT1 i = CxT1(0.,1.);
 
 
     
     //Class constructor
-    DWICGMC( Col<T2> kx, Col<T2> ky,  Col<T2> kz,  uword nx, uword ny, uword nz,uword nc, Col<T2> t, Col<T1> SENSEmap,  Col<T2> FieldMap, Col<T2> ShotPhaseMap ) {
+    DWICGMC( Col<T1> kx, Col<T1> ky,  Col<T1> kz,  uword nx, uword ny, uword nz,uword nc, Col<T1> t, Col<CxT1> SENSEmap,  Col<T1> FieldMap, Col<T1> ShotPhaseMap ) {
         Ni = nx*ny*nz;
         Nc = nc;
         Ns = ShotPhaseMap.n_elem/Ni;
@@ -58,11 +58,11 @@ public:
         Nz = nz;
         Tvec = t;
 
-        Cube<T2> ix;
+        Cube<T1> ix;
         ix.zeros(Nx,Ny,Nz);
-        Cube<T2> iy;
+        Cube<T1> iy;
         iy.zeros(Nx,Ny,Nz);
-        Cube<T2> iz;
+        Cube<T1> iz;
         iz.zeros(Nx,Ny,Nz);
 
         //generate the image space cordinates of the voxels we want to reconstruct
@@ -87,13 +87,13 @@ public:
     
     //Forward transformation is *
     // d is the vector of data of type T1, note it is const, so we don't modify it directly rather return another vector of type T1
-    Col<T1> operator*(const Col<T1>& d) const {
+    Col<CxT1> operator*(const Col<CxT1>& d) const {
 
-        Mat<T1> outData = zeros<Mat<T1>>(Nd,Ns*Nc);
-        cout <<"Nd = "<< Nd << endl;
-        cout << "Ns = " << Ns << endl;
-        cout <<"Nc = "<< Nc << endl;
-        cout << "Ns = " << Ns << endl;
+        Mat<CxT1> outData = zeros<Mat<T1>>(Nd,Ns*Nc);
+        cout <<"Nd = " << Nd << endl;
+        cout <<"Ns = " << Ns << endl;
+        cout <<"Nc = " << Nc << endl;
+        cout <<"Ns = " << Ns << endl;
         //savemat("/shared/mrfil-data/data/PowerGridTest/DWI_2mm/tmp_SMap.mat","img",SMap);
         //savemat("/shared/mrfil-data/data/PowerGridTest/DWI_2mm/tmp_PMap.mat","img",PMap);
       /*  Col<T1> tmp1;
@@ -106,7 +106,7 @@ public:
         tmp4.zeros(Nd);*/
         for (unsigned int jj=0; jj < Ns; jj++) {
 			//Use grid or DFT?
-            Gdft<T1,T2> G(Nd, Ni, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz,FMap, Tvec);
+            Gdft<T1> G(Nd, Ni, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz,FMap, Tvec);
             //Ggrid<T1,T2> G(Nd,2.0,Nx,Ny,Nz,Kx.col(jj),Ky.col(jj),Kz.col(jj),Ix,Iy,Iz);
             //In SENSE we store coil data using the columns of the data matrix, and we weight the data by the coil sensitivies from the SENSE map
           for (unsigned int ii=0; ii < Nc; ii++) {
@@ -122,16 +122,16 @@ public:
       return vectorise(outData);
     }
     //For the adjoint operation, we have to weight the adjoint transform of the coil data by the SENSE map.
-    Col<T1> operator/(const Col<T1>& d) const {
+    Col<CxT1> operator/(const Col<CxT1>& d) const {
 
-      Mat<T1> inData = reshape(d,Nd,Ns*Nc);
+      Mat<CxT1> inData = reshape(d,Nd,Ns*Nc);
 
-      Col<T1> outData = zeros<Col<T1>>(Ni);
+      Col<CxT1> outData = zeros<Col<CxT1>>(Ni);
 
           for (unsigned int jj=0; jj < Ns; jj++) {
 		
 			//Use grid or DFT?
-          Ggrid<T1,T2> G(Nd,2.0,Nx,Ny,Nz,Kx.col(jj),Ky.col(jj),Kz.col(jj),Ix,Iy,Iz);
+          Ggrid<T1> G(Nd,2.0,Nx,Ny,Nz,Kx.col(jj),Ky.col(jj),Kz.col(jj),Ix,Iy,Iz);
 
 
               for (unsigned int ii=0; ii < Nc; ii++) {

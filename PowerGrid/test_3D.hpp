@@ -13,9 +13,10 @@
 
 using namespace arma;
 
-template<typename T1,typename T2>
+template<typename T1>
 int test_3D(string dataPath)
 {
+    typedef complex<T1> CxT1;
     string testPath = dataPath;
 
     uword Nx =64;
@@ -23,11 +24,11 @@ int test_3D(string dataPath)
     uword Nz =16;
 
     //Setup image space coordinates/trajectory
-    Cube<T2> ix(Nx,Ny,Nz);
-    Cube<T2> iy(Nx,Ny,Nz);
-    Cube<T2> iz(Nx,Ny,Nz);
-    Col<T2> FM;
-    Col<T1> SMap;
+    Cube<T1> ix(Nx,Ny,Nz);
+    Cube<T1> iy(Nx,Ny,Nz);
+    Cube<T1> iz(Nx,Ny,Nz);
+    Col<T1> FM;
+    Col<CxT1> SMap;
     
     ix.zeros();
     iy.zeros();
@@ -39,24 +40,24 @@ int test_3D(string dataPath)
         for (uword jj = 0; jj < Nx; jj++) { //x
             for (uword kk = 0; kk < Nz; kk++) { //z
 
-                ix(ii, jj, kk) = ((T2) jj - (T2) Nx / 2.0) / ((T2) Nx);
-                iy(ii, jj, kk) = ((T2) ii - (T2) Ny / 2.0) / ((T2) Ny);
-                iz(ii, jj, kk) = ((T2) kk - (T2) Nz / 2.0) / ((T2) Nz);
+                ix(ii, jj, kk) = ((T1) jj - (T1) Nx / 2.0) / ((T1) Nx);
+                iy(ii, jj, kk) = ((T1) ii - (T1) Ny / 2.0) / ((T1) Ny);
+                iz(ii, jj, kk) = ((T1) kk - (T1) Nz / 2.0) / ((T1) Nz);
             }
         }
     }
 
-    Col<T2> kx;
+    Col<T1> kx;
     loadmat(testPath+"kx.mat","kx",&kx);
-    Col<T2> ky;
+    Col<T1> ky;
     loadmat(testPath+"ky.mat","ky",&ky);
-    Col<T2> kz;
+    Col<T1> kz;
     loadmat(testPath+"kz.mat","kz",&kz);
 
     uword nro;
     nro = kx.n_elem;
 
-    Col<T2> tvec;
+    Col<T1> tvec;
     loadmat(testPath+"t.mat","t",&tvec);
     
     uword L = 1;
@@ -68,15 +69,15 @@ int test_3D(string dataPath)
 
     // Fourier transfrom operator
     cout << "Initializing Ggrid" << endl;
-    Ggrid<T1,T2> G(nro,2.0,Nx,Ny,Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
+    Ggrid<T1> G(nro,2.0,Nx,Ny,Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz));
 
     // Field correction operation
     cout << "Initializing FieldCorrection" << endl;
-    FieldCorrection<T1, T2, Ggrid<T1,T2>> A(G,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L);
+    FieldCorrection<T1, Ggrid<T1>> A(G,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L);
 
    // Sense operation
     cout << "Iniitalizing SENSE" << endl;
-    SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>> S(A,SMap,nro,Nx*Ny*Nz,nc);
+    SENSE<T1, FieldCorrection<T1, Ggrid<T1>>> S(A,SMap,nro,Nx*Ny*Nz,nc);
     //SENSE<cx_double, Ggrid<T1,T2>> S(G,SMap,nro*nc,Nx*Ny*Nz,nc);
 
     // Variables needed for the recon: Penalty object, num of iterations
@@ -88,20 +89,20 @@ int test_3D(string dataPath)
     cout << "QuadPenalty setup successfull" << endl;
 
     uword niter = 5;
-    Col<T1> xinit(Nx*Ny*Nz); // initial estimate of x
+    Col<CxT1> xinit(Nx*Ny*Nz); // initial estimate of x
     xinit.zeros();
-    T2 W;
+    Col<T1> W;
     //W = eye<sp_mat<T1>>(A.n1,A.n1); // Should be the size of k-space data: Is it right?
-    W=1.0;
+    W=ones(nro*nc);
 
 
     cout << "loading data" << endl;
-    Col<T1> data;
+    Col<CxT1> data;
     loadmat(testPath+"data.mat","data",&data);
 
-    Col<T1> x_t;
-    cout << "heading into PWLS_pcg1" << endl;
-    //x_t = pwls_pcg1<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
+    Col<CxT1> x_t;
+    cout << "heading into solve_pwls_pcg" << endl;
+    //x_t = solve_pwls_pcg<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
     x_t = S/data;
     savemat(testPath+"test_3D.mat","img",x_t);
 

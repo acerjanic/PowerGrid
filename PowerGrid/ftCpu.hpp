@@ -114,6 +114,13 @@ iftCpu(T1 *idata_r, T1 *idata_i,
 #ifdef _OPENACC
 #include "openacc.h"
 #include "accelmath.h"
+#define COS(a) cos(a)
+#define SIN(a) sin(a)
+#define SQRT(a) sqrt(a)
+#else
+#define COS(a) std::cos(a)
+#define SIN(a) std::sin(a)
+#define SQRT(a) std::sqrt(a)
 #endif
 
 
@@ -214,19 +221,19 @@ kziztpi, kx_i, ky_i, kz_i, t, idata_r, idata_i)
             expr = (kxtpi * ix[j] + kytpi * iy[j] + kztpi * iz[j] +
                     (FM[j] * myti));
 
-            cosexpr = std::cos(expr); sinexpr = std::sin(expr);
+            cosexpr = COS(expr); sinexpr = SIN(expr);
 
             //cosexpr = cosf(expr); sinexpr = sinf(expr);
 
             sumr += (cosexpr * idata_r[j]) + (sinexpr * idata_i[j]);
             sumi += (-sinexpr * idata_r[j]) + (cosexpr * idata_i[j]);
-            
+
         }
         kdata_r[i] = sumr; // Real part
         kdata_i[i] = sumi; // Imaginary part
         //cout << "kdata[" << i << "] = " << sumr << " + 1j*" << sumi << endl ;
     }
-    
+
     //stopMriTimer(getMriTimer()->timer_ftCpu);
 }
 
@@ -247,12 +254,12 @@ iftCpu(T1 *idata_r, T1 *idata_i,
        const int num_k, const int num_i
        )
 {
-    
+
     T1 sumr = 0, sumi = 0, tpi = 0, kzdeltaz = 0, kziztpi = 0,
     expr = 0, cosexpr = 0, sinexpr = 0,
     itraj_x_tpi = 0, itraj_y_tpi = 0, itraj_z_tpi = 0;
     int i = 0, j = 0;
-    
+
     //--------------------------------------------------------------------
     //                         Initialization
     //--------------------------------------------------------------------
@@ -261,7 +268,7 @@ iftCpu(T1 *idata_r, T1 *idata_i,
     //kzdeltaz = kz[0] * MRI_DELTAZ;
     //kziztpi = kz[0] * iz[0] * tpi;
 
-    
+
     //--------------------------------------------------------------------
     //               Inverse Fourier Transform:     x=(G^H) * Gx
     //--------------------------------------------------------------------
@@ -273,12 +280,12 @@ iftCpu(T1 *idata_r, T1 *idata_i,
     for (j = 0; j < num_i; j++) { // j is the pixel points in image-space
         sumr = 0.0;
         sumi = 0.0;
-        
+
         itraj_x_tpi = ix[j] * tpi;
         itraj_y_tpi = iy[j] * tpi;
         itraj_z_tpi = iz[j] * tpi;
-        
-        
+
+
 #if USE_OPENMP
 #pragma omp parallel for default(none) reduction(+:sumr, sumi) \
 private(expr, cosexpr, sinexpr) \
@@ -291,7 +298,7 @@ fm, kdata_r, kdata_i)
                     ky[i] * itraj_y_tpi + kz[i] * itraj_z_tpi +
                     (myfmj * t[i]));
 
-            cosexpr = std::cos(expr); sinexpr = std::sin(expr);
+            cosexpr = COS(expr); sinexpr = SIN(expr);
 
             //cosexpr = cosf(expr); sinexpr = sinf(expr);
 

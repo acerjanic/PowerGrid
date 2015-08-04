@@ -54,7 +54,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-        int test = reconfMRIGdft<cx_double,double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils,startIndex,endIndex);
+        int test = reconfMRIGdft<double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils,startIndex,endIndex);
 
     } else {
 
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
             return 1;
         }
 
-        int test = test_SpeedCompareGdft<cx_double,double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils);
+        int test = test_SpeedCompareGdft<double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils);
 
     }
   
@@ -137,7 +137,7 @@ int main(int argc, char** argv)
 
      //savemat("/Users/alexcerjanic/Developer/PG/Resources/testForwardTest_SENSE.mat","testForward_SENSE", testForward_SENSE);
      //savemat("/Users/alexcerjanic/Developer/PG/Resources/testAdjointTest_SENSE.mat","testAdjoint_SENSE", testAdjoint_SENSE);
-     //Test PWLS_PCG1
+     //Test solve_pwls_pcg
     
      //Mat<cx_double> testPWLS = test_pwls_pcg();
      //savemat("/Users/alexcerjanic/Developer/PG/Resources/testPWLS.mat","testPWLS", testPWLS);

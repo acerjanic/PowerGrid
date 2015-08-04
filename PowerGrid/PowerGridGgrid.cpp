@@ -51,7 +51,7 @@ int main(int argc, char** argv)
             return 1;
         }
 
-        int test = reconfMRIGgrid<cx_double,double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils,startIndex,endIndex);
+        int test = reconfMRIGgrid<double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils,startIndex,endIndex);
     } else {
 
         try
@@ -72,7 +72,7 @@ int main(int argc, char** argv)
             return 1;
         }
 
-        int test = test_SpeedCompareGgrid<cx_double,double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils);
+        int test = test_SpeedCompareGgrid<double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils);
 
 
     }

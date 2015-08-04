@@ -100,13 +100,13 @@ int test_SpeedCompare(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uw
     //uword niter = 10;
     Col<T1> xinit(Nx*Ny*Nz); // initial estimate of x
     xinit.zeros();
-    T2 W;
+    Col<T1> W;
     //W = eye<sp_mat<T1>>(A.n1,A.n1); // Should be the size of k-space data: Is it right?
-    W=1.0;
+    W=ones(nro*nc);
 
     //Col<T1> x_t;
-    //cout << "heading into PWLS_pcg1" << endl;
-    //x_t = pwls_pcg1<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
+    //cout << "heading into solve_pwls_pcg" << endl;
+    //x_t = solve_pwls_pcg<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
     //x_t = S/data;
     //savemat(testPath+"test_3D.mat","img",x_t);
 /*
@@ -132,12 +132,12 @@ int test_SpeedCompare(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uw
 */
     cout << "Runing pwls with ggrid" << endl;
     Col<T1> test_pwls;
-    test_pwls = pwls_pcg1<T1,  SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, Sg, W, data, R, niter);
+    test_pwls = solve_pwls_pcg<T1,  SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, Sg, W, data, R, niter);
     savemat(testPath+"test_pwls.mat","img",test_pwls);
 /*
     cout << "Runing pwls with ggrid" << endl;
     Col<T1> test_pwls;
-    test_pwls = pwls_pcg1<T1,  Ggrid<T1,T2>,QuadPenalty<T1>>(xinit, Gg, W, data, R, niter);
+    test_pwls = solve_pwls_pcg<T1,  Ggrid<T1,T2>,QuadPenalty<T1>>(xinit, Gg, W, data, R, niter);
     savemat(testPath+"test_pwls.mat","img",test_pwls);
     */
 
