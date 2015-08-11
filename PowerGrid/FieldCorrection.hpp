@@ -30,7 +30,7 @@ public:
     Tobj *obj;
     Col<T1> fieldMap; //Field map (in radians per second)
     Col<T1> timeVec;  //timing vector of when each data point was collected relative to the echo time (in seconds)
-    Mat<T1> AA;		//interpolator coefficients for the different time segments
+    Mat<CxT1> AA;		//interpolator coefficients for the different time segments
     CxT1 i = CxT1(0.,1.);
 
     FieldCorrection(Tobj &G, Col<T1> map_in, Col<T1> timeVec_in, uword a, uword b,uword c) {
@@ -39,13 +39,13 @@ public:
     }
 
     //Class constructor
-    FieldCorrection(Tobj &G, Col<T1> map_in, Col<T1> timeVec_in, uword a, uword b,uword c, uword interptype ) {
+    FieldCorrection(Tobj &obj, Col<T1> map_in, Col<T1> timeVec_in, uword a, uword b,uword c, uword interptype ) {
 
       n1 = a; //Data size
       n2 = b;//Image size
       L = c; //number of time segments
       type = interptype; // type of time segmentation performed
-      obj = &G;
+      //obj = &G;
       fieldMap = map_in;
       
       AA.set_size(n1,L+1); //time segments weights
@@ -60,7 +60,7 @@ public:
         //tau = (rangt+datum::eps)/(L-1);
 		  for (unsigned int ii=0; ii < L+1; ii++) {
 			for (unsigned int jj=0; jj < n1; jj++) {
-			  if ((abs(timeVec(jj)-((ii)*tau)))<=tau){
+			  if ((std::abs(timeVec(jj)-((ii)*tau)))<=tau){
 				AA(jj,ii) = 0.5 + 0.5*std::cos((datum::pi)*(timeVec(jj)-((ii)*tau))/tau);
 			  } else {
                 AA(jj,ii) = 0.0;
@@ -75,7 +75,7 @@ public:
         //cout << "nro" << n2<< endl;
         //cout << "L" << L << endl;
         //cout << "ndat" << n1<< endl;
-        Mat <xT1> Ltp;
+        Mat <CxT1> Ltp;
         Ltp.ones(1, L);
         Col <CxT1> ggtp;
         ggtp.ones(n2, 1);
@@ -128,9 +128,10 @@ public:
 
         //savemat("/vagrant/GTG.mat","GTGc",GTG);
 
-        T2 rcn = 1/cond(GTG);
+        T1 rcn = 1/cond(GTG);
         if (rcn > 10*2e-16) { //condition number of GTG
          iGTGGT = inv(GTG)*G.t();
+
         }
         else {
          iGTGGT = pinv(GTG)*G.t(); // pseudo inverse
@@ -141,7 +142,7 @@ public:
 
         Mat <CxT1> iGTGGTtp;
         Mat <CxT1> ftp;
-        Col<CxT1> res;
+        Col<CxT1> res,temp;
 
         cout << "Start filling the AA matrix" << endl;
         /*for (unsigned int jj = 0; jj < L+1; jj++) {
@@ -157,7 +158,9 @@ public:
           for (unsigned int ii = 0; ii < n1; ii++) {
             ftp = exp(i*fieldMap*timeVec(ii));
             res = iGTGGT*ftp;
-            AA.row(ii) = conj(res.t());
+            //temp = conj(res);
+            AA.row(ii) = res.t();
+            cout << "Data point #" << ii << endl;
           }
 
 
