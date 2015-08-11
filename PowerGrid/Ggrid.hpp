@@ -90,21 +90,29 @@ public:
         FM.zeros();
         t.zeros();
         */
+        cout << "Seperating real and imaginary data." << endl;
+
         Col<T1> realData = real(d);
         Col<T1> imagData = imag(d);
         //Now we grab the data out of armadillo with the memptr() function
         //This returns a pointer of the type of the elements of the array/vector/matrix/cube (3d matrix)
         //Armadillo uses column major like MATLAB and Fortran, but different from 2D C++ arrays which are row major.
+        cout << "Grabbing pointers." << endl;
+
         T1* realDataPtr = realData.memptr();
         T1* imagDataPtr = imagData.memptr();
-        
+
+        cout << "Allocating memory for transformed data." << endl;
+
         Col<T1> realXformedData(this->n2);
         Col<T1> imagXformedData(this->n2);
         //realXformedData.zeros();
         //imagXformedData.zeros();
-        
+        cout << "Grabbing pointers for new memory." << endl;
+
         T1* realXformedDataPtr = realXformedData.memptr();
         T1* imagXformedDataPtr = imagXformedData.memptr();
+
         //Process data here, like calling a brute force transform, dft...
         // I assume you create the pointers to the arrays where the transformed data will be stored
         // realXformedDataPtr and imagXformedDataPtr and they are of type float*
@@ -118,6 +126,7 @@ public:
         );
         */
         //T2 gridOS = 2.0;
+        cout << "About to call the forward gridding routine." << endl;
         computeFd_CPU_Grid<T1>(n2, kx.memptr(),  ky.memptr(),  kz.memptr(),
                                realDataPtr, imagDataPtr, Nx, Ny, Nz,
                                gridOS, realXformedDataPtr, imagXformedDataPtr, kernelWidth, beta, LUT, sizeLUT);

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project("PowerGrid" CXX)
 
 
-option(OPENACC "Enable OpenACC support" ON)
+option(OPENACC "Enable OpenACC support" OFF)
 option(ISMRMD "Enable ISMRMRD Suppport" OFF)
 
 #set(CMAKE_CXX_STANDARD 11)
