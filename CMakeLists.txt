@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project("PowerGrid" CXX)
 
 
-option(OPENACC "Enable OpenACC support" OFF)
+option(OPENACC "Enable OpenACC support" ON)
 option(ISMRMD "Enable ISMRMRD Suppport" OFF)
 
 #set(CMAKE_CXX_STANDARD 11)
@@ -83,6 +83,6 @@ endif()
 if(APPLE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -flto")
 endif(APPLE)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -lfftw3")
 add_definitions(-D__STRICT_ANSI__)
-#add_definitions(-DARMA_DONT_USE_CXX11)
+add_definitions(-DARMA_DONT_USE_CXX11)

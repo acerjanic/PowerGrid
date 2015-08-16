@@ -36,6 +36,7 @@ FIND_LIBRARY(XERCESC_LIBRARY NAMES xerces-c_static_3 xerces-c-3.1 xerces-c
  $ENV{XERCESC_LIBRARY_DIR}
  ${XERCESC_LIBRARY_DIR}
  /usr/lib
+ /usr/lib/x86_64-linux-gnu/
  /usr/local/lib
  /u/staff/arnoldg/PowerGrid/lib
  /shared/mrfil-data/Software/MRFIL-Modules/PowerGridSupport/lib
@@ -46,6 +47,7 @@ FIND_LIBRARY(XERCESC_LIBRARY_DEBUG NAMES xerces-c_static_3D xerces-c-3.1D
  $ENV{XERCESC_LIBRARY_DIR}
  ${XERCESC_LIBRARY_DIR}
  /usr/lib
+ /usr/lib/x86_64-linux-gnu/
  /usr/local/lib
  /u/staff/arnoldg/PowerGrid/lib
  /shared/mrfil-data/Software/MRFIL-Modules/PowerGridSupport/lib
@@ -57,6 +59,7 @@ FIND_LIBRARY(XERCESC_LIBRARY NAMES xerces-c_3
  PATHS
  $ENV{XERCESC_LIBRARY_DIR}
  ${XERCESC_LIBRARY_DIR}
+ /usr/lib
  /u/staff/arnoldg/PowerGrid/lib
  /shared/mrfil-data/Software/MRFIL-Modules/PowerGridSupport/lib
 
@@ -65,6 +68,7 @@ FIND_LIBRARY(XERCESC_LIBRARY_DEBUG NAMES xerces-c_3D
  PATHS
  $ENV{XERCESC_LIBRARY_DIR}
  ${XERCESC_LIBRARY_DIR}
+ /usr/lib
  /u/staff/arnoldg/PowerGrid/lib
  /shared/mrfil-data/Software/MRFIL-Modules/PowerGridSupport/lib
 
