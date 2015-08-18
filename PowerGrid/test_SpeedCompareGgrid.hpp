@@ -14,7 +14,7 @@
 using namespace arma;
 
 template<typename T1>
-int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter,uword nc) {
+int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter,uword nc, uword nshots) {
     string testPath = dataPath;
     typedef complex<T1> CxT1;
     //uword Nx =64;
@@ -25,7 +25,7 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
     Cube<T1> ix(Nx,Ny,Nz);
     Cube<T1> iy(Nx,Ny,Nz);
     Cube<T1> iz(Nx,Ny,Nz);
-    Col<T1> FM;
+    Col<T1>  FM;
     Col<CxT1> SMap;
     
     ix.zeros();
@@ -73,7 +73,7 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
     uword type = 2; // 2 for min max time seg and 1 for Hanning
     //uword L = 4;
     cout << "Initializing FieldCorrection" << endl;
-    FieldCorrection<T1, Ggrid<T1>> A(Gg,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L,type);
+    FieldCorrection<T1, Ggrid<T1>> A(Gg,vectorise(FM),vectorise(tvec),nro,Nx*Ny*Nz,L,type,nshots);
 
     //cout << "Initializing Gdft" << endl;
     //Gdft<T1,T2> Gd(nro,Nx*Ny*Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM),vectorise(tvec));

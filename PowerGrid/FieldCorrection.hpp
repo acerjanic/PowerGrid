@@ -25,6 +25,7 @@ public:
     uword n2 = 0; //Image size
     uword L = 0; //number of time segments
     uword type = 0; //type of time segmentation
+	uword Nshots = 0; //Number of shots, used to reduce complexity of calculating interpolator
     T1 tau;		//time segment length
     T1 T_min;   // minimum time in the time vector (i.e. TE for spiral out)
     Tobj *obj;
@@ -34,18 +35,22 @@ public:
     CxT1 i = CxT1(0.,1.);
 
     FieldCorrection(Tobj &G, Col<T1> map_in, Col<T1> timeVec_in, uword a, uword b,uword c) {
-      FieldCorrection(G, map_in, timeVec_in, a, b,c, 1 );
+      FieldCorrection(G, map_in, timeVec_in, a, b,c, (uword)1 );
 
     }
+	FieldCorrection(Tobj &G, Col<T1> map_in, Col<T1> timeVec_in, uword a, uword b,uword c, uword interp) {
+		FieldCorrection(G, map_in, timeVec_in, a, b,c, interp, (uword)1 );
 
+	}
     //Class constructor
-    FieldCorrection(Tobj &obj, Col<T1> map_in, Col<T1> timeVec_in, uword a, uword b,uword c, uword interptype ) {
+    FieldCorrection(Tobj &G, Col<T1> map_in, Col<T1> timeVec_in, uword a, uword b,uword c, uword interptype, uword shots ) {
 
       n1 = a; //Data size
       n2 = b;//Image size
       L = c; //number of time segments
       type = interptype; // type of time segmentation performed
-      //obj = &G;
+      Nshots = shots; // number of shots
+      obj = &G;
       fieldMap = map_in;
       
       AA.set_size(n1,L+1); //time segments weights
@@ -55,18 +60,22 @@ public:
       tau = (rangt+datum::eps)/(L); // it was L-1 before
       timeVec = timeVec - T_min;
 
+	    uword NOneShot = n1/Nshots;
+		Mat<CxT1> tempAA(NOneShot,L+1);
+
       if (type == 1) {// Hanning interpolator
         cout << "Hanning interpolation" << endl;
         //tau = (rangt+datum::eps)/(L-1);
 		  for (unsigned int ii=0; ii < L+1; ii++) {
-			for (unsigned int jj=0; jj < n1; jj++) {
+			for (unsigned int jj=0; jj < NOneShot; jj++) {
 			  if ((std::abs(timeVec(jj)-((ii)*tau)))<=tau){
-				AA(jj,ii) = 0.5 + 0.5*std::cos((datum::pi)*(timeVec(jj)-((ii)*tau))/tau);
+				tempAA(jj,ii) = 0.5 + 0.5*std::cos((datum::pi)*(timeVec(jj)-((ii)*tau))/tau);
 			  } else {
-                AA(jj,ii) = 0.0;
+                tempAA(jj,ii) = 0.0;
               }
 			}
           }
+        AA = repmat(tempAA,Nshots,1);
       }
 
       else if (type == 2) { // Min-max interpolator: Exact LS interpolator
@@ -145,24 +154,27 @@ public:
         Col<CxT1> res,temp;
 
         cout << "Start filling the AA matrix" << endl;
-        /*for (unsigned int jj = 0; jj < L+1; jj++) {
-         for (unsigned int ii = 0; ii < n1; ii++) {
+	    /*
+        for (unsigned int jj = 0; jj < L+1; jj++) {
+         for (unsigned int ii = 0; ii < NOneShot; ii++) {
            iGTGGTtp =iGTGGT.row(jj);
            ftp = exp(i*fieldMap*timeVec(ii));
-           res = iGTGGTtp*ftp;
-           AA(ii,jj) = std::conj(res);
+           res = as_scalar(iGTGGTtp*ftp);
+           AA(ii,jj) = conj(res);
          }
           cout << "Loop L" << jj << endl;
-        }*/
+        }
+		*/
 
-          for (unsigned int ii = 0; ii < n1; ii++) {
+
+          for (unsigned int ii = 0; ii < NOneShot; ii++) {
             ftp = exp(i*fieldMap*timeVec(ii));
             res = iGTGGT*ftp;
             //temp = conj(res);
-            AA.row(ii) = res.t();
-            cout << "Data point #" << ii << endl;
+            tempAA.row(ii) = res.t();
+            //cout << "Data point #" << ii << endl;
           }
-
+	      AA = repmat(tempAA,Nshots,1);
 
 
         //savemat("/vagrant/AA.mat","AAc",AA);
@@ -181,7 +193,7 @@ public:
     //Forward transformation is *
     // d is the vector of data of type T1, note it is const, so we don't modify it directly rather return another vector of type T1
     Col<CxT1> operator*(const Col<CxT1>& d) const {
-
+      Tobj *G = this->obj;
     //output is the size of the kspace data
       Col<CxT1> outData = zeros<Col<CxT1>>(this->n1);
       Col<CxT1> Wo;
@@ -193,7 +205,7 @@ public:
 		Wo = exp(-i*(this->fieldMap)*((ii)*tau+T_min));
 
 		//perform multiplication by the object and sum up the time segments
-		outData += (this->AA.col(ii))%((*this->obj)*(Wo%d));
+		outData += (this->AA.col(ii))%(*G*(Wo%d));
 
 
       }

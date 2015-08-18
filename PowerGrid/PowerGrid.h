@@ -16,7 +16,6 @@
 #include "../Support/CeempleArmadillo.h"
 #include "../Support/CeempleMatio.h"
 #include "impatientTypes.h"
-#include "fftw3.h" //for fft library
 #include "config.hxx"
 #include <memory>
 
@@ -35,7 +34,8 @@ namespace arma {
 #include "solve_pwls_pcg.hpp"
 #include "ftCpu.hpp"
 #include "Gdft.hpp"
-#include "test_gdft.hpp" 
+#include "test_gdft.hpp"
+#include "fftGPU.hpp"
 #include "griddingSupport.hpp"
 #include "gridding.hpp"
 #include "Ggrid.hpp"
