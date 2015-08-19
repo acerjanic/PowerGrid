@@ -151,6 +151,24 @@ Ncoils (const Ncoils_type& x)
   this->Ncoils_.set (x);
 }
 
+const PowerGridConfig_t::Nshots_type& PowerGridConfig_t::
+Nshots () const
+{
+  return this->Nshots_.get ();
+}
+
+PowerGridConfig_t::Nshots_type& PowerGridConfig_t::
+Nshots ()
+{
+  return this->Nshots_.get ();
+}
+
+void PowerGridConfig_t::
+Nshots (const Nshots_type& x)
+{
+  this->Nshots_.set (x);
+}
+
 
 #include <xsd/cxx/xml/dom/parsing-source.hxx>
 
@@ -163,14 +181,16 @@ PowerGridConfig_t (const Nx_type& Nx,
                    const Nz_type& Nz,
                    const Niter_type& Niter,
                    const Ntimeseg_type& Ntimeseg,
-                   const Ncoils_type& Ncoils)
+                   const Ncoils_type& Ncoils,
+                   const Nshots_type& Nshots)
 : ::xml_schema::type (),
   Nx_ (Nx, this),
   Ny_ (Ny, this),
   Nz_ (Nz, this),
   Niter_ (Niter, this),
   Ntimeseg_ (Ntimeseg, this),
-  Ncoils_ (Ncoils, this)
+  Ncoils_ (Ncoils, this),
+  Nshots_ (Nshots, this)
 {
 }
 
@@ -184,7 +204,8 @@ PowerGridConfig_t (const PowerGridConfig_t& x,
   Nz_ (x.Nz_, f, this),
   Niter_ (x.Niter_, f, this),
   Ntimeseg_ (x.Ntimeseg_, f, this),
-  Ncoils_ (x.Ncoils_, f, this)
+  Ncoils_ (x.Ncoils_, f, this),
+  Nshots_ (x.Nshots_, f, this)
 {
 }
 
@@ -198,7 +219,8 @@ PowerGridConfig_t (const ::xercesc::DOMElement& e,
   Nz_ (this),
   Niter_ (this),
   Ntimeseg_ (this),
-  Ncoils_ (this)
+  Ncoils_ (this),
+  Nshots_ (this)
 {
   if ((f & ::xml_schema::flags::base) == 0)
   {
@@ -283,6 +305,17 @@ parse (::xsd::cxx::xml::dom::parser< char >& p,
       }
     }
 
+    // Nshots
+    //
+    if (n.name () == "Nshots" && n.namespace_ ().empty ())
+    {
+      if (!Nshots_.present ())
+      {
+        this->Nshots_.set (Nshots_traits::create (i, f, this));
+        continue;
+      }
+    }
+
     break;
   }
 
@@ -327,6 +360,13 @@ parse (::xsd::cxx::xml::dom::parser< char >& p,
       "Ncoils",
       "");
   }
+
+  if (!Nshots_.present ())
+  {
+    throw ::xsd::cxx::tree::expected_element< char > (
+      "Nshots",
+      "");
+  }
 }
 
 PowerGridConfig_t* PowerGridConfig_t::
@@ -348,6 +388,7 @@ operator= (const PowerGridConfig_t& x)
     this->Niter_ = x.Niter_;
     this->Ntimeseg_ = x.Ntimeseg_;
     this->Ncoils_ = x.Ncoils_;
+    this->Nshots_ = x.Nshots_;
   }
 
   return *this;

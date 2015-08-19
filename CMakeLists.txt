@@ -11,12 +11,18 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 find_package(MATIO)
 include_directories(${MATIO_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${MATIO_LIBRARIES})
-#find_package(FFTW REQUIRED)
-find_path(FFTW_INCLUDE_DIR fftw3.h)
-find_library(FFTW_LIBRARIES NAMES fftw3)
-include_directories(${FFTW_INCLUDE_DIR})
-set(LIBS ${LIBS} ${FFT_LIBRARIES})
-
+if(OPENACC)
+	find_path(cuFFT_INCLUDE_DIR cufft.h HINTS /usr/local/cuda/include)
+	include_directories(${cuFFT_INCLUDE_DIR})
+	find_library(cuFFT_LIBRARIES cufft HINTS /usr/local/cuda/lib64)
+	set(LIBS ${LIBS} ${cuFFT_LIBRARIES})
+else(OPENACC)
+	#find_package(FFTW REQUIRED)
+	find_path(FFTW_INCLUDE_DIR fftw3.h)
+	find_library(FFTW_LIBRARIES NAMES fftw3)
+	include_directories(${FFTW_INCLUDE_DIR})
+	set(LIBS ${LIBS} ${FFT_LIBRARIES})
+endif(OPENACC)
 if(${USE_ACML})
 	find_package(ACML)
 	set(LIBS ${LIBS} ${ACML_LIBRARIES})
@@ -40,7 +46,7 @@ set(POWERGRID_TEST_GDFT
     ./PowerGrid/config.cxx
 )
 
-set(POWERGRID_TEST_GGRID	
+set(POWERGRID_TEST_GGRID
 	./PowerGrid/PowerGridGgrid.cpp
 	./PowerGrid/config.cxx
 )

@@ -31,8 +31,8 @@
 // in the accompanying FLOSSE file.
 //
 
-#ifndef CXX_USERS_ALEXCERJANIC_DEVELOPER_PG_POWER_GRID_CONFIG_HXX
-#define CXX_USERS_ALEXCERJANIC_DEVELOPER_PG_POWER_GRID_CONFIG_HXX
+#ifndef CXX__CONFIG_HXX
+#define CXX__CONFIG_HXX
 
 #ifndef XSD_USE_CHAR
 #define XSD_USE_CHAR
@@ -324,6 +324,20 @@ class PowerGridConfig_t: public ::xml_schema::type
   void
   Ncoils (const Ncoils_type& x);
 
+  // Nshots
+  //
+  typedef ::xml_schema::integer Nshots_type;
+  typedef ::xsd::cxx::tree::traits< Nshots_type, char > Nshots_traits;
+
+  const Nshots_type&
+  Nshots () const;
+
+  Nshots_type&
+  Nshots ();
+
+  void
+  Nshots (const Nshots_type& x);
+
   // Constructors.
   //
   PowerGridConfig_t (const Nx_type&,
@@ -331,7 +345,8 @@ class PowerGridConfig_t: public ::xml_schema::type
                      const Nz_type&,
                      const Niter_type&,
                      const Ntimeseg_type&,
-                     const Ncoils_type&);
+                     const Ncoils_type&,
+                     const Nshots_type&);
 
   PowerGridConfig_t (const ::xercesc::DOMElement& e,
                      ::xml_schema::flags f = 0,
@@ -365,6 +380,7 @@ class PowerGridConfig_t: public ::xml_schema::type
   ::xsd::cxx::tree::one< Niter_type > Niter_;
   ::xsd::cxx::tree::one< Ntimeseg_type > Ntimeseg_;
   ::xsd::cxx::tree::one< Ncoils_type > Ncoils_;
+  ::xsd::cxx::tree::one< Nshots_type > Nshots_;
 };
 
 #include <iosfwd>
@@ -473,4 +489,4 @@ PowerGridConfig (::xml_schema::dom::auto_ptr< ::xercesc::DOMDocument > d,
 //
 // End epilogue.
 
-#endif // CXX_USERS_ALEXCERJANIC_DEVELOPER_PG_POWER_GRID_CONFIG_HXX
+#endif // CXX__CONFIG_HXX
