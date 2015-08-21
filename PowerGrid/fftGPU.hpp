@@ -5,7 +5,7 @@
 
 #ifndef PowerGrid_fftGPU_hpp
 #define PowerGrid_fftGPU_hpp
-
+#ifdef _OPENACC
 #include <type_traits>
 #include "cufft.h"
 #include <complex>
@@ -26,7 +26,6 @@ void ifft2dGPU(std::complex <T1>* d_data, int nx, int ny, void* stream)
 	cufftSetStream(plan, (cudaStream_t) stream);
 	cufftExecC2C(plan, (cufftComplex*) d_data, (cufftComplex*) d_data, CUFFT_INVERSE);
 	cufftDestroy(plan);
-
 }
 
 template<typename T1, typename std::enable_if<std::is_same<T1, float>::value, int>::type = 0>
@@ -42,7 +41,6 @@ void fft2dGPU(std::complex <T1>* d_data, int nx, int ny, void* stream)
 	cufftSetStream(plan, (cudaStream_t) stream);
 	cufftExecC2C(plan, (cufftComplex*) d_data, (cufftComplex*) d_data, CUFFT_FORWARD);
 	cufftDestroy(plan);
-
 }
 
 template<typename T1, typename std::enable_if<std::is_same<T1, float>::value, int>::type = 0>
@@ -58,7 +56,6 @@ void ifft3dGPU(std::complex <T1>* d_data, int nx, int ny, int nz, void* stream)
 	cufftSetStream(plan, (cudaStream_t) stream);
 	cufftExecC2C(plan, (cufftComplex*) d_data, (cufftComplex*) d_data, CUFFT_INVERSE);
 	cufftDestroy(plan);
-
 }
 
 template<typename T1, typename std::enable_if<std::is_same<T1, float>::value, int>::type = 0>
@@ -74,7 +71,6 @@ void fft3dGPU(std::complex <T1>* d_data, int nx, int ny, int nz, void* stream)
 	cufftSetStream(plan, (cudaStream_t) stream);
 	cufftExecC2C(plan, (cufftComplex*) d_data, (cufftComplex*) d_data, CUFFT_FORWARD);
 	cufftDestroy(plan);
-
 }
 
 template<typename T1, typename std::enable_if<std::is_same<T1, double>::value, int>::type = 0>
@@ -91,7 +87,6 @@ void ifft2dGPU(std::complex <T1>* d_data, int nx, int ny, void* stream)
 	cufftSetStream(plan, (cudaStream_t) stream);
 	cufftExecZ2Z(plan, (cufftDoubleComplex*) d_data, (cufftDoubleComplex*) d_data, CUFFT_INVERSE);
 	cufftDestroy(plan);
-
 }
 
 template<typename T1, typename std::enable_if<std::is_same<T1, double>::value, int>::type = 0>
@@ -108,7 +103,6 @@ void fft2dGPU(std::complex <T1>* d_data, int nx, int ny, void* stream)
 	cufftSetStream(plan, (cudaStream_t) stream);
 	cufftExecZ2Z(plan, (cufftDoubleComplex*) d_data, (cufftDoubleComplex*) d_data, CUFFT_FORWARD);
 	cufftDestroy(plan);
-
 }
 
 template<typename T1, typename std::enable_if<std::is_same<T1, double>::value, int>::type = 0>
@@ -124,7 +118,6 @@ void ifft3dGPU(std::complex <T1>* d_data, int nx, int ny, int nz, void* stream)
 	cufftSetStream(plan, (cudaStream_t) stream);
 	cufftExecZ2Z(plan, (cufftDoubleComplex*) d_data, (cufftDoubleComplex*) d_data, CUFFT_INVERSE);
 	cufftDestroy(plan);
-
 }
 
 template<typename T1, typename std::enable_if<std::is_same<T1, double>::value, int>::type = 0>
@@ -141,5 +134,5 @@ void fft3dGPU(std::complex <T1>* d_data, int nx, int ny, int nz, void* stream)
 	cufftExecZ2Z(plan, (cufftDoubleComplex*) d_data, (cufftDoubleComplex*) d_data, CUFFT_FORWARD);
 	cufftDestroy(plan);
 }
-
+#endif //_OPENACC
 #endif //PowerGrid_fftGPU_hpp

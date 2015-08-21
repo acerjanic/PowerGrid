@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project("PowerGrid" CXX)
 
 
-option(OPENACC "Enable OpenACC support" ON)
+option(OPENACC "Enable OpenACC support" On)
 option(ISMRMD "Enable ISMRMRD Suppport" OFF)
 
 #set(CMAKE_CXX_STANDARD 11)
@@ -27,6 +27,11 @@ if(${USE_ACML})
 	find_package(ACML)
 	set(LIBS ${LIBS} ${ACML_LIBRARIES})
 endif()
+
+if (ISMRMRD)
+
+
+endif (ISMRMRD)
 find_package(Armadillo REQUIRED)
 include_directories(${ARMADILLO_INCLUDE_DIRS})
 MESSAGE(${ARMADILLO_INCLUDE_DIRS})
@@ -64,7 +69,7 @@ else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FFT_LIBRARIES}")
 	else()
 		if(OPENACC)
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Minfo -ta=tesla -fpermissive -pgf77libs")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g  -Minfo -ta=tesla -fpermissive -pgf77libs")
 		else()
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive -pgf77libs")
 		endif()

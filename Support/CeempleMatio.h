@@ -1,5 +1,18 @@
-//This file is distributed under a BSD 3-Clause license.
-// See Ceemple_BSD_license.txt for details.
+/*
+This file is distributed under a BSD 3-Clause license.
+Copyright (c) 2014, Ceemple Software Ltd.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #ifndef CEEMPLEMATIO_H
 #define CEEMPLEMATIO_H
@@ -38,7 +51,7 @@ bool
 savemat(const std::string &FileName, const std::string &VarName,
         const T &Var,
         const typename arma_not_cx<typename T::elem_type>::result* junk = 0) {
-    cout << "Calling real savemat" << endl;
+	//cout << "Calling real savemat" << endl;
     arma_ignore(junk);
     mat_t *matfp = Mat_CreateVer(FileName.c_str(), NULL, MAT_FT_MAT5);
     if (!matfp) {
@@ -71,7 +84,7 @@ savemat(const std::string &FileName, const std::string &VarName,
         const typename arma_cx_only<typename T1::elem_type>::result* junk = 0) {
     arma_extra_debug_sigprint();
     arma_ignore(junk);
-    cout << "Calling complex savemat" << endl;
+	//cout << "Calling complex savemat" << endl;
 
     mat_t *matfp = Mat_CreateVer(FileName.c_str(), NULL, MAT_FT_MAT5);
     if (!matfp) {
@@ -85,7 +98,7 @@ savemat(const std::string &FileName, const std::string &VarName,
     arma::Mat<double> imTemp = arma::imag(temp);
     struct mat_complex_split_t z = {reTemp.memptr(),imTemp.memptr()};
 
-    std::cout << "MatioTypes<T1>::DataType = " << MatioTypes<typename T1::elem_type>::DataType << std::endl;
+	//std::cout << "MatioTypes<T1>::DataType = " << MatioTypes<typename T1::elem_type>::DataType << std::endl;
 
     matvar_t *matvar =
             Mat_VarCreate(VarName.c_str(), MAT_C_DOUBLE, MatioTypes<typename T1::elem_type>::DataType, 2,

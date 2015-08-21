@@ -338,6 +338,20 @@ class PowerGridConfig_t: public ::xml_schema::type
   void
   Nshots (const Nshots_type& x);
 
+    // Beta
+    //
+    typedef ::xml_schema::float_ Beta_type;
+    typedef ::xsd::cxx::tree::traits<Beta_type, char> Beta_traits;
+
+    const Beta_type&
+            Beta() const;
+
+    Beta_type&
+            Beta();
+
+    void
+            Beta(const Beta_type& x);
+
   // Constructors.
   //
   PowerGridConfig_t (const Nx_type&,
@@ -346,7 +360,8 @@ class PowerGridConfig_t: public ::xml_schema::type
                      const Niter_type&,
                      const Ntimeseg_type&,
                      const Ncoils_type&,
-                     const Nshots_type&);
+          const Nshots_type&,
+          const Beta_type&);
 
   PowerGridConfig_t (const ::xercesc::DOMElement& e,
                      ::xml_schema::flags f = 0,
@@ -381,6 +396,7 @@ class PowerGridConfig_t: public ::xml_schema::type
   ::xsd::cxx::tree::one< Ntimeseg_type > Ntimeseg_;
   ::xsd::cxx::tree::one< Ncoils_type > Ncoils_;
   ::xsd::cxx::tree::one< Nshots_type > Nshots_;
+    ::xsd::cxx::tree::one <Beta_type> Beta_;
 };
 
 #include <iosfwd>
