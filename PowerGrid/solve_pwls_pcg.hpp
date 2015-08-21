@@ -123,7 +123,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,
             }
 
             pgrad = R.Gradient(x+step*ddir);
-            //savemat("/home/vagrant/test_reg.mat","pgrad",pgrad);
+            savemat("/home/acerja2/test_reg.mat", "pgrad", pgrad);
             temp = conj(ddir).eval();
             pdot = as_scalar(real(dot_double(temp,pgrad)));
 

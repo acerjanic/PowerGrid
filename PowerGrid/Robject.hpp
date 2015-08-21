@@ -32,9 +32,6 @@ public:
         this->Nx = nx;
         this->Ny = ny;
         this->Nz = nz;
-        this->DeltaX = 1.0/(double)nx;
-        this->DeltaY = 1.0/(double)ny;
-        this->DeltaZ = 1.0/(double)nz;
         this->Beta = beta;
 
     }
@@ -44,9 +41,15 @@ public:
         return ones < Col < CxT1 >> (d.n_rows);
     }
 
-    virtual Col<CxT1> pot(const Col<CxT1>& d) const
+    virtual Col <CxT1> dpot(const Col <CxT1>& d) const
     {
-        return d % d / 2.0;
+	    return d;
+    }
+
+    virtual Col <CxT1> pot(const Col <CxT1>& d) const
+    {
+	    Col <T1> temp = abs(d)%abs(d)/2.0;
+	    return conv_to<Col<CxT1 >> ::from(temp);
     }
 
     Col<CxT1>Cd(const Col<CxT1>& d, uword dim) const
@@ -66,7 +69,6 @@ public:
         }
         */
         Col<CxT1> out(Nx*Ny*Nz);
-
         uword ll,jj,kk;
         switch (dim)
         {
@@ -115,31 +117,42 @@ public:
         */
         Col<CxT1> out(Nx*Ny*Nz);
 
-        uword ll,jj,kk;
-        switch (dim)
-        {
-            case (uword)0:
-                ll = 1;
-                jj = 0;
-                kk = 0;
-                break;
-            case (uword)1:
-                ll = 0;
-                jj = 1;
-                kk = 0;
-                break;
-            case (uword)2:
-                ll = 0;
-                jj = 0;
-                kk = 1;
-                break;
-            default:
-                cout << "Warning regularization along dimension greater than 3! Undefined case!" << endl;
-        }
-        uword offset = ll + jj*Ny + kk*Nx*Ny;
-        for(uword ii = offset; ii < Ny*Nx*Nz; ii++) {
-            out(ii-offset) = d(ii - offset) - d(ii);
-        }
+	    uword ll, jj, kk;
+	    switch (dim) {
+	    case (uword) 0:
+		    ll = 1;
+		    jj = 0;
+		    kk = 0;
+		    break;
+	    case (uword) 1:
+		    ll = 0;
+		    jj = 1;
+		    kk = 0;
+		    break;
+	    case (uword) 2:
+		    ll = 0;
+		    jj = 0;
+		    kk = 1;
+		    break;
+	    default:
+		    cout << "Warning regularization along dimension greater than 3! Undefined case!" << endl;
+	    }
+
+	    uword offset = ll+jj*Ny+kk*Nx*Ny;
+	    for (uword ii = offset; ii<Ny*Nx*Nz; ii++) {
+		    if (ii==offset-1) {
+			    out(ii) = -d(ii+1);
+		    }
+		    else if (ii==Ny*Nx*Nz-1) {
+			    out(ii-offset) = d(ii-offset);
+		    }
+		    else {
+			    out(ii-offset) = d(ii-offset)-d(ii);
+
+		    }
+
+
+	    }
 
         return out;
     }
@@ -181,7 +194,7 @@ public:
 
         for(uword ii = 0; ii < nd; ii++) {
             d = this->Cd(x,ii);
-            d = this->wpot(d);
+	        d = this->dpot(d);
             d = this->Ctd(d,ii);
             g = g + d;
         }
@@ -191,7 +204,7 @@ public:
     CxT1 Denom(const Col<CxT1>& ddir,const Col<CxT1>& x) const
     {
 
-        Col <CxT1> d = zeros< Col < CxT1 >>(ddir.n_rows);
+	    Col <CxT1> Cdir = zeros<Col<CxT1 >> (ddir.n_rows);
         Col <CxT1> Cx = zeros< Col < CxT1 >>(ddir.n_rows);
         CxT1 penal = 0;
         CxT1 temp;
@@ -203,10 +216,10 @@ public:
         }
 
         for(uword ii = 0; ii < nd; ii++) {
-            d = this->Ctd(ddir,ii);
+	        Cdir = this->Cd(ddir, ii);
             Cx = this->wpot(this->Cd(x,ii));
-            Cx = Cx % this->Cd(ddir,ii);
-            temp = as_scalar(d.t()*Cx);
+	        Cx = Cx%Cdir;
+	        temp = as_scalar(Cdir.t()*Cx);
             penal += temp;
         }
 

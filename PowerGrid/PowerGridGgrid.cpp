@@ -16,9 +16,10 @@ using namespace std; //complex type comes from the STL
 
 int main(int argc, char** argv)
 {
-    uword Nx,Ny,Nz,Niter = 1,NL = 1,Ncoils,Nshots = 1;
-    uword startIndex, endIndex;
 
+    uword Nx, Ny, Nz, Niter = 1, NL = 1, Ncoils, Nshots = 1;
+    uword startIndex, endIndex;
+    double Beta = 0.0;
     string testPath,configPath;
     if (argc > 1) {
         testPath = std::string(argv[1]);
@@ -44,7 +45,7 @@ int main(int argc, char** argv)
             Niter = cfg->Niter();
             Ncoils = cfg->Ncoils();
             Nshots = cfg->Nshots();
-
+            Beta = cfg->Beta();
         }
         catch (const xml_schema::exception& e)
         {
@@ -54,10 +55,10 @@ int main(int argc, char** argv)
 
         int test = reconfMRIGgrid<double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils,startIndex,endIndex);
     } else {
-
         try
         {
-            auto_ptr<PowerGridConfig_t> cfg(PowerGridConfig(configPath.c_str()));
+
+            auto_ptr <PowerGridConfig_t> cfg(PowerGridConfig(configPath.c_str()));
 
             Nx = cfg->Nx();
             Ny = cfg->Ny();
@@ -66,14 +67,14 @@ int main(int argc, char** argv)
             Niter = cfg->Niter();
             Ncoils = cfg->Ncoils();
             Nshots = cfg->Nshots();
+            Beta = cfg->Beta();
         }
         catch (const xml_schema::exception& e)
         {
             cerr << e << endl;
             return 1;
         }
-
-        int test = test_SpeedCompareGgrid<double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils,Nshots);
+        int test = test_SpeedCompareGgrid<double>(testPath, Nx, Ny, Nz, NL, Niter, Ncoils, Nshots, Beta);
 
 
     }

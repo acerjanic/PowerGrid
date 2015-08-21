@@ -14,7 +14,8 @@
 using namespace arma;
 
 template<typename T1>
-int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter, uword nc, uword nshots)
+int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter, uword nc, uword nshots,
+		T1 beta)
 {
 	string testPath = dataPath;
 	typedef complex <T1> CxT1;
@@ -60,19 +61,19 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 	loadmat(testPath+"t.mat", "t", &tvec);
 
 	loadmat(testPath+"FM.mat", "FM", &FM);
-	//FM.zeros();
+
 
 
 
 	// Fourier transfrom operator
-	cout << "Initializing Ggrid" << endl;
+	//cout << "Initializing Ggrid" << endl;
 	Ggrid<T1> Gg(nro, 2.0, Nx, Ny, Nz, kx, ky, kz, vectorise(ix), vectorise(iy), vectorise(iz));
 
 	// Field correction operation
 
 	uword type = 2; // 2 for min max time seg and 1 for Hanning
 	//uword L = 4;
-	cout << "Initializing FieldCorrection" << endl;
+	//cout << "Initializing FieldCorrection" << endl;
 	FieldCorrection<T1, Ggrid<T1>> A(Gg, vectorise(FM), vectorise(tvec), nro, Nx*Ny*Nz, L, type, nshots);
 
 	//cout << "Initializing Gdft" << endl;
@@ -85,10 +86,10 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 	//SENSE<cx_double, Gdft<T1,T2>> Sd(Gd,SMap,nro,Nx*Ny*Nz,nc);
 
 	// Sense operation
-	cout << "Iniitalizing SENSE Ggrid" << endl;
+	//cout << "Iniitalizing SENSE Ggrid" << endl;
 	SENSE<T1, FieldCorrection<T1, Ggrid<T1>>> Sg(A, SMap, nro, Nx*Ny*Nz, nc);
 
-	cout << "loading data" << endl;
+	//cout << "loading data" << endl;
 	Col <CxT1> data;
 	loadmat(testPath+"data.mat", "data", &data);
 
@@ -96,9 +97,9 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 	//ucube ReconMask(Nx,Ny,Nz);
 	//ReconMask.ones();
 
-	cout << "Iniitalizing QuadPenalty" << endl;
-	TVPenalty<T1> R(Nx, Ny, Nz, 1e-5, 1e-7);
-	cout << "QuadPenalty setup successfull" << endl;
+	//cout << "Iniitalizing QuadPenalty" << endl;
+	QuadPenalty<T1> R(Nx, Ny, Nz, beta);
+	//cout << "QuadPenalty setup successfull" << endl;
 
 	//uword niter = 10;
 	Col <CxT1> xinit(Nx*Ny*Nz); // initial estimate of x
@@ -133,9 +134,9 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
     x_Sd_forward = Sd*x_Sd_adjoint;
     savemat(testPath+"test_forward_Sdft.mat","img",x_Sd_forward);
 */
-	cout << "Runing pwls with ggrid" << endl;
+	//cout << "Runing pwls with ggrid" << endl;
 	Col <CxT1> test_pwls;
-	test_pwls = solve_pwls_pcg<T1, SENSE<T1, FieldCorrection<T1, Ggrid<T1>>>, TVPenalty<T1>>(xinit, Sg, W, data, R,
+	test_pwls = solve_pwls_pcg<T1, SENSE<T1, FieldCorrection<T1, Ggrid<T1>>>, QuadPenalty<T1>>(xinit, Sg, W, data, R,
 			niter);
 	savemat(testPath+"test_pwls.mat", "img", test_pwls);
 /*
