@@ -167,7 +167,7 @@ deinterleave_data3d(
 	int lIndex, X, Y, Z;
 	T1* __restrict pSrc; // pointer for working with stl::complex<T1> data as an interleaved array of T1
 	pSrc = reinterpret_cast<T1*>(src);
-#pragma acc parallel loop collapse(3) independent present(pSrc[0:imageX*imageY*imageZ]) present(outR_d[0:imageX*imageY*imageZ],outI_d[0:imageX*imageY*imageZ])
+//#pragma acc parallel loop present(pSrc[0:imageX*imageY*imageZ]) present(outR_d[0:imageX*imageY*imageZ],outI_d[0:imageX*imageY*imageZ])
 	for (Z = 0; Z<imageZ; Z++) {
 		for (X = 0; X<imageX; X++) {
 			for (Y = 0; Y<imageY; Y++) {
@@ -269,7 +269,7 @@ deapodization2d(
 	pSrc = reinterpret_cast<T1*>(src);
 	pDst = reinterpret_cast<T1*>(dst);
 
-	#pragma acc parallel loop present(pDst[0:2*imageX*imageY])
+#pragma acc parallel loop present(pDst[0:2*imageX*imageY])
 	for(int ii = 0; ii < 2*destSize; ii++) {
 		pDst[ii] = (T1)0.0;
 	}
@@ -405,18 +405,18 @@ deapodization3d(
 	T1* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
 	pSrc = reinterpret_cast<T1*>(src);
 	pDst = reinterpret_cast<T1*>(dst);
-	#pragma acc parallel loop present(pDst[0:2*imageX*imageY*imageZ])
+//#pragma acc parallel loop present(pDst[0:2*imageX*imageY*imageZ])
 	for(int ii = 0; ii < 2*destSize; ii++) {
 		pDst[ii] = (T1)0.0;
 	}
-#pragma acc kernels loop collapse(3) independent present(pSrc[0:2*imageX*imageY*imageZ]) present(pDst[0:2*imageX*imageY*imageZ])
+//#pragma acc kernels loop present(pSrc[0:2*imageX*imageY*imageZ],pDst[0:2*imageX*imageY*imageZ])
 	for (Z = 0; Z<imageZ; Z++) {
 		for (X = 0; X<imageX; X++) {
 			for (Y = 0; Y<imageY; Y++) {
 
-				gridKernelZ = (T1) ((Z)-((T1) imageZ/2.0f))/(T1) imageZ;
-				gridKernelY = (T1) ((Y)-((T1) imageY/2.0f))/(T1) imageY;
-				gridKernelX = (T1) ((X)-((T1) imageX/2.0f))/(T1) imageX;
+				gridKernelZ = (T1) ((Z)-((T1) imageZ/2.0))/(T1) imageZ;
+				gridKernelY = (T1) ((Y)-((T1) imageY/2.0))/(T1) imageY;
+				gridKernelX = (T1) ((X)-((T1) imageX/2.0))/(T1) imageX;
 
 				common_exprX = (MRI_PI*MRI_PI*kernelWidth*kernelWidth*gridKernelX*gridKernelX-beta*beta);
 				common_exprY = (MRI_PI*MRI_PI*kernelWidth*kernelWidth*gridKernelY*gridKernelY-beta*beta);
@@ -425,17 +425,17 @@ deapodization3d(
 				if (common_exprX>=0)
 					common_exprX1 = (SIN(std::sqrt(common_exprX))/std::sqrt(common_exprX));
 				else
-					common_exprX1 = (SINH(std::sqrt(-1.0f*common_exprX))/std::sqrt(-1.0f*common_exprX));
+					common_exprX1 = (SINH(std::sqrt(-1.0*common_exprX))/std::sqrt(-1.0*common_exprX));
 
 				if (common_exprY>=0)
 					common_exprY1 = (SIN(std::sqrt(common_exprY))/std::sqrt(common_exprY));
 				else
-					common_exprY1 = (SINH(std::sqrt(-1.0f*common_exprY))/std::sqrt(-1.0f*common_exprY));
+					common_exprY1 = (SINH(std::sqrt(-1.0*common_exprY))/std::sqrt(-1.0*common_exprY));
 
 				if (common_exprZ>=0)
 					common_exprZ1 = (SIN(std::sqrt(common_exprZ))/std::sqrt(common_exprZ));
 				else
-					common_exprZ1 = (SINH(std::sqrt(-1.0f*common_exprZ))/std::sqrt(-1.0f*common_exprZ));
+					common_exprZ1 = (SINH(std::sqrt(-1.0*common_exprZ))/std::sqrt(-1.0*common_exprZ));
 
 				T1 gridKernel = common_exprX1*common_exprY1*common_exprZ1;
 
@@ -444,8 +444,8 @@ deapodization3d(
 					int common_index = Z*imageY*imageX+X*imageY+Y;
 					gridOS3 = gridOS*gridOS*gridOS;
 					//dst[common_index] = (src[common_index])/gridKernel*(1.0/gridOS3);
-					pDst[2*common_index] = (pSrc[2*common_index]) / gridKernel * (1.0f / gridOS3); //Real
-					pDst[2*common_index+1] = (pSrc[2*common_index+1]) / gridKernel * (1.0f / gridOS3); //Imaginary
+					pDst[2*common_index] = (pSrc[2*common_index])/gridKernel*(1.0/gridOS3); //Real
+					pDst[2*common_index+1] = (pSrc[2*common_index+1])/gridKernel*(1.0/gridOS3); //Imaginary
 				}
 			}
 		}
@@ -498,7 +498,7 @@ crop_center_region2d(
 	pSrc = reinterpret_cast<T1*>(src);
 	pDst = reinterpret_cast<T1*>(dst);
 
-#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*gridSizeX*gridSizeY]) present(pDst[0:2*imageSizeX*imageSizeY])
+#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*gridSizeX*gridSizeY],pDst[0:2*imageSizeX*imageSizeY])
 	for (int dX_dst = 0; dX_dst<imageSizeX; dX_dst++) {
 		for (int dY_dst = 0; dY_dst<imageSizeY; dY_dst++) {
 
@@ -569,7 +569,7 @@ crop_center_region3d(
 	T1* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
 	pSrc = reinterpret_cast<T1*>(src);
 	pDst = reinterpret_cast<T1*>(dst);
-#pragma acc parallel loop collapse(3) independent present(pSrc[0:2*gridSizeX*gridSizeY*gridSizeZ]) present(pDst[0:2*imageSizeX*imageSizeY*imageSizeZ])
+//#pragma acc parallel loop present(pSrc[0:2*gridSizeX*gridSizeY*gridSizeZ],pDst[0:2*imageSizeX*imageSizeY*imageSizeZ])
 	for (int dZ_dst = 0; dZ_dst<imageSizeZ; dZ_dst++) {
 		for (int dX_dst = 0; dX_dst<imageSizeX; dX_dst++) {
 			for (int dY_dst = 0; dY_dst<imageSizeY; dY_dst++) {
@@ -626,7 +626,7 @@ zero_pad2d(
 	for (int jj = 0; jj<2*destSize; jj++) {
 		pDst[jj] = 0.0;
 	}
-#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*imageSizeX*imageSizeY]) present(pDst[0:2*destSize])
+#pragma acc parallel loop present(pSrc[0:2*imageSizeX*imageSizeY],pDst[0:2*destSize])
 	for (int dY_src = 0; dY_src<imageSizeY; dY_src++) {
 		for (int dX_src = 0; dX_src<imageSizeX; dX_src++) {
 
@@ -676,12 +676,12 @@ zero_pad3d(
 	pSrc = reinterpret_cast<T1*>(src);
 	pDst = reinterpret_cast<T1*>(dst);
 
-#pragma acc parallel loop present(pDst[0:2*destSize])
+//#pragma acc parallel loop present(pDst[0:2*destSize])
 	for (int jj = 0; jj<2*destSize; jj++) {
 		pDst[jj] = 0.0;
 	}
 
-#pragma acc parallel loop collapse(3) independent present(pSrc[0:2*imageSizeX*imageSizeY*imageSizeZ]) present(pDst[0:2*destSize])
+//#pragma acc parallel loop present(pSrc[0:2*imageSizeX*imageSizeY*imageSizeZ],pDst[0:2*destSize])
 	for (int dZ_src = 0; dZ_src<imageSizeZ; dZ_src++) {
 		for (int dY_src = 0; dY_src<imageSizeY; dY_src++) {
 			for (int dX_src = 0; dX_src<imageSizeX; dX_src++) {
@@ -765,7 +765,7 @@ void circshift2(std::complex <T>* __restrict out, const std::complex <T>* __rest
 	T* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
 	pSrc = reinterpret_cast<const T*>(in);
 	pDst = reinterpret_cast<T*>(out);
-#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*xdim*ydim],pDst[0:2*xdim*ydim])
+//#pragma acc parallel loop present(pSrc[0:2*xdim*ydim],pDst[0:2*xdim*ydim])
 	for (int x = 0; x<xdim; x++) {
 		ii = (x+xshift)%xdim;
 		for (int y = 0; y<ydim; y++) {
@@ -787,7 +787,7 @@ void circshift3(std::complex <T>* __restrict out, const std::complex <T>* __rest
 	T* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
 	pSrc = reinterpret_cast<const T*>(in);
 	pDst = reinterpret_cast<T*>(out);
-#pragma acc parallel loop collapse(3) independent present(pSrc[0:2*xdim*ydim*zdim],pDst[0:2*xdim*ydim*zdim])
+//#pragma acc parallel loop present(pSrc[0:2*xdim*ydim*zdim],pDst[0:2*xdim*ydim*zdim])
 	for (int x = 0; x<xdim; x++) {
 		ii = (x+xshift)%xdim;
 		for (int y = 0; y<ydim; y++) {

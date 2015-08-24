@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project("PowerGrid" CXX)
 
 
-option(OPENACC "Enable OpenACC support" On)
+option(OPENACC "Enable OpenACC support" ON)
 option(ISMRMD "Enable ISMRMRD Suppport" OFF)
 
 #set(CMAKE_CXX_STANDARD 11)
@@ -16,6 +16,7 @@ if(OPENACC)
 	include_directories(${cuFFT_INCLUDE_DIR})
 	find_library(cuFFT_LIBRARIES cufft HINTS /usr/local/cuda/lib64)
 	set(LIBS ${LIBS} ${cuFFT_LIBRARIES})
+
 else(OPENACC)
 	#find_package(FFTW REQUIRED)
 	find_path(FFTW_INCLUDE_DIR fftw3.h)

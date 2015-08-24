@@ -198,6 +198,7 @@ public:
             d = this->Ctd(d,ii);
             g = g + d;
         }
+
         return this->Beta*g;
     }
 
@@ -222,7 +223,7 @@ public:
 	        temp = as_scalar(Cdir.t()*Cx);
             penal += temp;
         }
-
+        cout << "Beta = " << Beta << endl;
         return this->Beta*penal;
     }
 
