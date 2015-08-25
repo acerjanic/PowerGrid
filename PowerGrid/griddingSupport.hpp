@@ -131,7 +131,7 @@ deinterleave_data2d( ///NAIVE
 	int lIndex;
 	T1* __restrict pSrc; // pointer for working with stl::complex<T1> data as an interleaved array of T1
 	pSrc = reinterpret_cast<T1*>(src);
-#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*imageX*imageY]) present(outR_d[0:imageX*imageY],outI_d[0:imageX*imageY])
+//#pragma acc kernels loop independent present(pSrc[0:2*imageX*imageY]) present(outR_d[0:imageX*imageY],outI_d[0:imageX*imageY])
 	for (int X = 0; X<imageX; X++) {
 		for (int Y = 0; Y<imageY; Y++) {
 			lIndex = Y+X*imageY;
@@ -269,11 +269,11 @@ deapodization2d(
 	pSrc = reinterpret_cast<T1*>(src);
 	pDst = reinterpret_cast<T1*>(dst);
 
-#pragma acc parallel loop present(pDst[0:2*imageX*imageY])
+//#pragma acc parallel loop present(pDst[0:2*imageX*imageY])
 	for(int ii = 0; ii < 2*destSize; ii++) {
 		pDst[ii] = (T1)0.0;
 	}
-#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*imageX*imageY],pDst[0:2*imageX*imageY])
+//#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*imageX*imageY],pDst[0:2*imageX*imageY])
 	for (X = 0; X<imageX; X++) {
 		for (Y = 0; Y<imageY; Y++) {
 
@@ -498,7 +498,7 @@ crop_center_region2d(
 	pSrc = reinterpret_cast<T1*>(src);
 	pDst = reinterpret_cast<T1*>(dst);
 
-#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*gridSizeX*gridSizeY],pDst[0:2*imageSizeX*imageSizeY])
+//#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*gridSizeX*gridSizeY],pDst[0:2*imageSizeX*imageSizeY])
 	for (int dX_dst = 0; dX_dst<imageSizeX; dX_dst++) {
 		for (int dY_dst = 0; dY_dst<imageSizeY; dY_dst++) {
 
@@ -622,11 +622,11 @@ zero_pad2d(
 	T1* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
 	pSrc = reinterpret_cast<T1*>(src);
 	pDst = reinterpret_cast<T1*>(dst);
-#pragma acc parallel loop present(pDst[0:2*destSize])
+//#pragma acc parallel loop present(pDst[0:2*destSize])
 	for (int jj = 0; jj<2*destSize; jj++) {
 		pDst[jj] = 0.0;
 	}
-#pragma acc parallel loop present(pSrc[0:2*imageSizeX*imageSizeY],pDst[0:2*destSize])
+//#pragma acc parallel loop present(pSrc[0:2*imageSizeX*imageSizeY],pDst[0:2*destSize])
 	for (int dY_src = 0; dY_src<imageSizeY; dY_src++) {
 		for (int dX_src = 0; dX_src<imageSizeX; dX_src++) {
 
@@ -782,6 +782,7 @@ void circshift3(std::complex <T>* __restrict out, const std::complex <T>* __rest
 		int xshift, int yshift,
 		int zshift)
 {
+	cout << "Entering circshift3 " << endl;
 	int ii, jj, kk;
 	const T* __restrict pSrc; // pointer for working with stl::complex<T1> data as an interleaved array of T1
 	T* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
@@ -836,7 +837,7 @@ fft2shift_grid(
 {
 	//(dimX,dimY) is the size of 'src'
 	int common_index_dst;
-#pragma acc parallel loop
+#pragma acc kernels loop
 	for (int dY_dst = 0; dY_dst<dimY; dY_dst++) {
 		for (int dX_dst = 0; dX_dst<dimX; dX_dst++) {
 			common_index_dst = dY_dst*dimX+dX_dst;
@@ -856,7 +857,7 @@ fft3shift_grid(
 	//(dimX,dimY,dimZ) is the size of 'src'
 	int common_index_dst;
 
-#pragma acc parallel loop
+#pragma acc kernels loop
 	for (int dY_dst = 0; dY_dst<dimY; dY_dst++) {
 		for (int dX_dst = 0; dX_dst<dimX; dX_dst++) {
 			for (int dZ_dst = 0; dZ_dst<dimZ; dZ_dst++) {

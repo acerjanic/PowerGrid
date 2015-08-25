@@ -16,6 +16,8 @@
 #include "accelmath.h"
 #include "fftGPU.hpp"
 #include "cufft.h"
+#include "fftw3.h"
+
 #define MIN std::min
 #define MAX std::max
 #define SQRT std::sqrt
@@ -73,7 +75,7 @@ gridding_Gold_2D(unsigned int n, parameters <T1> params, T1 beta, Reconstruction
 	//Jiading GAI
 	//float t0 = t[0];
 
-	#pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) present(pGData[0:gridNumElems*2])
+#pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(pGData[0:gridNumElems*2])
 	for (int i = 0; i<n; i++) {
 		ReconstructionSample <T1> pt = sample[i];
 
@@ -239,7 +241,7 @@ gridding_Gold_3D(unsigned int n, parameters <T1> params, T1 beta, Reconstruction
 	//float t0 = t[0];
 	pGData = reinterpret_cast<T1*>(gridData);
 
-#pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) present(pGData[0:gridNumElems*2])
+#pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT]) pcopy(pGData[0:gridNumElems*2])
 	for (int i = 0; i<n; i++) {
 		ReconstructionSample <T1> pt = sample[i];
 
@@ -407,7 +409,8 @@ gridding_Silver_2D(unsigned int n, parameters <T1> params, const T1* kx, const T
 	pGridData = reinterpret_cast<T1*>(gridData);
 	//Jiading GAI
 	//float t0 = t[0];
-#pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT])  copy(pSamples[0:n*2]) pcopy(pGridData[0:gridNumElems*2])
+
+#pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT])  pcopy(pSamples[0:n*2]) pcopy(pGridData[0:gridNumElems*2])
 	for (int i = 0; i<n; i++) {
 		//complex<T1> pt = sample[i];
 
@@ -572,7 +575,7 @@ gridding_Silver_3D(unsigned int n, parameters <T1> params, const T1* kx, const T
 	//Jiading GAI
 	//float t0 = t[0];
 
-#pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT])  copy(pSamples[0:n*2]) pcopy(pGridData[0:gridNumElems*2])
+#pragma acc parallel loop gang vector pcopyin(LUT[0:sizeLUT])  pcopy(pSamples[0:n*2]) pcopy(pGridData[0:gridNumElems*2])
 	for (int i = 0; i<n; i++) {
 		//complex<T1> pt = sample[i];
 
@@ -867,7 +870,7 @@ computeFH_CPU_Grid(
 
 //#pragma acc enter data pcopyin(gridData[0:gridNumElems]) create(gridData_d[0:gridNumElems],gridData_crop_d[0:imageNumElems],gridData_crop_deAp[0:imageNumElems], outR_d[0:imageNumElems], outI_d[0:imageNumElems])
 	// Gridding with CPU - gold
-#pragma acc enter data create(gridData[0:gridNumElems]) 
+//#pragma acc enter data create(gridData[0:gridNumElems]) 
 	if (Nz==1) {
 		gridding_Gold_2D<T1>(n, params, beta, samples, LUT, sizeLUT,
 				gridData);
@@ -876,7 +879,7 @@ computeFH_CPU_Grid(
 		gridding_Gold_3D<T1>(n, params, beta, samples, LUT, sizeLUT,
 				gridData);
 	}
-#pragma acc exit data copyout(gridData[0:gridNumElems])
+//#pragma acc exit data copyout(gridData[0:gridNumElems])
 
 	//cx_vec temp(gridData,gridNumElems);
 	//savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/gridData.mat","img",temp);
@@ -896,26 +899,33 @@ computeFH_CPU_Grid(
 	// ifftn(gridData):
 	//cout << "About to get to update host directive" << endl;
 
-
+/*
 #ifdef _OPENACC // We're on GPU
 	// Inside this region the device data pointer will be used for cuFFT
-#pragma acc host_data use_device(gridData_d)
+*/
+	T1* pGridData_d = reinterpret_cast<T1*>(gridData_d);
+
+#pragma acc data copy(pGridData_d[0:2*gridNumElems])
+	{
+#pragma acc host_data use_device(pGridData_d)
 	{
 	   // Query OpenACC for CUDA stream
 	   void *stream = acc_get_cuda_stream(acc_async_sync);
 
 	   // Launch FFT on the GPU
 	   if (Nz == 1) {
-	   ifft2dGPU( gridData_d, params.gridSize[0], params.gridSize[1], stream);
+		   ifft2dGPU(pGridData_d, params.gridSize[0], params.gridSize[1], stream);
 	   } else {
-	   ifft3dGPU( gridData_d, params.gridSize[0], params.gridSize[1], params.gridSize[2],stream);
+		   ifft3dGPU(pGridData_d, params.gridSize[0], params.gridSize[1], params.gridSize[2], stream);
 	   }
 	}
+	}
 
-#else // We're on CPU so we'll use FFTW
-#pragma acc update host(gridData_d[0:gridNumElems])
+//#else // We're on CPU so we'll use FFTW
+
+//#pragma acc update host(gridData_d[0:gridNumElems])
 	//cout << "Got through the update host directive" << endl;
-	fftw_plan plan;
+/*	fftw_plan plan;
 	if (Nz==1) {
 		plan = fftw_plan_dft_2d(params.gridSize[0],
 				params.gridSize[1], (fftw_complex*) gridData_d, (fftw_complex*) gridData_d,
@@ -927,14 +937,14 @@ computeFH_CPU_Grid(
 				(fftw_complex*) gridData_d, FFTW_BACKWARD, FFTW_ESTIMATE);
 	}
 
-	/* Inverse transform 'gridData_d' in place. */
+	// Inverse transform 'gridData_d' in place.
 	fftw_execute(plan);
 	fftw_destroy_plan(plan);
-
+*/
 	// fftshift(gridData):
 	//cout << "About to get to update device directive" << endl;
-#pragma acc update device(gridData_d[0:gridNumElems])
-#endif
+//#pragma acc update device(gridData_d[0:gridNumElems])
+//#endif
 	//cout << "Got through the update device directive" << endl;
 	if (Nz==1) {
 		fftshift2(gridData, gridData_d, params.gridSize[0],
@@ -987,7 +997,7 @@ computeFH_CPU_Grid(
 	}
 	//cout << "Finished deinterleave" << endl;
 
-#pragma acc exit data copyout(outR_d[0:imageNumElems],outI_d[0:imageNumElems]) delete(gridData_crop_d,gridData_d,gridData, gridData_crop_deAp)
+//#pragma acc exit data copyout(outR_d[0:imageNumElems],outI_d[0:imageNumElems]) delete(gridData_crop_d,gridData_d,gridData, gridData_crop_deAp)
 
 	//}// Close #pragma acc data #3
 	//cout << "Deallocating memory from the adjoint gridding operation" << endl;
@@ -1165,28 +1175,37 @@ computeFd_CPU_Grid(
 				params.gridSize[1], params.gridSize[2]);
 	}
 
-
+	T1* pGridData_os_d = reinterpret_cast<T1*>(gridData_os_d);
+/*
 	// ifftn(gridData)
 #ifdef _OPENACC // We're on GPU
 	// Inside this region the device data pointer will be used
-#pragma acc enter data copyin(gridData_os_d[0:gridNumElems])
-    acc_async_wait_all();
-#pragma acc host_data use_device(gridData_os_d)
+	cout << "about to reach openacc region in forward transform" << endl;
+ */
+#pragma acc data copy(pGridData_os_d[0:2*gridNumElems])
 	{
+#pragma acc host_data use_device(pGridData_os_d)
+		{
+
 	   // Query OpenACC for CUDA stream
-	   void *stream = acc_get_cuda_stream(acc_async_sync);
+			void* stream = acc_get_cuda_stream(acc_async_sync);
 
 	   // Launch FFT on the GPU
-	   if (Nz == 1) {
-	   fft2dGPU( gridData_os_d, params.gridSize[0], params.gridSize[1], stream);
-	   } else {
-	   fft3dGPU( gridData_os_d, params.gridSize[0], params.gridSize[1], params.gridSize[2], stream);
-	   }
-	}
-#pragma acc exit data copyout(gridData_os_d[0:gridNumElems])
+			if (Nz==1) {
+				fft2dGPU(pGridData_os_d, params.gridSize[0], params.gridSize[1], stream);
+			}
+			else {
+				fft3dGPU(pGridData_os_d, params.gridSize[0], params.gridSize[1], params.gridSize[2], stream);
+			}
 
-#else // We're on CPU
+		}
+		//acc_wait_all();
+	}
+
+//#else // We're on CPU
+
 //#pragma acc update host(gridData_os_d[0:gridNumElems])
+/*
 	fftw_plan plan;
 	if (Nz==1) {
 		plan = fftw_plan_dft_2d(params.gridSize[0],
@@ -1199,21 +1218,23 @@ computeFd_CPU_Grid(
 				FFTW_FORWARD, FFTW_ESTIMATE);
 	}
 
-	/* Inverse transform 'gridData_d' in place. */
+	// Inverse transform 'gridData_d' in place.
 	fftw_execute(plan);
 	fftw_destroy_plan(plan);
+*/
 //#pragma acc update device(gridData_os_d[0:gridNumElems])
-#endif
+//#endif
 	// ifftshift(gridData):
-
 	if (Nz==1) {
 		ifftshift2(gridData_os, gridData_os_d, params.gridSize[0], params.gridSize[1]);
 	}
 	else {
 		ifftshift3(gridData_os, gridData_os_d, params.gridSize[0], params.gridSize[1], params.gridSize[2]);
 	}
-#pragma acc enter data copy(gridData_os[0:gridNumElems])
-	acc_async_wait_all();
+	T1* pGridData_os = reinterpret_cast<T1*>(gridData_os);
+	cout << "About to deal with gridding_Silver_3D" << endl;
+//#pragma acc enter data copy(pGridData_os[0:2*gridNumElems])
+//	{   //acc_async_wait_all();
 	// Gridding with CPU - silver
 	if (Nz==1) {
 		gridding_Silver_2D<T1>(n, params, kx, ky, beta, samples, LUT, sizeLUT,
@@ -1223,8 +1244,8 @@ computeFd_CPU_Grid(
 		gridding_Silver_3D<T1>(n, params, kx, ky, kz, beta, samples, LUT, sizeLUT,
 				gridData_os);
 	}
+//	}
 
-#pragma acc exit data copyout(gridData_os[0:gridNumElems])
 	/*
 	// crop the center region of the "image".
 	if(Nz==1)
