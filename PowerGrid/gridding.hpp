@@ -899,10 +899,10 @@ computeFH_CPU_Grid(
 	// ifftn(gridData):
 	//cout << "About to get to update host directive" << endl;
 
-/*
+
 #ifdef _OPENACC // We're on GPU
 	// Inside this region the device data pointer will be used for cuFFT
-*/
+
 	T1* pGridData_d = reinterpret_cast<T1*>(gridData_d);
 
 #pragma acc data copy(pGridData_d[0:2*gridNumElems])
@@ -921,11 +921,11 @@ computeFH_CPU_Grid(
 	}
 	}
 
-//#else // We're on CPU so we'll use FFTW
+#else // We're on CPU so we'll use FFTW
 
 //#pragma acc update host(gridData_d[0:gridNumElems])
 	//cout << "Got through the update host directive" << endl;
-/*	fftw_plan plan;
+	fftw_plan plan;
 	if (Nz==1) {
 		plan = fftw_plan_dft_2d(params.gridSize[0],
 				params.gridSize[1], (fftw_complex*) gridData_d, (fftw_complex*) gridData_d,
@@ -940,11 +940,11 @@ computeFH_CPU_Grid(
 	// Inverse transform 'gridData_d' in place.
 	fftw_execute(plan);
 	fftw_destroy_plan(plan);
-*/
+
 	// fftshift(gridData):
 	//cout << "About to get to update device directive" << endl;
 //#pragma acc update device(gridData_d[0:gridNumElems])
-//#endif
+#endif
 	//cout << "Got through the update device directive" << endl;
 	if (Nz==1) {
 		fftshift2(gridData, gridData_d, params.gridSize[0],
@@ -1176,12 +1176,12 @@ computeFd_CPU_Grid(
 	}
 
 	T1* pGridData_os_d = reinterpret_cast<T1*>(gridData_os_d);
-/*
+
 	// ifftn(gridData)
 #ifdef _OPENACC // We're on GPU
 	// Inside this region the device data pointer will be used
 	cout << "about to reach openacc region in forward transform" << endl;
- */
+
 #pragma acc data copy(pGridData_os_d[0:2*gridNumElems])
 	{
 #pragma acc host_data use_device(pGridData_os_d)
@@ -1202,10 +1202,10 @@ computeFd_CPU_Grid(
 		//acc_wait_all();
 	}
 
-//#else // We're on CPU
+#else // We're on CPU
 
 //#pragma acc update host(gridData_os_d[0:gridNumElems])
-/*
+
 	fftw_plan plan;
 	if (Nz==1) {
 		plan = fftw_plan_dft_2d(params.gridSize[0],
@@ -1221,9 +1221,9 @@ computeFd_CPU_Grid(
 	// Inverse transform 'gridData_d' in place.
 	fftw_execute(plan);
 	fftw_destroy_plan(plan);
-*/
+
 //#pragma acc update device(gridData_os_d[0:gridNumElems])
-//#endif
+#endif
 	// ifftshift(gridData):
 	if (Nz==1) {
 		ifftshift2(gridData_os, gridData_os_d, params.gridSize[0], params.gridSize[1]);
