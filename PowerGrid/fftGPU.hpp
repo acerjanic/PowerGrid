@@ -13,7 +13,7 @@
 //Like Armadillo, we're using SFINAE here to choose between float and double. (Maybe FP16 some day in the future)
 //We need enable_if to choose which version to run based on the type of the template parameter.
 template<typename T1, typename std::enable_if<std::is_same<T1, float>::value, int>::type = 0>
-void ifft2dGPU(std::complex <T1>* d_data, int nx, int ny, void* stream)
+void ifft2dGPU(T1* d_data, int nx, int ny, void* stream)
 {
 	cufftHandle plan;
 
@@ -29,7 +29,7 @@ void ifft2dGPU(std::complex <T1>* d_data, int nx, int ny, void* stream)
 }
 
 template<typename T1, typename std::enable_if<std::is_same<T1, float>::value, int>::type = 0>
-void fft2dGPU(std::complex <T1>* d_data, int nx, int ny, void* stream)
+void fft2dGPU(T1* d_data, int nx, int ny, void* stream)
 {
 	cufftHandle plan;
 	cufftSetCompatibilityMode(plan, CUFFT_COMPATIBILITY_FFTW_ALL);
@@ -44,7 +44,7 @@ void fft2dGPU(std::complex <T1>* d_data, int nx, int ny, void* stream)
 }
 
 template<typename T1, typename std::enable_if<std::is_same<T1, float>::value, int>::type = 0>
-void ifft3dGPU(std::complex <T1>* d_data, int nx, int ny, int nz, void* stream)
+void ifft3dGPU(T1* d_data, int nx, int ny, int nz, void* stream)
 {
 	cufftHandle plan;
 	cufftSetCompatibilityMode(plan, CUFFT_COMPATIBILITY_FFTW_ALL);
@@ -59,7 +59,7 @@ void ifft3dGPU(std::complex <T1>* d_data, int nx, int ny, int nz, void* stream)
 }
 
 template<typename T1, typename std::enable_if<std::is_same<T1, float>::value, int>::type = 0>
-void fft3dGPU(std::complex <T1>* d_data, int nx, int ny, int nz, void* stream)
+void fft3dGPU(T1* d_data, int nx, int ny, int nz, void* stream)
 {
 	cufftHandle plan;
 	cufftSetCompatibilityMode(plan, CUFFT_COMPATIBILITY_FFTW_ALL);
@@ -76,15 +76,15 @@ void fft3dGPU(std::complex <T1>* d_data, int nx, int ny, int nz, void* stream)
 template<typename T1, typename std::enable_if<std::is_same<T1, double>::value, int>::type = 0>
 void ifft2dGPU(T1* d_data, int nx, int ny, void* stream)
 {
-	printf("Running 2d inverse xform \n");
+	//printf("Running 2d inverse xform \n");
 	cufftHandle plan;
 
 	cufftSetCompatibilityMode(plan, CUFFT_COMPATIBILITY_FFTW_ALL);
 
 	if (cufftPlan2d(&plan, ny, nx, CUFFT_Z2Z)!=CUFFT_SUCCESS) {
-		printf( "CUFFT error: Plan creation failed\m");
+		printf( "CUFFT error: Plan creation failed\n");
 	}
-	printf("Built plan \n");
+	//printf("Built plan \n");
 	cufftSetStream(plan, (cudaStream_t) stream);
 	if (cufftExecZ2Z(plan, (cufftDoubleComplex*) d_data, (cufftDoubleComplex*) d_data, CUFFT_INVERSE)!=CUFFT_SUCCESS) {
 		printf("CUFFT error: Plan execution failed\n");
@@ -95,7 +95,7 @@ void ifft2dGPU(T1* d_data, int nx, int ny, void* stream)
 template<typename T1, typename std::enable_if<std::is_same<T1, double>::value, int>::type = 0>
 void fft2dGPU(T1* d_data, int nx, int ny, void* stream)
 {
-	printf("Running 2d forward xform \n");
+	//printf("Running 2d forward xform \n");
 	cufftHandle plan;
 
 	cufftSetCompatibilityMode(plan, CUFFT_COMPATIBILITY_FFTW_ALL);
@@ -103,7 +103,7 @@ void fft2dGPU(T1* d_data, int nx, int ny, void* stream)
 	if (cufftPlan2d(&plan, ny, nx, CUFFT_Z2Z)!=CUFFT_SUCCESS) {
 		printf("CUFFT error: Plan creation failed\n");
 	}
-	printf("Built plan \n");
+	//printf("Built plan \n");
 
 	cufftSetStream(plan, (cudaStream_t) stream);
 	if (cufftExecZ2Z(plan, (cufftDoubleComplex*) d_data, (cufftDoubleComplex*) d_data, CUFFT_FORWARD)!=CUFFT_SUCCESS) {
@@ -115,14 +115,14 @@ void fft2dGPU(T1* d_data, int nx, int ny, void* stream)
 template<typename T1, typename std::enable_if<std::is_same<T1, double>::value, int>::type = 0>
 void ifft3dGPU(T1*d_data, int nx, int ny, int nz, void* stream)
 {
-	printf("Running 3d inverse xform \n");
+	//printf("Running 3d inverse xform \n");
 	cufftHandle plan;
 	cufftSetCompatibilityMode(plan, CUFFT_COMPATIBILITY_FFTW_ALL);
 
 	if (cufftPlan3d(&plan, nz, ny, nx, CUFFT_Z2Z)!=CUFFT_SUCCESS) {
 		printf("CUFFT error: Plan creation failed\n");
 	}
-	printf("Built plan \n");
+	//printf("Built plan \n");
 
 	cufftSetStream(plan, (cudaStream_t) stream);
 	if (cufftExecZ2Z(plan, (cufftDoubleComplex*) d_data, (cufftDoubleComplex*) d_data, CUFFT_INVERSE)!=CUFFT_SUCCESS) {
@@ -133,14 +133,14 @@ void ifft3dGPU(T1*d_data, int nx, int ny, int nz, void* stream)
 
 template<typename T1, typename std::enable_if<std::is_same<T1, double>::value, int>::type = 0>
 void fft3dGPU(T1* d_data, int nx, int ny, int nz, void* stream)
-{   printf("Running 3d forward xform \n");
+{   //printf("Running 3d forward xform \n");
 	cufftHandle plan;
 	cufftSetCompatibilityMode(plan, CUFFT_COMPATIBILITY_FFTW_ALL);
 
 	if (cufftPlan3d(&plan, nz, ny, nx, CUFFT_Z2Z)!=CUFFT_SUCCESS) {
 		printf("CUFFT error: Plan creation failed\n");
 	}
-	printf("Built plan \n");
+	//printf("Built plan \n");
 
 	cufftSetStream(plan, (cudaStream_t) stream);
 

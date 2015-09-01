@@ -8,7 +8,7 @@
 
 #ifndef PowerGrid_PowerGrid_h
 #define PowerGrid_PowerGrid_h
-//#define ARMA_NO_DEBUG // Disable this comment only for release.
+#define ARMA_NO_DEBUG // Disable this comment only for release.
 #include <iostream>
 #include <cmath>
 #include "armadillo"

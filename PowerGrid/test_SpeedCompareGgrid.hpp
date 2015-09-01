@@ -13,6 +13,15 @@
 
 using namespace arma;
 
+template<typename T1, typename T2>
+void cast_data(T1 in, T2 out)
+{
+	for (int ii = 0; ii<in.n_rows; ii++) {
+		out(ii) = in(ii);
+	}
+
+};
+
 template<typename T1>
 int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter, uword nc, uword nshots,
 		T1 beta)
@@ -34,7 +43,7 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 	iy.zeros();
 	iz.zeros();
 
-	//generate the image space cordinates of the voxels we want to reconstruct
+	//generate the image space coordinates of the voxels we want to reconstruct
 	// after vectorizing ix and iy the image coordinates must match the Field and SENSe map image coordinates
 	for (uword ii = 0; ii<Ny; ii++) { //y
 		for (uword jj = 0; jj<Nx; jj++) { //x
@@ -49,19 +58,36 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 
 	Col <T1> kx;
 	loadmat(testPath+"kx.mat", "kx", &kx);
+	//Col <double> kx;
+	//kx.copy_size(kx_tmp);
+	//cast_data(kx_tmp,kx);
 	Col <T1> ky;
 	loadmat(testPath+"ky.mat", "ky", &ky);
+	//Col <double> ky;
+	//ky.copy_size(ky);
+	//cast_data(ky_tmp,ky);
 	Col <T1> kz;
 	loadmat(testPath+"kz.mat", "kz", &kz);
+	//Col <double> kz;
+	//kz.copy_size(kz);
+	//cast_data(kz_tmp,kz);
+	//Col <T1> kz = kz_tmp;
+
 
 	uword nro;
 	nro = kx.n_elem;
 
 	Col <T1> tvec;
 	loadmat(testPath+"t.mat", "t", &tvec);
+	//savemat(testPath+"twrite.mat", "twrite", tvec);
+	//Col <T1> tvec;
+	//tvec.copy_size(tvec_tmp);
+	//cast_data(tvec_tmp,tvec);
 
+	//Col <T1> FM;
 	loadmat(testPath+"FM.mat", "FM", &FM);
-
+	//FM.copy_size(FM_tmp);
+	//cast_data(FM_tmp,FM);
 
 
 
@@ -80,7 +106,12 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 	//Gdft<T1,T2> Gd(nro,Nx*Ny*Nz,kx,ky,kz,vectorise(ix),vectorise(iy),vectorise(iz),vectorise(FM),vectorise(tvec));
 
 	//uword nc = 4;
+	//Col <CxT1> SMap;
 	loadmat(testPath+"SMap.mat", "SMap", &SMap);
+	//loadmat(testPath+"FM.mat", "FM", &FM_tmp);
+	//Col <CxT1> SMap;
+	//SMap.copy_size(SMap_tmp);
+	//cast_data(SMap_tmp,SMap);
 
 	//cout << "Iniitalizing SENSE gdft" << endl;
 	//SENSE<cx_double, Gdft<T1,T2>> Sd(Gd,SMap,nro,Nx*Ny*Nz,nc);
@@ -92,6 +123,10 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 	//cout << "loading data" << endl;
 	Col <CxT1> data;
 	loadmat(testPath+"data.mat", "data", &data);
+	//Col <CxT1> data;
+	//data.copy_size(data_tmp);
+	//cast_data(data_tmp,data);
+	savemat(testPath+"datawrite.mat", "data", data);
 
 	// Variables needed for the recon: Penalty object, num of iterations
 	//ucube ReconMask(Nx,Ny,Nz);
@@ -106,12 +141,12 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 	xinit.zeros();
 	Col <T1> W;
 	//W = eye<sp_mat<T1>>(A.n1,A.n1); // Should be the size of k-space data: Is it right?
-	W = ones(nro*nc);
+	W.ones(nro*nc);
 
-	//Col<T1> x_t;
+	//Col<CxT1> x_t;
 	//cout << "heading into solve_pwls_pcg" << endl;
 	//x_t = solve_pwls_pcg<T1, SENSE<cx_double, FieldCorrection<T1, T2, Ggrid<T1,T2>>>,QuadPenalty<T1>>(xinit, S, W, data, R, niter);
-	//x_t = S/data;
+	//x_t = Sg/data;
 	//savemat(testPath+"test_3D.mat","img",x_t);
 /*
     cout << "Runing adjoint with ggrid" << endl;

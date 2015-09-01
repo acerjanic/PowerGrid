@@ -86,7 +86,7 @@ int main(int argc, char** argv)
     Mat<double> test;
 
     //Mat<cx_double> testComplex;
-    //Load our read double matrix object. (You need to match type to avoide mangling the data.)
+    //Load our read double matrix object. (You need to match type to avoid mangling the data.)
     loadmat(testPath+"test.mat","test",&test);
     
     //loadmat("/Users/alexcerjanic/Developer/PG/Resources/testForwardTest.mat","testForward",&testComplex);

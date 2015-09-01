@@ -125,13 +125,11 @@ T1 kernel_value_LUT(T1 dist, const T1* LUT, uword sizeLUT, T1 width)
 template<typename T1>
 void
 deinterleave_data2d( ///NAIVE
-		std::complex <T1>* __restrict src, T1* __restrict outR_d, T1* __restrict outI_d,
+		T1* __restrict pSrc, T1* __restrict outR_d, T1* __restrict outI_d,
 		int imageX, int imageY)
 {
 	int lIndex;
-	T1* __restrict pSrc; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	pSrc = reinterpret_cast<T1*>(src);
-#pragma acc parallel loop collapse(2) independent pcopyin(pSrc[0:2*imageX*imageY]) pcopyout(outR_d[0:imageX*imageY],outI_d[0:imageX*imageY])
+#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*imageX*imageY]) present(outR_d[0:imageX*imageY],outI_d[0:imageX*imageY])
 	for (int X = 0; X<imageX; X++) {
 		for (int Y = 0; Y<imageY; Y++) {
 			lIndex = Y+X*imageY;
@@ -161,13 +159,11 @@ deinterleave_data2d( ///NAIVE
 template<typename T1>
 void
 deinterleave_data3d(
-		std::complex <T1>* __restrict src, T1* __restrict outR_d, T1* __restrict outI_d,
+		T1* __restrict pSrc, T1* __restrict outR_d, T1* __restrict outI_d,
 		int imageX, int imageY, int imageZ)
 {
 	int lIndex, X, Y, Z;
-	T1* __restrict pSrc; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	pSrc = reinterpret_cast<T1*>(src);
-#pragma acc parallel loop collapse(3) independent pcopyin(pSrc[0:2*imageX*imageY*imageZ]) pcopyout(outR_d[0:imageX*imageY*imageZ],outI_d[0:imageX*imageY*imageZ])
+#pragma acc parallel loop collapse(3) independent present(pSrc[0:2*imageX*imageY*imageZ]) present(outR_d[0:imageX*imageY*imageZ],outI_d[0:imageX*imageY*imageZ])
 	for (Z = 0; Z<imageZ; Z++) {
 		for (X = 0; X<imageX; X++) {
 			for (Y = 0; Y<imageY; Y++) {
@@ -239,7 +235,7 @@ deinterleave_data3d(
 template<typename T1>
 void
 deapodization2d(
-		std::complex <T1>* __restrict dst, std::complex <T1>* __restrict src,
+		T1* __restrict pDst, T1* __restrict pSrc,
 		int imageX, int imageY,
 		T1 kernelWidth, T1 beta, T1 gridOS)
 {
@@ -264,19 +260,15 @@ deapodization2d(
 	T1 gridOS2;
 
 	int destSize = imageX*imageY;
-	T1* __restrict pSrc; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	T1* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	pSrc = reinterpret_cast<T1*>(src);
-	pDst = reinterpret_cast<T1*>(dst);
 
-#pragma acc kernels pcreate(pDst[0:2*imageX*imageY])
+#pragma acc kernels present(pDst[0:2*imageX*imageY])
 	{
 #pragma acc loop
 		for (int ii = 0; ii<2*destSize; ii++) {
 			pDst[ii] = (T1) 0.0;
 		}
 	}
-#pragma acc parallel loop collapse(2) independent pcopyin(pSrc[0:2*imageX*imageY]) pcopyout(pDst[0:2*imageX*imageY])
+#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*imageX*imageY]) present(pDst[0:2*imageX*imageY])
 	for (X = 0; X<imageX; X++) {
 		for (Y = 0; Y<imageY; Y++) {
 
@@ -379,9 +371,9 @@ deapodization2d(
 template<typename T1>
 void
 deapodization3d(
-		std::complex <T1>* __restrict dst, std::complex <T1>* __restrict src,
+		T1* __restrict pDst, T1* __restrict pSrc,
 		int imageX, int imageY, int imageZ,
-		float kernelWidth, float beta, float gridOS)
+		T1 kernelWidth, T1 beta, T1 gridOS)
 {
 
 	int Z;
@@ -405,18 +397,14 @@ deapodization3d(
 	T1 gridOS3;
 	//int common_index;
 	int destSize = imageX*imageY*imageZ;
-	T1* __restrict pSrc; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	T1* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	pSrc = reinterpret_cast<T1*>(src);
-	pDst = reinterpret_cast<T1*>(dst);
-#pragma acc kernels pcreate(pDst[0:2*imageX*imageY*imageZ])
+#pragma acc kernels present(pDst[0:2*imageX*imageY*imageZ])
 	{
 #pragma acc loop
 		for (int ii = 0; ii<2*destSize; ii++) {
 			pDst[ii] = (T1) 0.0;
 		}
 	}
-#pragma acc parallel loop collapse(3) independent pcopyin(pSrc[0:2*imageX*imageY*imageZ]) pcopyout(pDst[0:2*imageX*imageY*imageZ])
+#pragma acc parallel loop collapse(3) independent present(pSrc[0:2*imageX*imageY*imageZ]) present(pDst[0:2*imageX*imageY*imageZ])
 	for (Z = 0; Z<imageZ; Z++) {
 		for (X = 0; X<imageX; X++) {
 			for (Y = 0; Y<imageY; Y++) {
@@ -485,7 +473,7 @@ deapodization3d(
 template<typename T1>
 void
 crop_center_region2d(
-		std::complex <T1>* __restrict dst, std::complex <T1>* __restrict src,
+		T1* __restrict pDst, T1* __restrict pSrc,
 		int imageSizeX, int imageSizeY,
 		int gridSizeX, int gridSizeY)
 {
@@ -500,12 +488,7 @@ crop_center_region2d(
 	int common_index_dst;
 	int common_index_src;
 
-	T1* __restrict pSrc; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	T1* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	pSrc = reinterpret_cast<T1*>(src);
-	pDst = reinterpret_cast<T1*>(dst);
-
-#pragma acc parallel loop collapse(2) independent pcopyin(pSrc[0:2*gridSizeX*gridSizeY]) pcopyout(pDst[0:2*imageSizeX*imageSizeY])
+#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*gridSizeX*gridSizeY]) present(pDst[0:2*imageSizeX*imageSizeY])
 	for (int dX_dst = 0; dX_dst<imageSizeX; dX_dst++) {
 		for (int dY_dst = 0; dY_dst<imageSizeY; dY_dst++) {
 
@@ -554,7 +537,7 @@ crop_center_region2d(
 template<typename T1>
 void
 crop_center_region3d(
-		std::complex <T1>* __restrict dst, std::complex <T1>* __restrict src,
+		T1* __restrict pDst, T1* __restrict pSrc,
 		int imageSizeX, int imageSizeY, int imageSizeZ,
 		int gridSizeX, int gridSizeY, int gridSizeZ)
 {
@@ -572,11 +555,7 @@ crop_center_region3d(
 	int common_index_dst;
 	int common_index_src;
 
-	T1* __restrict pSrc; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	T1* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	pSrc = reinterpret_cast<T1*>(src);
-	pDst = reinterpret_cast<T1*>(dst);
-#pragma acc parallel loop collapse(3) independent pcopyin(pSrc[0:2*gridSizeX*gridSizeY*gridSizeZ]) pcopyout(pDst[0:2*imageSizeX*imageSizeY*imageSizeZ])
+#pragma acc parallel loop collapse(3) independent present(pSrc[0:2*gridSizeX*gridSizeY*gridSizeZ]) present(pDst[0:2*imageSizeX*imageSizeY*imageSizeZ])
 	for (int dZ_dst = 0; dZ_dst<imageSizeZ; dZ_dst++) {
 		for (int dX_dst = 0; dX_dst<imageSizeX; dX_dst++) {
 			for (int dY_dst = 0; dY_dst<imageSizeY; dY_dst++) {
@@ -607,7 +586,7 @@ crop_center_region3d(
 template<typename T1>
 void
 zero_pad2d(
-		std::complex <T1>* __restrict dst, std::complex <T1>* __restrict src,
+		T1* __restrict pDst, T1* __restrict pSrc,
 		int imageSizeX, int imageSizeY,
 		T1 gridOS)
 {
@@ -625,11 +604,8 @@ zero_pad2d(
 	offsetY = (int) (((T1) imageSizeY*gridOS/(T1) 2.0)-((T1) imageSizeY/(T1) 2.0));
 	offsetX = (int) (((T1) imageSizeX*gridOS/(T1) 2.0)-((T1) imageSizeX/(T1) 2.0));
 	int destSize = imageSizeX*gridOS*imageSizeY*gridOS;
-	T1* __restrict pSrc; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	T1* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	pSrc = reinterpret_cast<T1*>(src);
-	pDst = reinterpret_cast<T1*>(dst);
-#pragma acc kernels pcopyout(pDst[0:2*destSize]) pcopyin(pSrc[0:2*imageSizeX*imageSizeY])
+
+#pragma acc kernels present(pDst[0:2*destSize]) present(pSrc[0:2*imageSizeX*imageSizeY])
 	{
 #pragma acc loop
 		for (int jj = 0; jj<2*destSize; jj++) {
@@ -658,7 +634,7 @@ zero_pad2d(
 template<typename T1>
 void
 zero_pad3d(
-		std::complex <T1>* __restrict dst, std::complex <T1>* __restrict src,
+		T1* __restrict pDst, T1* __restrict pSrc,
 		int imageSizeX, int imageSizeY, int imageSizeZ,
 		T1 gridOS)
 {
@@ -681,12 +657,7 @@ zero_pad3d(
 	offsetZ = (int) (((T1) imageSizeZ*gridOS/(T1) 2.0)-((T1) imageSizeZ/(T1) 2.0));
 	int destSize = imageSizeX*gridOS*imageSizeY*gridOS*imageSizeZ*gridOS;
 
-	T1* __restrict pSrc; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	T1* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	pSrc = reinterpret_cast<T1*>(src);
-	pDst = reinterpret_cast<T1*>(dst);
-
-#pragma acc kernels pcopyout(pDst[0:2*destSize]) pcopyin(pSrc[0:2*imageSizeX*imageSizeY*imageSizeZ])
+#pragma acc kernels present(pDst[0:2*destSize]) present(pSrc[0:2*imageSizeX*imageSizeY*imageSizeZ])
 	{
 #pragma acc loop
 		for (int jj = 0; jj<2*destSize; jj++) {
@@ -770,15 +741,12 @@ cuda_fft3shift_grid(
 //Circshift routines for fftshift.
 //Are the X and Y references correct?
 template<typename T>
-void circshift2(std::complex <T>* __restrict out, const std::complex <T>* __restrict in, int xdim, int ydim, int xshift,
+void circshift2(T* __restrict pDst, const T* __restrict pSrc, int xdim, int ydim, int xshift,
 		int yshift)
 {
 	int ii, jj;
-	const T* __restrict pSrc; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	T* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	pSrc = reinterpret_cast<const T*>(in);
-	pDst = reinterpret_cast<T*>(out);
-#pragma acc parallel loop collapse(2) independent pcopyin(pSrc[0:2*xdim*ydim]) pcopyout(pDst[0:2*xdim*ydim])
+
+#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*xdim*ydim]) present(pDst[0:2*xdim*ydim])
 	for (int x = 0; x<xdim; x++) {
 		ii = (x+xshift)%xdim;
 		for (int y = 0; y<ydim; y++) {
@@ -791,17 +759,14 @@ void circshift2(std::complex <T>* __restrict out, const std::complex <T>* __rest
 }
 
 template<typename T>
-void circshift3(std::complex <T>* __restrict out, const std::complex <T>* __restrict in, int xdim, int ydim, int zdim,
+void circshift3(T* __restrict pDst, const T* __restrict pSrc, int xdim, int ydim, int zdim,
 		int xshift, int yshift,
 		int zshift)
 {
-	cout << "Entering circshift3 " << endl;
+	//cout << "Entering circshift3 " << endl;
 	int ii, jj, kk;
-	const T* __restrict pSrc; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	T* __restrict pDst; // pointer for working with stl::complex<T1> data as an interleaved array of T1
-	pSrc = reinterpret_cast<const T*>(in);
-	pDst = reinterpret_cast<T*>(out);
-#pragma acc parallel loop collapse(2) independent pcopyin(pSrc[0:2*xdim*ydim*zdim]) pcopyout(pDst[0:2*xdim*ydim*zdim])
+
+#pragma acc parallel loop collapse(2) independent present(pSrc[0:2*xdim*ydim*zdim]) present(pDst[0:2*xdim*ydim*zdim])
 	for (int x = 0; x<xdim; x++) {
 		ii = (x+xshift)%xdim;
 		for (int y = 0; y<ydim; y++) {
@@ -821,25 +786,25 @@ void circshift3(std::complex <T>* __restrict out, const std::complex <T>* __rest
 template<typename T>
 void fftshift2(T* __restrict out, const T* __restrict in, int xdim, int ydim)
 {
-	circshift2(out, in, xdim, ydim, std::floor(xdim/2.0), std::floor(ydim/2.0));
+	circshift2<T>(out, in, xdim, ydim, std::floor(xdim/2.0), std::floor(ydim/2.0));
 }
 
 template<typename T>
 void ifftshift2(T* __restrict out, const T* __restrict in, int xdim, int ydim)
 {
-	circshift2(out, in, xdim, ydim, std::ceil(xdim/2.0), std::ceil(ydim/2.0));
+	circshift2<T>(out, in, xdim, ydim, std::ceil(xdim/2.0), std::ceil(ydim/2.0));
 }
 
 template<typename T>
 void fftshift3(T* __restrict out, const T* __restrict in, int xdim, int ydim, int zdim)
 {
-	circshift3(out, in, xdim, ydim, zdim, std::floor(xdim/2.0), std::floor(ydim/2.0), std::floor(zdim/2.0));
+	circshift3<T>(out, in, xdim, ydim, zdim, std::floor(xdim/2.0), std::floor(ydim/2.0), std::floor(zdim/2.0));
 }
 
 template<typename T>
 void ifftshift3(T* __restrict out, const T* __restrict in, int xdim, int ydim, int zdim)
 {
-	circshift3(out, in, xdim, ydim, zdim, std::ceil(xdim/2.0), std::ceil(ydim/2.0), std::floor(zdim/2.0));
+	circshift3<T>(out, in, xdim, ydim, zdim, std::ceil(xdim/2.0), std::ceil(ydim/2.0), std::floor(zdim/2.0));
 }
 
 template<typename T1>

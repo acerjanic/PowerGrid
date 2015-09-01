@@ -16,7 +16,6 @@
 #include "accelmath.h"
 #include "fftGPU.hpp"
 #include "cufft.h"
-#include "fftw3.h"
 
 #define MIN std::min
 #define MAX std::max
@@ -26,7 +25,7 @@
 #define ABS std::abs
 #else //CPU version
 
-#include "fftw3.h"
+#include "fftCPU.hpp"
 
 #define MIN std::min
 #define MAX std::max
@@ -834,17 +833,7 @@ computeFH_CPU_Grid(
 			params.imageSize[1]*
 			params.imageSize[2];
 
-
-	//allocate gridData
-	//cout << "Allocating gridData" << endl;
-
 	complex <T1>* gridData = new complex<T1>[gridNumElems];
-	//cout << "Finished allocating gridData and now allocating sampleDensity" << endl;
-	//sampleDensity = new T1[gridNumElems];
-	//cout << "Finished allocating sampleDensity" << endl;
-	//#pragma acc data create(gridData[0:gridNumElems]) pcreate(sampleDensity[0:gridNumElems])
-	//{
-
 
 	// Have to set 'gridData' and 'sampleDensity' to zero.
 	// Because they will be involved in accumulative operations
@@ -855,22 +844,15 @@ computeFH_CPU_Grid(
 		gridData[i].imag((T1) 0.0);
 		//sampleDensity[i] = (T1)0.0;
 	}
-	//cout << "Allocating gridData_d" << endl;
 	gridData_d = new complex<T1>[gridNumElems];
-	//cout << "Finished allocating gridData_d" << endl;
-
-	//memcpy(gridData_d,gridData,gridNumElems*sizeof(complex<T1>));
-	//cout << "About to reach the gridData_d data directive" << endl;
-
-	//cout << "Allocating gridData_crop_d" << endl;
 	complex <T1>* gridData_crop_d = new complex<T1>[imageNumElems];
-	//cout << "Finished Allocating gridData_crop_d and now allocating gridData_crop_deAp" << endl;
 	complex <T1>* gridData_crop_deAp = new complex<T1>[imageNumElems];
-	//cout << "Finished allocating gridData_crop_deAp" << endl;
-
-//#pragma acc enter data pcopyin(gridData[0:gridNumElems]) create(gridData_d[0:gridNumElems],gridData_crop_d[0:imageNumElems],gridData_crop_deAp[0:imageNumElems], outR_d[0:imageNumElems], outI_d[0:imageNumElems])
+	T1* pGridData_crop_d = reinterpret_cast<T1*>(gridData_crop_d);
+	T1* pGridData_crop_deAp = reinterpret_cast<T1*>(gridData_crop_deAp);
+	T1* pGridData_d = reinterpret_cast<T1*>(gridData_d);
+	T1* pGridData = reinterpret_cast<T1*>(gridData);
+#pragma acc enter data copyin(pGridData[0:2*gridNumElems]) create(pGridData_d[0:2*gridNumElems],pGridData_crop_d[0:2*imageNumElems],pGridData_crop_deAp[0:2*imageNumElems], outR_d[0:imageNumElems], outI_d[0:imageNumElems])
 	// Gridding with CPU - gold
-//#pragma acc enter data create(gridData[0:gridNumElems]) 
 	if (Nz==1) {
 		gridding_Gold_2D<T1>(n, params, beta, samples, LUT, sizeLUT,
 				gridData);
@@ -879,34 +861,20 @@ computeFH_CPU_Grid(
 		gridding_Gold_3D<T1>(n, params, beta, samples, LUT, sizeLUT,
 				gridData);
 	}
-//#pragma acc exit data copyout(gridData[0:gridNumElems])
 
-	//cx_vec temp(gridData,gridNumElems);
-	//savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/gridData.mat","img",temp);
-
-	//cout << "Made it through the data directive" << endl;
-	// ifftshift(gridData):
 	if (Nz==1) {
-		ifftshift2(gridData_d, gridData, params.gridSize[0], params.gridSize[1]);
+		ifftshift2<T1>(pGridData_d, pGridData, params.gridSize[0], params.gridSize[1]);
 	}
 	else {
-		ifftshift3(gridData_d, gridData, params.gridSize[0], params.gridSize[1], params.gridSize[2]);
+		ifftshift3<T1>(pGridData_d, pGridData, params.gridSize[0], params.gridSize[1], params.gridSize[2]);
 	}
-
-	//cx_vec temp2(gridData_d,gridNumElems);
-	//savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/ifftshiftData.mat","img",temp2);
-
-	// ifftn(gridData):
-	//cout << "About to get to update host directive" << endl;
 
 
 #ifdef _OPENACC // We're on GPU
 	// Inside this region the device data pointer will be used for cuFFT
 
-	T1* pGridData_d = reinterpret_cast<T1*>(gridData_d);
-
-#pragma acc data copy(pGridData_d[0:2*gridNumElems])
-	{
+//#pragma acc data copy(pGridData_d[0:2*gridNumElems])
+//	{
 #pragma acc host_data use_device(pGridData_d)
 	{
 	   // Query OpenACC for CUDA stream
@@ -919,99 +887,67 @@ computeFH_CPU_Grid(
 		   ifft3dGPU(pGridData_d, params.gridSize[0], params.gridSize[1], params.gridSize[2], stream);
 	   }
 	}
-	}
+
 
 #else // We're on CPU so we'll use FFTW
 
-//#pragma acc update host(gridData_d[0:gridNumElems])
-	//cout << "Got through the update host directive" << endl;
-	fftw_plan plan;
+	// Launch FFT on the GPU
 	if (Nz==1) {
-		plan = fftw_plan_dft_2d(params.gridSize[0],
-				params.gridSize[1], (fftw_complex*) gridData_d, (fftw_complex*) gridData_d,
-				FFTW_BACKWARD, FFTW_ESTIMATE);
+		ifft2dCPU(pGridData_d, params.gridSize[0], params.gridSize[1]);
 	}
 	else {
-		plan = fftw_plan_dft_3d(params.gridSize[2],
-				params.gridSize[1], params.gridSize[0], (fftw_complex*) gridData_d,
-				(fftw_complex*) gridData_d, FFTW_BACKWARD, FFTW_ESTIMATE);
+		ifft3dCPU(pGridData_d, params.gridSize[0], params.gridSize[1], params.gridSize[2]);
 	}
 
-	// Inverse transform 'gridData_d' in place.
-	fftw_execute(plan);
-	fftw_destroy_plan(plan);
-
-	// fftshift(gridData):
-	//cout << "About to get to update device directive" << endl;
-//#pragma acc update device(gridData_d[0:gridNumElems])
 #endif
 	//cout << "Got through the update device directive" << endl;
 	if (Nz==1) {
-		fftshift2(gridData, gridData_d, params.gridSize[0],
+		fftshift2<T1>(pGridData, pGridData_d, params.gridSize[0],
 				params.gridSize[1]);
 	}
 	else {
-		fftshift3(gridData, gridData_d, params.gridSize[0],
+		fftshift3<T1>(pGridData, pGridData_d, params.gridSize[0],
 				params.gridSize[1], params.gridSize[2]);
 	}
 
-	//memcpy(gridData_crop_d,gridData_d,gridNumElems*sizeof(complex<T1>));
-	// crop the center region of the "image".
-	//#pragma acc data create(gridData_crop_d[0:imageNumElems]) copyout(outR_d[0:imageNumElems],outI_d[0:imageNumElems])
-	//{
 
 	if (Nz==1) {
-		crop_center_region2d(gridData_crop_d, gridData,
+		crop_center_region2d<T1>(pGridData_crop_d, pGridData,
 				params.imageSize[0], params.imageSize[1],
 				params.gridSize[0], params.gridSize[1]);
 	}
 	else {
-		crop_center_region3d(gridData_crop_d, gridData,
+		crop_center_region3d<T1>(pGridData_crop_d, pGridData,
 				params.imageSize[0], params.imageSize[1], params.imageSize[2],
 				params.gridSize[0], params.gridSize[1], params.gridSize[2]);
 	}
-	//cout << "Finished crop_center_region" << endl;
-
 	// deapodization
 	if (Nz==1) {
-		deapodization2d(gridData_crop_deAp, gridData_crop_d,
+		deapodization2d<T1>(pGridData_crop_deAp, pGridData_crop_d,
 				Nx, Ny, kernelWidth, beta, params.gridOS);
 	}
 	else {
-		deapodization3d(gridData_crop_deAp, gridData_crop_d,
+		deapodization3d<T1>(pGridData_crop_deAp, pGridData_crop_d,
 				Nx, Ny, Nz, kernelWidth, beta, params.gridOS);
 	}
-	//cout << "Finished deapodization" << endl;
-
 
 	// Copy results from gridData_crop_d to outR_d and outI_d
 	// gridData_crop_d is cufftComplex, interleaving
 	// De-interleaving the data from cufftComplex to outR_d-and-outI_d
 
-
 	if (Nz==1) {
-		deinterleave_data2d(gridData_crop_deAp, outR_d, outI_d, Nx, Ny);
+		deinterleave_data2d<T1>(pGridData_crop_deAp, outR_d, outI_d, Nx, Ny);
 	}
 	else {
-		deinterleave_data3d(gridData_crop_deAp, outR_d, outI_d, Nx, Ny, Nz);
+		deinterleave_data3d<T1>(pGridData_crop_deAp, outR_d, outI_d, Nx, Ny, Nz);
 	}
-	//cout << "Finished deinterleave" << endl;
 
-//#pragma acc exit data copyout(outR_d[0:imageNumElems],outI_d[0:imageNumElems]) delete(gridData_crop_d,gridData_d,gridData, gridData_crop_deAp)
-
-	//}// Close #pragma acc data #3
-	//cout << "Deallocating memory from the adjoint gridding operation" << endl;
+#pragma acc exit data copyout(outR_d[0:imageNumElems],outI_d[0:imageNumElems]) delete(pGridData_crop_d,pGridData_d,pGridData, pGridData_crop_deAp)
 	delete[] gridData_crop_d;
 	delete[] gridData_crop_deAp;
-
-	//}// Close #pragma acc data
-	//deallocate samples
 	free(samples);
 	delete[] gridData;
 	delete[] gridData_d;
-	//#pragma acc exit data delete(sampleDensity)
-	//delete[] sampleDensity;
-
 }
 
 //Calculates the gridded forward fourier transform
@@ -1032,7 +968,7 @@ computeFd_CPU_Grid(
 	 *  width parameter used by Jackson et al.
 	 */
 	/*
-	T1 kernelWidth = 4.0;
+	T1 kernelWidth = .0;
 	T1 beta = MRI_PI * std::sqrt( (gridOS - 0.5) * (gridOS - 0.5) *
 								  (kernelWidth * kernelWidth*4.0) /
 								  (gridOS * gridOS) - 0.8
@@ -1057,14 +993,8 @@ computeFd_CPU_Grid(
 	params.gridSize[2] = (Nz==1) ? Nz : (CEIL(gridOS*(T1) Nz));// 2D or 3D
 	params.numSamples = numK_per_coil;
 
-	//T1 *sampleDensity;
+	complex <T1>* samples = new complex<T1>[params.numSamples];
 
-
-	complex <T1>* samples; //Input Data
-	//allocate samples
-	//cout << "Allocating memory for samples" << endl;
-	samples = (complex <T1>*) malloc(params.numSamples*sizeof(complex<T1>));
-	//cout << "Finished allocating memory for samples" << endl;
 
 	if (samples==NULL) {
 		printf("ERROR: Unable to allocate memory for input data\n");
@@ -1111,82 +1041,70 @@ computeFd_CPU_Grid(
 	int gridNumElems = params.gridSize[0]*
 			params.gridSize[1]*
 			params.gridSize[2];
-
 	int imageNumElems = params.imageSize[0]*
 			params.imageSize[1]*
 			params.imageSize[2];
 
-
 	//allocate gridData
-	//cout << "Allocating memory for gridData" << endl;
 	complex <T1>* gridData = new complex<T1>[imageNumElems];
-	//cout << "Finished allocating memory for gridData and allocating memory for sampleDensity" << endl;
-	//sampleDensity = new T1[gridNumElems];
-	//cout << "Finished allocating memory for sampleDensity" << endl;
-	// Have to set 'gridData' and 'sampleDensity' to zero.
+	// Have to set 'gridData' to zero.
 	// Because they will be involved in accumulative operations
 	// inside gridding functions.
 	for (int i = 0; i<imageNumElems; i++) {
 		gridData[i].real(dR[i]);
 		gridData[i].imag(dI[i]);
-		//sampleDensity[i] = (T1)0.0;
 	}
-	//cout << "Allocating memory for gridData_d" << endl;
 	complex <T1>* gridData_d = new complex<T1>[imageNumElems];
-	//cout << "Finished allocating memory for gridData_d" << endl;
-	//memcpy(gridData_d,gridData,imageNumElems*sizeof(complex<T1>));
-	//cout << "Allocating memory for gridData_os_d" << endl;
 	complex <T1>* gridData_os_d = new complex<T1>[gridNumElems];
-	//cout << "Finished Allocating memory for gridData_os_d" << endl;
-	//memcpy(gridData_os_d, gridData_os, gridNumElems*sizeof(complex<T1>));
-	// fftshift(gridData):
 	complex <T1>* gridData_os = new complex<T1>[gridNumElems];
+	T1* pGridData_d = reinterpret_cast<T1*>(gridData_d);
+	T1* pGridData_os_d = reinterpret_cast<T1*>(gridData_os_d);
+	T1* pGridData_os = reinterpret_cast<T1*>(gridData_os);
+	T1* pGridData = reinterpret_cast<T1*>(gridData);
 
-//#pragma acc enter data create(gridData_d[0:imageNumElems],gridData_os[0:gridNumElems],gridData_os_d[0:gridNumElems]) pcopyin(gridData[0:imageNumElems])
+#pragma acc enter data copyin(pGridData[0:2*imageNumElems]) create(pGridData_d[0:2*imageNumElems],pGridData_os[0:2*gridNumElems],pGridData_os_d[0:2*gridNumElems])
 	// deapodization
 	if (Nz==1) {
-		deapodization2d(gridData_d, gridData,
+		deapodization2d<T1>(pGridData_d, pGridData,
 				Nx, Ny, kernelWidth, beta, params.gridOS);
 	}
 	else {
-		deapodization3d(gridData_d, gridData,
+		deapodization3d<T1>(pGridData_d, pGridData,
 				Nx, Ny, Nz, kernelWidth, beta, params.gridOS);
 	}
 
 	//zero pad
 
 	if (Nz==1) {
-		zero_pad2d(gridData_os, gridData_d,
+		zero_pad2d<T1>(pGridData_os, pGridData_d,
 				Nx, Ny, params.gridOS);
 	}
 	else {
 
-		zero_pad3d(gridData_os, gridData_d,
+		zero_pad3d<T1>(pGridData_os, pGridData_d,
 				Nx, Ny, Nz, params.gridOS);
 
 	}
 
 	if (Nz==1) {
-		fftshift2(gridData_os_d, gridData_os, params.gridSize[0],
+		fftshift2<T1>(pGridData_os_d, pGridData_os, params.gridSize[0],
 				params.gridSize[1]);
 	}
 	else {
-		fftshift3(gridData_os_d, gridData_os, params.gridSize[0],
+		fftshift3<T1>(pGridData_os_d, pGridData_os, params.gridSize[0],
 				params.gridSize[1], params.gridSize[2]);
 	}
 
-	T1* pGridData_os_d = reinterpret_cast<T1*>(gridData_os_d);
 
 	// ifftn(gridData)
 #ifdef _OPENACC // We're on GPU
 	// Inside this region the device data pointer will be used
-	cout << "about to reach openacc region in forward transform" << endl;
+	//cout << "about to reach openacc region in forward transform" << endl;
 
-#pragma acc data copy(pGridData_os_d[0:2*gridNumElems])
-	{
+//#pragma acc data copy(pGridData_os_d[0:2*gridNumElems])
+//{
 #pragma acc host_data use_device(pGridData_os_d)
 		{
-
 	   // Query OpenACC for CUDA stream
 			void* stream = acc_get_cuda_stream(acc_async_sync);
 
@@ -1197,44 +1115,23 @@ computeFd_CPU_Grid(
 			else {
 				fft3dGPU(pGridData_os_d, params.gridSize[0], params.gridSize[1], params.gridSize[2], stream);
 			}
-
 		}
-		//acc_wait_all();
-	}
-
 #else // We're on CPU
-
-//#pragma acc update host(gridData_os_d[0:gridNumElems])
-
-	fftw_plan plan;
 	if (Nz==1) {
-		plan = fftw_plan_dft_2d(params.gridSize[0],
-				params.gridSize[1], (fftw_complex*) gridData_os_d, (fftw_complex*) gridData_os_d, FFTW_FORWARD,
-				FFTW_ESTIMATE);
+		fft2dCPU(pGridData_os_d, params.gridSize[0], params.gridSize[1]);
 	}
 	else {
-		plan = fftw_plan_dft_3d(params.gridSize[2],
-				params.gridSize[1], params.gridSize[0], (fftw_complex*) gridData_os_d, (fftw_complex*) gridData_os_d,
-				FFTW_FORWARD, FFTW_ESTIMATE);
+		fft3dCPU(pGridData_os_d, params.gridSize[0], params.gridSize[1], params.gridSize[2]);
 	}
-
-	// Inverse transform 'gridData_d' in place.
-	fftw_execute(plan);
-	fftw_destroy_plan(plan);
-
-//#pragma acc update device(gridData_os_d[0:gridNumElems])
 #endif
 	// ifftshift(gridData):
 	if (Nz==1) {
-		ifftshift2(gridData_os, gridData_os_d, params.gridSize[0], params.gridSize[1]);
+		ifftshift2<T1>(pGridData_os, pGridData_os_d, params.gridSize[0], params.gridSize[1]);
 	}
 	else {
-		ifftshift3(gridData_os, gridData_os_d, params.gridSize[0], params.gridSize[1], params.gridSize[2]);
+		ifftshift3<T1>(pGridData_os, pGridData_os_d, params.gridSize[0], params.gridSize[1], params.gridSize[2]);
 	}
-	T1* pGridData_os = reinterpret_cast<T1*>(gridData_os);
-	cout << "About to deal with gridding_Silver_3D" << endl;
-//#pragma acc enter data copy(pGridData_os[0:2*gridNumElems])
-//	{   //acc_async_wait_all();
+
 	// Gridding with CPU - silver
 	if (Nz==1) {
 		gridding_Silver_2D<T1>(n, params, kx, ky, beta, samples, LUT, sizeLUT,
@@ -1244,7 +1141,6 @@ computeFd_CPU_Grid(
 		gridding_Silver_3D<T1>(n, params, kx, ky, kz, beta, samples, LUT, sizeLUT,
 				gridData_os);
 	}
-//	}
 
 	/*
 	// crop the center region of the "image".
@@ -1277,17 +1173,9 @@ computeFd_CPU_Grid(
 		outR_d[ii] = samples[ii].real();
 		outI_d[ii] = samples[ii].imag();
 	}
-	/*
-	vec temp1(outR_d,n);
-	vec temp2(outI_d,n);
-	cx_vec temp = cx_vec(temp1,temp2);
-	savemat("./test.mat","test",temp);
-	exit(EXIT_FAILURE);
-	 */
 	//deallocate samples
-	free(samples);
-	//free(LUT);
-//#pragma acc exit data delete(gridData_os_d,gridData,gridData_d,gridData_os)
+#pragma acc exit data delete(pGridData_d[0:2*imageNumElems],pGridData_os[0:2*gridNumElems],pGridData_os_d[0:2*gridNumElems],pGridData[0:2*imageNumElems])
+	delete[] samples;
 	delete[] gridData;
 	delete[] gridData_d;
 	delete[] gridData_os;

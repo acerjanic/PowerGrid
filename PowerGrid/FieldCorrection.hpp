@@ -113,7 +113,7 @@ public:
 			    //cout << "M0" << endl;
 			    for (unsigned int ii = 0; ii<L; ii++) {
 				    for (unsigned int jj = 0; jj<n2; jj++) {
-					    gl(jj, ii) = pow(gg(jj, ii), double(ii+1));
+					    gl(jj, ii) = pow(gg(jj, ii), (T1) (ii+1));
 				    }
 			    }
 			    //savemat("/vagrant/gl.mat","glc",gl);
@@ -141,8 +141,8 @@ public:
 			    for (unsigned int ii = 0; ii<L; ii++) {
 				    Mat <CxT1> GTGtp;
 				    GTGtp.zeros(L, L);
-				    GTGtp.diag(-double(ii+1)) += glsum(ii);
-				    GTGtp.diag(double(ii+1)) += std::conj(glsum(ii));
+				    GTGtp.diag(-(T1) (ii+1)) += glsum(ii);
+				    GTGtp.diag((T1) (ii+1)) += std::conj(glsum(ii));
 				    GTG = GTG+GTGtp;
 			    }
 

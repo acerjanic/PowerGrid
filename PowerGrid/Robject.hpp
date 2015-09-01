@@ -18,15 +18,15 @@ public:
     uword Nx;
     uword Ny;
     uword Nz;
-    double DeltaX;
-    double DeltaY;
-    double DeltaZ;
-    double Beta;
+    T1 DeltaX;
+    T1 DeltaY;
+    T1 DeltaZ;
+    T1 Beta;
 
 
     // It was declared as type Mat<uword> and the 3D type was a cube. We need to vectorize it before it is passed to QuadPenalty.
     //Custom Class Constructor
-    Robject(uword nx,uword ny,uword nz, double beta)
+    Robject(uword nx, uword ny, uword nz, T1 beta)
     {
         //Set Class Memebers
         this->Nx = nx;
@@ -157,16 +157,16 @@ public:
         return out;
     }
 public:
-    double Penalty(const Col<CxT1>& x) const
+    T1 Penalty(const Col <CxT1>& x) const
     {
         Col <CxT1> d = zeros< Col < T1 >>(x.n_rows);
-        double penal = 0;
+	    T1 penal = 0;
         uword nd = 0;
         if(this->Nz == 1) {
             nd = 2;
         } else {
             nd = 3;
-            cout << "Setting dimension to 3 in reg." << endl;
+	        //cout << "Setting dimension to 3 in reg." << endl;
         }
 
         for(uword ii = 0; ii < nd; ii++) {
@@ -188,7 +188,7 @@ public:
             nd = 2;
         } else {
             nd = 3;
-            cout << "Setting dimension to 3 in reg." << endl;
+	        //cout << "Setting dimension to 3 in reg." << endl;
 
         }
 
@@ -223,7 +223,7 @@ public:
 	        temp = as_scalar(Cdir.t()*Cx);
             penal += temp;
         }
-        cout << "Beta = " << Beta << endl;
+	    //cout << "Beta = " << Beta << endl;
         return this->Beta*penal;
     }
 

@@ -59,7 +59,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,
     for (unsigned int ii = 0; ii < niter; ii++)
     {
         // Compute negative gradient
-        cout << "About to calculate the gradient of the cost function" << endl;
+//        /cout << "About to calculate the gradient of the cost function" << endl;
         ngrad = A / (W % (yi - Ax));
         if (norm_grad<T1>(ngrad,yi,W) < 1e-10) {
             cout << "Terminating early due to zero gradient." << endl;
@@ -109,7 +109,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,
             //pdenom = real(dot_double(pow(abs(ddir),2.0).eval(), R.Denom(x + step*ddir)));
             //pdenom = Cdir' * (R.wpot(R.wt, Cdir) .* Cdir); Original MATLAB code from pwls_pcg1.m
             pdenom = R.Denom(ddir,x+step*ddir);
-            cout << " pdenom = " << pdenom << endl;
+	        //cout << " pdenom = " << pdenom << endl;
             denom = dAWAd + pdenom;
             
             if (std::abs(denom) < 1e-10 || std::abs(denom) > 1e25) {
