@@ -22,11 +22,11 @@ public:
     FieldCorrection();
 
     //Class variables go here
-    uword n1 = 0; //Data size
-    uword n2 = 0; //Image size
-    uword L = 0; //number of time segments
-    uword type = 0; //type of time segmentation
-    uword Nshots = 0; //Number of shots, used to reduce complexity of calculating interpolator
+    uword n1; //Data size
+    uword n2; //Image size
+    uword L; //number of time segments
+    uword type; //type of time segmentation
+    uword Nshots; //Number of shots, used to reduce complexity of calculating interpolator
     T1 tau;        //time segment length
     T1 T_min;   // minimum time in the time vector (i.e. TE for spiral out)
     Tobj* obj;
@@ -35,23 +35,11 @@ public:
     Mat <CxT1> AA;        //interpolator coefficients for the different time segments
     CxT1 i = CxT1(0., 1.);
 
-    FieldCorrection(Tobj& G, Col <T1> map_in, Col <T1> timeVec_in, uword a, uword b, uword c)
-    {
-	    FieldCorrection(G, map_in, timeVec_in, a, b, c, (uword) 1);
-
-    }
-
-    FieldCorrection(Tobj& G, Col <T1> map_in, Col <T1> timeVec_in, uword a, uword b, uword c, uword interp)
-    {
-	    FieldCorrection(G, map_in, timeVec_in, a, b, c, interp, (uword) 1);
-
-    }
-
     //Class constructor
-    FieldCorrection(Tobj& G, Col <T1> map_in, Col <T1> timeVec_in, uword a, uword b, uword c, uword interptype,
-		    uword shots)
+    FieldCorrection(Tobj& G, Col <T1> map_in, Col <T1> timeVec_in, uword a, uword b, uword c, uword interptype = 1,
+		    uword shots = 1)
     {
-
+		cout << "Entering Class constructor" << endl;
 	    n1 = a; //Data size
 	    n2 = b;//Image size
 	    L = c; //number of time segments
@@ -59,10 +47,14 @@ public:
 	    Nshots = shots; // number of shots
 	    obj = &G;
 	    fieldMap = map_in;
+    	cout << "N1 = " << n1 << endl;
+		cout << "N2 = " << n2 << endl;
+		cout << "L = " << L << endl;
 
-	    AA.set_size(n1, L+1); //time segments weights
+
+		AA.set_size(n1, L+1); //time segments weights
 	    timeVec = timeVec_in;
-	    T_min = timeVec.min();
+	    T_min =timeVec.min();
 	    T1 rangt = timeVec.max()-T_min;
 	    tau = (rangt+datum::eps)/(L); // it was L-1 before
 	    timeVec = timeVec-T_min;
@@ -192,6 +184,7 @@ public:
 
 		    }
 	    }
+		cout << "Exiting class constructor." << endl;
     }
 
 
@@ -206,13 +199,14 @@ public:
 	    Tobj* G = this->obj;
 	    //output is the size of the kspace data
 	    Col <CxT1> outData = zeros<Col<CxT1 >> (this->n1);
+		cout << "OutData size = " << this->n1 << endl;
 	    Col <CxT1> Wo;
 
 	    //loop through time segments
 	    for (unsigned int ii = 0; ii<this->L; ii++) {
 		    //cout << "Entering time segmentation loop" << endl;
 		    //apply a phase to each time segment
-		    Wo = exp(-i*(this->fieldMap)*((ii)*tau+T_min));
+		    Wo = exp(-i*(this->fieldMap)*((ii)*this->tau+this->T_min));
 
 		    //perform multiplication by the object and sum up the time segments
 		    outData += (this->AA.col(ii))%(*G*(Wo%d));
@@ -232,7 +226,7 @@ public:
 	    for (unsigned int ii = 0; ii<this->L; ii++) {
 
 		    //create the phase map for the Lth time segment
-		    Wo = exp(i*(this->fieldMap)*((ii)*tau+T_min));
+		    Wo = exp(i*(this->fieldMap)*((ii)*this->tau+this->T_min));
 
 		    //perform adjoint operation by the object and sum up the time segments
 		    outData += Wo%((*this->obj)/(AA.col(ii)%d));
@@ -244,7 +238,7 @@ public:
     }
 /*
 protected:
-  Col<T1> int_tim_seg(uword L) {
+  Col<T1> int_tim_seg(uword this->L) {
 
   }
 */

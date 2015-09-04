@@ -97,7 +97,7 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 
 	// Field correction operation
 
-	uword type = 2; // 2 for min max time seg and 1 for Hanning
+	uword type = 1; // 2 for min max time seg and 1 for Hanning
 	//uword L = 4;
 	//cout << "Initializing FieldCorrection" << endl;
 	FieldCorrection<T1, Ggrid<T1>> A(Gg, vectorise(FM), vectorise(tvec), nro, Nx*Ny*Nz, L, type, nshots);

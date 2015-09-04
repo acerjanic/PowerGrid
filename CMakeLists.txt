@@ -62,12 +62,18 @@ set(POWERGRID_TEST_GGRID
 	./PowerGrid/config.cxx
 )
 
+set(POWERGRID_TEST_DWI3D
+		./PowerGrid/PowerGridDWI3D.cpp
+		./PowerGrid/config.cxx
+)
+
 
 add_executable(PowerGridGdft ${POWERGRID_TEST_GDFT})
 add_executable(PowerGridGgrid ${POWERGRID_TEST_GGRID})
-
+add_executable(PowerGridDWI3D ${POWERGRID_TEST_DWI3D})
 target_link_libraries(PowerGridGdft ${LIBS})
 target_link_libraries(PowerGridGgrid ${LIBS})
+target_link_libraries(PowerGridDWI3D ${LIBS})
 
 if (ISMRMRD)
 	add_executable(PowerGridIsmrmrd ${POWERGRID_ISMRMRD})
@@ -112,4 +118,5 @@ if(APPLE)
 endif(APPLE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -lfftw3")
 add_definitions(-D__STRICT_ANSI__)
+remove_definitions(_DARMA_NO_DEBUG)
 add_definitions(-DARMA_DONT_USE_CXX11)
