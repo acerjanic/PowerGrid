@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project("PowerGrid" CXX)
 
 
-option(OPENACC "Enable OpenACC support" OFF)
+option(OPENACC "Enable OpenACC support" ON)
 option(ISMRMD "Enable ISMRMRD Suppport" OFF)
 
 #set(CMAKE_CXX_STANDARD 11)
@@ -11,16 +11,33 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 find_package(MATIO)
 include_directories(${MATIO_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${MATIO_LIBRARIES})
-#find_package(FFTW REQUIRED)
-find_path(FFTW_INCLUDE_DIR fftw3.h)
-find_library(FFTW_LIBRARIES NAMES fftw3)
-include_directories(${FFTW_INCLUDE_DIR})
-set(LIBS ${LIBS} ${FFT_LIBRARIES})
+find_package(Boost)
+set(LIBS ${LIBS} ${Boost_LIBRARIES})
+include_directories(${Boost_INCLUDE_DIRS})
 
+if(OPENACC)
+	find_path(cuFFT_INCLUDE_DIR cufft.h HINTS /usr/local/cuda/include)
+	include_directories(${cuFFT_INCLUDE_DIR})
+	find_library(cuFFT_LIBRARIES cufft HINTS /usr/local/cuda/lib64)
+	set(LIBS ${LIBS} ${cuFFT_LIBRARIES})
+	#find_library(cudaRT_LIBRARIES cudart HINTS /usr/local/cuda/lib64)
+	#set(LIBS ${LIBS} ${cudaRT_LIBRARIES})
+
+else(OPENACC)
+	#find_package(FFTW REQUIRED)
+	find_path(FFTW_INCLUDE_DIR fftw3.h)
+find_library(FFTW_LIBRARIES NAMES fftw3 HINTS /usr/lib/x86_64-linux-gnu/)
+find_library(FFTWF_LIBRARIES NAMES fftw3f HINTS /usr/lib/x86_64-linux-gnu/)
+	include_directories(${FFTW_INCLUDE_DIR})
+set(LIBS ${LIBS} ${FFTW_LIBRARIES})
+set(LIBS ${LIBS} ${FFTWF_LIBRARIES})
+endif(OPENACC)
 if(${USE_ACML})
 	find_package(ACML)
 	set(LIBS ${LIBS} ${ACML_LIBRARIES})
 endif()
+
+
 find_package(Armadillo REQUIRED)
 include_directories(${ARMADILLO_INCLUDE_DIRS})
 MESSAGE(${ARMADILLO_INCLUDE_DIRS})
@@ -40,27 +57,43 @@ set(POWERGRID_TEST_GDFT
     ./PowerGrid/config.cxx
 )
 
-set(POWERGRID_TEST_GGRID	
+set(POWERGRID_TEST_GGRID
 	./PowerGrid/PowerGridGgrid.cpp
 	./PowerGrid/config.cxx
 )
+
+set(POWERGRID_TEST_DWI3D
+		./PowerGrid/PowerGridDWI3D.cpp
+		./PowerGrid/config.cxx
+)
+
+
 add_executable(PowerGridGdft ${POWERGRID_TEST_GDFT})
 add_executable(PowerGridGgrid ${POWERGRID_TEST_GGRID})
-
+add_executable(PowerGridDWI3D ${POWERGRID_TEST_DWI3D})
 target_link_libraries(PowerGridGdft ${LIBS})
 target_link_libraries(PowerGridGgrid ${LIBS})
+target_link_libraries(PowerGridDWI3D ${LIBS})
+
+if (ISMRMRD)
+	add_executable(PowerGridIsmrmrd ${POWERGRID_ISMRMRD})
+	target_link_libraries(PowerGridIsmrmrd ${LIBS})
+	set(POWERGRID_ISMRMRD
+			./PowerGrid/PowerGridIsmrmrd.cpp
+	)
+endif (ISMRMRD)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/usr/include")
 if(APPLE)
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lgfortran")
 else()
 	if(CMAKE_COMPILER_IS_GNUCXX)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FFT_LIBRARIES}")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native ")
 	else()
 		if(OPENACC)
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Minfo -ta=tesla -fpermissive -pgf77libs")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gopt -fast -Minfo=accel -ta=tesla -fpermissive -pgf77libs")
 		else()
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive -pgf77libs")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gopt -fast -fpermissive -pgf77libs")
 		endif()
 	endif()
 endif()
@@ -83,6 +116,7 @@ endif()
 if(APPLE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -flto")
 endif(APPLE)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -lfftw3")
 add_definitions(-D__STRICT_ANSI__)
-#add_definitions(-DARMA_DONT_USE_CXX11)
+remove_definitions(_DARMA_NO_DEBUG)
+add_definitions(-DARMA_DONT_USE_CXX11)

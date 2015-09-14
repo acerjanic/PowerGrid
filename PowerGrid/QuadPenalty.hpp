@@ -28,9 +28,6 @@ public:
         this->Nx = nx;
         this->Ny = ny;
         this->Nz = nz;
-        this->DeltaX = 1.0/(double)nx;
-        this->DeltaY = 1.0/(double)ny;
-        this->DeltaZ = 1.0/(double)nz;
         this->Beta = beta;
 
     }
@@ -42,9 +39,14 @@ public:
         return ones < Col < CxT1 >> (d.n_rows);
     }
 
+    Col <CxT1> dpot(const Col <CxT1>& d) const
+    {
+        return d;
+    }
     Col<CxT1> pot(const Col< CxT1 >& d) const
     {
-        return d % d / 2.0;
+        Col <T1> temp = abs(d)%abs(d)/2.0;
+        return conv_to<Col<CxT1 >> ::from(temp);
     }
 
 

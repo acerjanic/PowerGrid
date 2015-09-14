@@ -22,7 +22,7 @@ public:
           const Col <T1> &k3, const Col <T1> &i1, const Col <T1> &i2,
           const Col <T1> &i3) //Change these argumenst as you need to setup the object
     {
-        cout << "Entering the class constructor for Ggrid" << endl;
+        //cout << "Entering the class constructor for Ggrid" << endl;
         n1 = nx*ny*nz;
         n2 = dataLength;
         Nx = nx;
@@ -43,7 +43,7 @@ public:
 
         //Deal with the LUT
         //Generating Look-Up Table
-        cout << "Calculating look up table" << endl;
+        //cout << "Calculating look up table" << endl;
         calculateLUT(beta, kernelWidth, LUT, sizeLUT);
         #pragma acc enter data copyin(LUT[0:sizeLUT])
 
@@ -81,7 +81,7 @@ public:
     //Forward transform operation using gridding
     Col<CxT1> operator*(const Col<CxT1>& d) const//Don't change these arguments
     {
-        cout << "Entering forward operator overload in Ggrid." << endl;
+        //cout << "Entering forward operator overload in Ggrid." << endl;
         //This is just specifying size assuming things are the same size, change as necessary
         //uword dataLength = d.n_rows;
         /* TODO: Fix this. It eats up more than 32GB of memory!
@@ -90,25 +90,25 @@ public:
         FM.zeros();
         t.zeros();
         */
-        cout << "Seperating real and imaginary data." << endl;
+        //cout << "Seperating real and imaginary data." << endl;
 
         Col<T1> realData = real(d);
         Col<T1> imagData = imag(d);
         //Now we grab the data out of armadillo with the memptr() function
         //This returns a pointer of the type of the elements of the array/vector/matrix/cube (3d matrix)
         //Armadillo uses column major like MATLAB and Fortran, but different from 2D C++ arrays which are row major.
-        cout << "Grabbing pointers." << endl;
+        //cout << "Grabbing pointers." << endl;
 
         T1* realDataPtr = realData.memptr();
         T1* imagDataPtr = imagData.memptr();
 
-        cout << "Allocating memory for transformed data." << endl;
+        //cout << "Allocating memory for transformed data." << endl;
 
         Col<T1> realXformedData(this->n2);
         Col<T1> imagXformedData(this->n2);
         //realXformedData.zeros();
         //imagXformedData.zeros();
-        cout << "Grabbing pointers for new memory." << endl;
+        //cout << "Grabbing pointers for new memory." << endl;
 
         T1* realXformedDataPtr = realXformedData.memptr();
         T1* imagXformedDataPtr = imagXformedData.memptr();
@@ -126,7 +126,7 @@ public:
         );
         */
         //T2 gridOS = 2.0;
-        cout << "About to call the forward gridding routine." << endl;
+        //cout << "About to call the forward gridding routine." << endl;
         computeFd_CPU_Grid<T1>(n2, kx.memptr(),  ky.memptr(),  kz.memptr(),
                                realDataPtr, imagDataPtr, Nx, Ny, Nz,
                                gridOS, realXformedDataPtr, imagXformedDataPtr, kernelWidth, beta, LUT, sizeLUT);

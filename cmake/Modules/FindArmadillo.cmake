@@ -34,7 +34,7 @@
 find_library(ARMADILLO_LIBRARY
   NAMES armadillo
   HINTS $ENV{ARMA_HOME}
-  PATHS "$ENV{ProgramFiles}/Armadillo/lib"  "$ENV{ProgramFiles}/Armadillo/lib64" "$ENV{ProgramFiles}/Armadillo"
+  PATHS /usr/lib "$ENV{ProgramFiles}/Armadillo/lib"  "$ENV{ProgramFiles}/Armadillo/lib64" "$ENV{ProgramFiles}/Armadillo"
   "/shared/mrfil-data/Software/MRFIL-Modules/PowerGridSupport/lib"
   "/u/staff/arnoldg/PowerGrid/lib"
   PATH_SUFFIXES "lib"
@@ -42,7 +42,7 @@ find_library(ARMADILLO_LIBRARY
 find_path(ARMADILLO_INCLUDE_DIR
   NAMES armadillo
   HINTS $ENV{ARMA_HOME}
-  PATHS "$ENV{ProgramFiles}/Armadillo/include"
+  PATHS /usr/lib "$ENV{ProgramFiles}/Armadillo/include"
 	"/shared/mrfil-data/Software/MRFIL-Modules/PowerGridSupport/include"
 	"/u/staff/arnoldg/PowerGrid/include"  
 PATH_SUFFIXES "include"

@@ -9,6 +9,8 @@
             <xs:element name="Niter" type="xs:integer"/>
             <xs:element name="Ntimeseg" type="xs:integer"/>
             <xs:element name="Ncoils" type="xs:integer"/>
+            <xs:element name="Nshots" type="xs:integer"/>
+            <xs:element name="Beta" type="xs:float"/>
         </xs:sequence>
     </xs:complexType>
 
