@@ -8,7 +8,7 @@
 
 #ifndef PowerGrid_PowerGrid_h
 #define PowerGrid_PowerGrid_h
-#define ARMA_NO_DEBUG // Disable this comment only for release.
+//#define ARMA_NO_DEBUG // Disable this comment only for release.
 #include <iostream>
 #include <cmath>
 #include "armadillo"
@@ -27,22 +27,24 @@ namespace arma {
 #include "fn_circshift.hpp"
 #include "fftshift.hpp"
 #include "Gfft.hpp"
+#include "ftCpu.hpp"
+#include "Gdft.hpp"
+#include "fftGPU.hpp"
+#include "griddingSupport.hpp"
+#include "gridding.hpp"
+#include "Ggrid.hpp"
 #include "SENSE.hpp"
 #include "Robject.hpp"
 #include "QuadPenalty.hpp"
 #include "TVPenalty.hpp"
 #include "solve_pwls_pcg.hpp"
-#include "ftCpu.hpp"
-#include "Gdft.hpp"
 #include "test_gdft.hpp"
-#include "fftGPU.hpp"
-#include "griddingSupport.hpp"
-#include "gridding.hpp"
-#include "Ggrid.hpp"
 #include "test_ggrid.hpp"
 #include "FieldCorrection.hpp"
+#include "DWICGMC.hpp"
 #include "test_FieldCorrection.hpp"
 #include "test_3D.hpp"
+#include "test_DWI.hpp"
 #include "test_SpeedCompareGgrid.hpp"
 #include "test_SpeedCompareGdft.hpp"
 #include "test_pwls_pcg.hpp"

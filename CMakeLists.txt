@@ -3,15 +3,15 @@ project("PowerGrid" CXX)
 
 
 option(OPENACC "Enable OpenACC support" ON)
-option(ISMRMD "Enable ISMRMRD Suppport" OFF)
+option(ISMRMRD "Enable ISMRMRD Suppport" ON)
 
-#set(CMAKE_CXX_STANDARD 11)
-#set(CMAKE_CXX_STANDARD_REQUIRED 1)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED 1)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 find_package(MATIO)
 include_directories(${MATIO_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${MATIO_LIBRARIES})
-find_package(Boost)
+find_package(Boost 1.43 COMPONENTS program_options)
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
 include_directories(${Boost_INCLUDE_DIRS})
 
@@ -71,16 +71,21 @@ set(POWERGRID_TEST_DWI3D
 add_executable(PowerGridGdft ${POWERGRID_TEST_GDFT})
 add_executable(PowerGridGgrid ${POWERGRID_TEST_GGRID})
 add_executable(PowerGridDWI3D ${POWERGRID_TEST_DWI3D})
+
 target_link_libraries(PowerGridGdft ${LIBS})
 target_link_libraries(PowerGridGgrid ${LIBS})
 target_link_libraries(PowerGridDWI3D ${LIBS})
 
 if (ISMRMRD)
-	add_executable(PowerGridIsmrmrd ${POWERGRID_ISMRMRD})
-	target_link_libraries(PowerGridIsmrmrd ${LIBS})
 	set(POWERGRID_ISMRMRD
 			./PowerGrid/PowerGridIsmrmrd.cpp
-	)
+			./PowerGrid/config.cxx
+			PowerGrid/processIsmrmrd.cpp)
+	find_library(ISMRMRD_LIBRARIES ismrmrd HINTS /usr/lib/)
+	set(LIBS ${LIBS} ${ISMRMRD_LIBRARIES})
+	add_executable(PowerGridIsmrmrd ${POWERGRID_ISMRMRD} PowerGrid/processIsmrmrd.cpp)
+	target_link_libraries(PowerGridIsmrmrd ${LIBS})
+
 endif (ISMRMRD)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/usr/include")

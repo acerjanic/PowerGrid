@@ -17,9 +17,9 @@ using namespace std; //complex type comes from the STL
 
 int main(int argc, char** argv)
 {
-    uword Nx,Ny,Nz,Niter = 1,NL = 1,Ncoils;
+    uword Nx, Ny, Nz, Niter = 1, NL = 1, Ncoils = 1, Nshots = 1;
     uword startIndex, endIndex;
-
+    double Beta = 0.0;
     string testPath,configPath;
     if (argc > 1) {;
         testPath = std::string(argv[1]);
@@ -68,7 +68,8 @@ int main(int argc, char** argv)
             NL = cfg->Ntimeseg();
             Niter = cfg->Niter();
             Ncoils = cfg->Ncoils();
-
+            Nshots = cfg->Nshots();
+            Beta = cfg->Beta();
         }
         catch (const xml_schema::exception& e)
         {
@@ -76,7 +77,7 @@ int main(int argc, char** argv)
             return 1;
         }
 
-        int test = test_SpeedCompareGdft<double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils);
+        int test = test_SpeedCompareGdft<double>(testPath, Nx, Ny, Nz, NL, Niter, Ncoils, Nshots, Beta);
 
     }
   

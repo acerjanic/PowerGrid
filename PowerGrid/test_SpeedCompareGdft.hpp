@@ -14,7 +14,8 @@
 using namespace arma;
 
 template<typename T1>
-int test_SpeedCompareGdft(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter,uword nc) {
+int test_SpeedCompareGdft(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter, uword nc, uword nshots,
+                          T1 beta) {
     typedef complex<T1> CxT1;
     string testPath = dataPath;
 
@@ -95,7 +96,7 @@ int test_SpeedCompareGdft(string dataPath, uword Nx, uword Ny, uword Nz, uword L
     ReconMask.ones();
 
     cout << "Iniitalizing QuadPenalty" << endl;
-    QuadPenalty<T1>R(Nx,Ny,Nz,0);
+    QuadPenalty < T1 > R(Nx, Ny, Nz, beta);
     cout << "QuadPenalty setup successfull" << endl;
 
     //uword niter = 10;
