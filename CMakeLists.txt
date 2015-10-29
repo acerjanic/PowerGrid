@@ -11,6 +11,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 find_package(MATIO)
 include_directories(${MATIO_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${MATIO_LIBRARIES})
+set(BOOST_LIBRARYDIR /usr/lib/x86_64-linux-gnu/)
 find_package(Boost 1.43 COMPONENTS program_options)
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
 include_directories(${Boost_INCLUDE_DIRS})
@@ -80,10 +81,10 @@ if (ISMRMRD)
 	set(POWERGRID_ISMRMRD
 			./PowerGrid/PowerGridIsmrmrd.cpp
 			./PowerGrid/config.cxx
-			PowerGrid/processIsmrmrd.cpp)
+	)
 	find_library(ISMRMRD_LIBRARIES ismrmrd HINTS /usr/lib/)
 	set(LIBS ${LIBS} ${ISMRMRD_LIBRARIES})
-	add_executable(PowerGridIsmrmrd ${POWERGRID_ISMRMRD} PowerGrid/processIsmrmrd.cpp)
+	add_executable(PowerGridIsmrmrd ${POWERGRID_ISMRMRD})
 	target_link_libraries(PowerGridIsmrmrd ${LIBS})
 
 endif (ISMRMRD)

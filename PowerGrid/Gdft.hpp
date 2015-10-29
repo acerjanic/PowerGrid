@@ -8,6 +8,8 @@
 
 #ifndef PowerGrid_Gdft_hpp
 #define PowerGrid_Gdft_hpp
+using namespace arma;
+
 template<typename T1> //This is of type complex<double> or complex<float>, or any other type like float or single
 class Gdft {
 typedef complex<T1> CxT1;

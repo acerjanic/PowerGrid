@@ -11,7 +11,10 @@
 //#define ARMA_NO_DEBUG // Disable this comment only for release.
 #include <iostream>
 #include <cmath>
+#include <string>
 #include "armadillo"
+
+//Support Headers for making it easier to work with Armadillo and Matio.
 #include "../Support/CeempleComplex.h"
 #include "../Support/CeempleArmadillo.h"
 #include "../Support/CeempleMatio.h"
@@ -19,12 +22,23 @@
 #include "config.hxx"
 #include <memory>
 
-// I throw everything into namespace arma to use the Armadillo objects and functions without arma:: everywhere
-// Maybe I should reevaluate this later...
+//Headers for ISMRMRD Support
+#include "ismrmrd/ismrmrd.h"
+#include "ismrmrd/xml.h"
+#include "ismrmrd/dataset.h"
+#include "ismrmrd/version.h"
+
+
+//These headers add a circshift routine to armadillo in the arma namespace
 namespace arma {
 #include "op_circshift_bones.hpp"
 #include "op_circshift_meat.hpp"
 #include "fn_circshift.hpp"
+}
+
+//
+namespace PowerGrid {
+
 #include "fftshift.hpp"
 #include "Gfft.hpp"
 #include "ftCpu.hpp"
@@ -38,6 +52,7 @@ namespace arma {
 #include "QuadPenalty.hpp"
 #include "TVPenalty.hpp"
 #include "solve_pwls_pcg.hpp"
+#include "reconSolve.hpp"
 #include "test_gdft.hpp"
 #include "test_ggrid.hpp"
 #include "FieldCorrection.hpp"
@@ -50,7 +65,6 @@ namespace arma {
 #include "test_pwls_pcg.hpp"
 #include "reconfMRIGdft.hpp"
 #include "reconfMRIGgrid.hpp"
-
 
 }
 

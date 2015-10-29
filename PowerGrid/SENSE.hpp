@@ -8,6 +8,7 @@
 
 #ifndef PowerGrid_SENSE_hpp
 #define PowerGrid_SENSE_hpp
+using namespace arma;
 
 // We are using two template types at the moment. One for the type of data to be processed (ie Col<cx_double>) and one for the type of G object (ie Gfft<Col<cx_double>>
 template<typename T1, typename Tobj>

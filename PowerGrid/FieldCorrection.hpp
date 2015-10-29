@@ -52,11 +52,11 @@ public:
 		cout << "L = " << L << endl;
 
 
-		AA.set_size(n1, L+1); //time segments weights
+		AA.set_size(n1, L); //time segments weights
 	    timeVec = timeVec_in;
 	    T_min =timeVec.min();
 	    T1 rangt = timeVec.max()-T_min;
-	    tau = (rangt+datum::eps)/(L); // it was L-1 before
+		tau = (rangt + datum::eps) / (L - 1); // it was L-1 before
 	    timeVec = timeVec-T_min;
 
 	    uword NOneShot = n1/Nshots;
@@ -65,7 +65,7 @@ public:
 		    AA.ones();
 	    }
 	    else {
-		    Mat <CxT1> tempAA(NOneShot, L+1);
+			Mat <CxT1> tempAA(NOneShot, L);
 		    if (type==1) {// Hanning interpolator
 			    cout << "Hanning interpolation" << endl;
 			    //tau = (rangt+datum::eps)/(L-1);
@@ -84,9 +84,7 @@ public:
 		    else if (type==2) { // Min-max interpolator: Exact LS interpolator
 
 			    cout << "Min Max time segmentation" << endl;
-			    //cout << "nro" << n2<< endl;
-			    //cout << "L" << L << endl;
-			    //cout << "ndat" << n1<< endl;
+
 			    Mat <CxT1> Ltp;
 			    Ltp.ones(1, L);
 			    Col <CxT1> ggtp;
@@ -95,20 +93,15 @@ public:
 			    gg = exp(i*fieldMap*tau)*Ltp;
 			    Mat <CxT1> iGTGGT;
 			    iGTGGT.set_size(L+1, n2);
-			    //savemat("/vagrant/gg.mat","ggc",gg);
 			    Mat <CxT1> gl;
 			    gl.zeros(n2, L);
-			    //savemat("/vagrant/fieldMap.mat","fieldMap",fieldMap);
-			    //savemat("/vagrant/timeVec.mat","timeVecc",timeVec);
 
 
-			    //cout << "M0" << endl;
 			    for (unsigned int ii = 0; ii<L; ii++) {
 				    for (unsigned int jj = 0; jj<n2; jj++) {
 					    gl(jj, ii) = pow(gg(jj, ii), (T1) (ii+1));
 				    }
 			    }
-			    //savemat("/vagrant/gl.mat","glc",gl);
 
 			    Mat <CxT1> G;
 			    G.set_size(n2, L);
@@ -128,11 +121,9 @@ public:
 			    GTG.zeros(L, L);
 			    GTG.diag(0) += n2;
 			    glsum = sum(gl.t(), 1);
-			    //savemat("/vagrant/glsum.mat","glsumc",glsum);
-
-			    for (unsigned int ii = 0; ii<L; ii++) {
-				    Mat <CxT1> GTGtp;
-				    GTGtp.zeros(L, L);
+				Mat <CxT1> GTGtp(L, L);
+				for (unsigned int ii = 0; ii < (L - 1); ii++) {
+					GTGtp.zeros();
 				    GTGtp.diag(-(T1) (ii+1)) += glsum(ii);
 				    GTGtp.diag((T1) (ii+1)) += std::conj(glsum(ii));
 				    GTG = GTG+GTGtp;
@@ -149,8 +140,6 @@ public:
 				    iGTGGT = pinv(GTG)*G.t(); // pseudo inverse
 			    }
 
-			    //savemat("/vagrant/iGTGGT.mat","iGTGGTc",iGTGGT);
-			    //savemat("/vagrant/timeVec.mat","timeVecc",timeVec);
 
 			    Mat <CxT1> iGTGGTtp;
 			    Mat <CxT1> ftp;
@@ -173,15 +162,9 @@ public:
 			    for (unsigned int ii = 0; ii<NOneShot; ii++) {
 				    ftp = exp(i*fieldMap*timeVec(ii));
 				    res = iGTGGT*ftp;
-				    //temp = conj(res);
 				    tempAA.row(ii) = res.t();
-				    //cout << "Data point #" << ii << endl;
 			    }
 			    AA = repmat(tempAA, Nshots, 1);
-
-
-			    //savemat("/vagrant/AA.mat","AAc",AA);
-
 		    }
 	    }
 		cout << "Exiting class constructor." << endl;
@@ -199,7 +182,7 @@ public:
 	    Tobj* G = this->obj;
 	    //output is the size of the kspace data
 	    Col <CxT1> outData = zeros<Col<CxT1 >> (this->n1);
-		cout << "OutData size = " << this->n1 << endl;
+		//cout << "OutData size = " << this->n1 << endl;
 	    Col <CxT1> Wo;
 
 	    //loop through time segments

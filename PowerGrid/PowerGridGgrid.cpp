@@ -12,7 +12,7 @@
 
 using namespace arma; //Armdillo stuff is in the arma namespace
 using namespace std; //complex type comes from the STL
-
+using namespace PowerGrid;
 
 int main(int argc, char** argv)
 {

@@ -8,10 +8,11 @@
 
 #ifndef PowerGrid_DWICGMC_hpp
 #define PowerGrid_DWICGMC_hpp
+using namespace arma;
 
 template<typename T1>
 class DWICGMC {
-    typedef complex <T1> CxT1;
+    typedef std::complex <T1> CxT1;
 public:
     DWICGMC();
 
@@ -45,10 +46,10 @@ public:
         Nc = nc;
         Ns = ShotPhaseMap.n_elem / Ni;
         Nd = kx.n_elem / Ns;
-        cout << "Nd = " << Nd << endl;
-        cout << "Ns = " << Ns << endl;
-        cout << "Nc = " << Nc << endl;
-        cout << "Ni = " << Ni << endl;
+        std::cout << "Nd = " << Nd << std::endl;
+        std::cout << "Ns = " << Ns << std::endl;
+        std::cout << "Nc = " << Nc << std::endl;
+        std::cout << "Ni = " << Ni << std::endl;
         SMap = reshape(SENSEmap, Ni, Nc);
         PMap = reshape(ShotPhaseMap, Ni, Ns);
         FMap = FieldMap;
@@ -100,13 +101,13 @@ public:
             Ggrid <T1>*  G = new Ggrid<T1>(Nd, 2.0, Nx, Ny, Nz, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz);
             FieldCorrection<T1,Ggrid<T1>>*  AObj = new FieldCorrection<T1,Ggrid<T1>>(*G, vectorise(FMap), vectorise(Tvec.col(jj)), (uword)Nd, (uword)(Nx * Ny * Nz), (uword)L,
                                                  type , (uword) 1);
-            cout << "A address = " << &AObj << endl;
-            cout << "Nd = " << Nd << endl;
-            cout << "NxNyNz = " << (uword)(Nx * Ny * Nz) << endl;
-            cout << "A.n1 = " << AObj->n1 << endl;
-            cout << "A.n2 = " << AObj->n2 << endl;
-            cout << "A.L = " << AObj->L << endl;
-            cout << "A.Nshots = " << AObj->Nshots << endl;
+            std::cout << "A address = " << &AObj << std::endl;
+            std::cout << "Nd = " << Nd << std::endl;
+            std::cout << "NxNyNz = " << (uword)(Nx * Ny * Nz) << std::endl;
+            std::cout << "A.n1 = " << AObj->n1 << std::endl;
+            std::cout << "A.n2 = " << AObj->n2 << std::endl;
+            std::cout << "A.L = " << AObj->L << std::endl;
+            std::cout << "A.Nshots = " << AObj->Nshots << std::endl;
 
             for (unsigned int ii = 0; ii < Nc; ii++) {
                 outData.col(jj + ii * Ns) = (*AObj) * (d % (SMap.col(ii) % exp(-i * (PMap.col(jj)))));
@@ -143,7 +144,6 @@ public:
 
         //equivalent to returning col(output) in MATLAB with IRT
         return vectorise(outData);
-
 
     }
 };

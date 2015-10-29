@@ -8,6 +8,8 @@
 
 #ifndef PowerGrid_Ggrid_h
 #define PowerGrid_Ggrid_h
+namespace ar = arma;
+
 template<typename T1> //This is of type complex<double> or complex<float>, or any other type like float or single
 class Ggrid {
     typedef complex<T1> CxT1;
@@ -20,7 +22,7 @@ public:
     //Class Constructor
     Ggrid(uword dataLength, T1 gridos, uword nx, uword ny, uword nz, const Col <T1> &k1, const Col <T1> &k2,
           const Col <T1> &k3, const Col <T1> &i1, const Col <T1> &i2,
-          const Col <T1> &i3) //Change these argumenst as you need to setup the object
+          const Col <T1> &i3) //Change these arguments as you need to setup the object
     {
         //cout << "Entering the class constructor for Ggrid" << endl;
         n1 = nx*ny*nz;
@@ -63,7 +65,7 @@ public:
     uword Nx = 0;
     uword Ny = 0;
     uword Nz = 0;
-    
+
     Col<T1> kx; //k-space coordinates
     Col<T1> ky;
     Col<T1> kz;
@@ -84,12 +86,7 @@ public:
         //cout << "Entering forward operator overload in Ggrid." << endl;
         //This is just specifying size assuming things are the same size, change as necessary
         //uword dataLength = d.n_rows;
-        /* TODO: Fix this. It eats up more than 32GB of memory!
-        Col<T2> FM(ix.n_rows*iy.n_rows);
-        Col<T2> t(n2);
-        FM.zeros();
-        t.zeros();
-        */
+
         //cout << "Seperating real and imaginary data." << endl;
 
         Col<T1> realData = real(d);
@@ -138,7 +135,7 @@ public:
         //imagXformedData(imagXformedDataPtr, dataLength);
         
         //We can free the realDataXformPtr and imagDataXformPtr at this point and Armadillo will manage armadillo object memory as things change size or go out of scope and need to be destroyed
-        
+
         Col<CxT1> XformedData(this->n2);
         XformedData.set_real(realXformedData);
         XformedData.set_imag(imagXformedData);
@@ -150,20 +147,15 @@ public:
     //Adjoint transform operation
     Col<CxT1> operator/(const Col<CxT1>& d) const
     {
-        
+
         uword dataLength = n2;
-        /* TODO: Fix this. It eats up more than 32GB of memory!
-        Col<T2> FM(ix.n_rows*iy.n_rows);
-        Col<T2> t(n2);
-        FM.zeros();
-        t.zeros();
-        */
+
         Col<T1> realData = real(d);
         Col<T1> imagData = imag(d);
         
         T1* realDataPtr = realData.memptr();
         T1* imagDataPtr = imagData.memptr();
-        
+
         Col<T1> realXformedData(n1);
         Col<T1> imagXformedData(n1);
 
@@ -194,7 +186,7 @@ public:
         //imagXformedData(imagXformedDataPtr, dataLength);
         
         //We can free the realDataXformPtr and imagDataXformPtr at this point and Armadillo will manage armadillo object memory as things change size or go out of scope and need to be destroyed
-        
+
         Col<CxT1> XformedData(n1);
         XformedData.set_real(realXformedData);
         XformedData.set_imag(imagXformedData);

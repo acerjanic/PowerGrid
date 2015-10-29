@@ -13,14 +13,6 @@
 
 using namespace arma;
 
-template<typename T1, typename T2>
-void cast_data(T1 in, T2 out)
-{
-	for (int ii = 0; ii<in.n_rows; ii++) {
-		out(ii) = in(ii);
-	}
-
-};
 
 template<typename T1>
 int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter, uword nc, uword nshots,

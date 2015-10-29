@@ -32,8 +32,8 @@ int test_DWI(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter
     ix.zeros();
     iy.zeros();
     iz.zeros();
-    
-    //generate the image space cordinates of the voxels we want to reconstruct
+
+    //generate the image space coordinates of the voxels we want to reconstruct
     // after vectorizing ix and iy the image coordinates must match the Field and SENSe map image coordinates
     for(uword ii = 0; ii < Ny; ii++) { //y
         for (uword jj = 0; jj < Nx; jj++) { //x

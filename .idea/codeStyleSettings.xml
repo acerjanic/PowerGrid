@@ -27,7 +27,7 @@
             <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="DeallocMethod" />
           </class>
           <extensions>
-            <pair source="cpp" header="h" />
+            <pair source="cpp" header="hpp" />
             <pair source="c" header="h" />
           </extensions>
         </Objective-C-extensions>
@@ -37,6 +37,5 @@
       </value>
     </option>
     <option name="USE_PER_PROJECT_SETTINGS" value="true" />
-    <option name="PREFERRED_PROJECT_CODE_STYLE" value="Default (1)" />
   </component>
 </project>
