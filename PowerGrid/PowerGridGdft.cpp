@@ -75,7 +75,7 @@ int main(int argc, char** argv)
             return 1;
         }
 
-        int test = test_SpeedCompareGdft<double>(testPath, Nx, Ny, Nz, NL, Niter, Ncoils, Nshots, Beta);
+        int test = test_SpeedCompareGdft<float>(testPath, Nx, Ny, Nz, NL, Niter, Ncoils, Nshots, Beta);
 
     }
   

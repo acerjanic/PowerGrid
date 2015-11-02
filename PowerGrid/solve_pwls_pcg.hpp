@@ -35,6 +35,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,
     // Initialize projection
     cout << "Entering pwls_pcg1" << endl;
     Col<CxT1> Ax = A*xInitial;
+    cout << "Ax length = " << Ax.n_rows << endl;
     Col<CxT1> x = xInitial;
     CxT1 oldinprod = 0;
     CxT1 gamma = 0.0;
@@ -55,11 +56,12 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,
     CxT1 step;
     CxT1 rdenom;
     CxT1 newinprod;
+
     cout << "Entering pwls_pcg1 iteration loop" << endl;
     for (unsigned int ii = 0; ii < niter; ii++)
     {
         // Compute negative gradient
-//        /cout << "About to calculate the gradient of the cost function" << endl;
+        //cout << "About to calculate the gradient of the cost function" << endl;
         ngrad = A / (W % (yi - Ax));
         if (norm_grad<T1>(ngrad,yi,W) < 1e-10) {
             cout << "Terminating early due to zero gradient." << endl;
@@ -89,6 +91,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,
         Col<CxT1> oldgrad = ngrad;
         oldinprod = newinprod;
         Col<CxT1> temp = conj(ddir).eval();
+
         // Check if descent direction
         if (as_scalar(real(dot_double(temp, ngrad))) < 0) {
             cout << " Warning descent direction not negative" << endl;
@@ -116,8 +119,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,
               if (as_scalar(real(dot_double(ngrad,ngrad))) < 1e-10) {
                 cout << " Found exact solution" << endl;
                   return x;
-              }
-              else {
+              } else {
                 cout << "inf denom" << endl;
                 return x;
               }
@@ -129,7 +131,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,
             pdot = as_scalar(real(dot_double(temp,pgrad)));
 
             stepIntermediate = (-dAWr + step * dAWAd + pdot) / denom;
-            step = step - conv_to<T1>::from(stepIntermediate.eval());
+            step = step - as_scalar(stepIntermediate.eval());
         }
         
         // Check downhill direction

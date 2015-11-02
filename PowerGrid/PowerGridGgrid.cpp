@@ -74,7 +74,7 @@ int main(int argc, char** argv)
             cerr << e << endl;
             return 1;
         }
-        int test = test_SpeedCompareGgrid<double>(testPath, Nx, Ny, Nz, NL, Niter, Ncoils, Nshots, Beta);
+        int test = test_SpeedCompareGgrid<float>(testPath, Nx, Ny, Nz, NL, Niter, Ncoils, Nshots, Beta);
 
 
     }

@@ -16,6 +16,15 @@ class DWICGMC {
 public:
     DWICGMC();
 
+    ~DWICGMC() {
+
+        for (uword jj = 0; jj < Ns; jj++) {
+            delete AObj[jj];
+            delete G[jj];
+        }
+        delete[] AObj;
+        delete[] G;
+    }
     //Class variables go here
     uword Nd = 0; //Data size  (the size of one gdft or ggrid object, length of a single shot)
     uword Ni = 0; //Image size
@@ -37,7 +46,8 @@ public:
     CxT1 i = CxT1(0., 1.);
     uword type = 1; // 2 for min max time seg and 1 for Hanning
     uword L = 20;
-
+    Ggrid <T1> **G = NULL;
+    FieldCorrection <T1, Ggrid<T1>> **AObj = NULL;
 
     //Class constructor
     DWICGMC(Col <T1> kx, Col <T1> ky, Col <T1> kz, uword nx, uword ny, uword nz, uword nc, Col <T1> t,
@@ -85,6 +95,19 @@ public:
         Iy = vectorise(iy);
         Iz = vectorise(iz);
 
+        G = new Ggrid <T1> *[Ns];
+        AObj = new FieldCorrection <T1, Ggrid<T1>> *[Ns];
+
+        // Initialize the field correction and G objects we need for this reconstruction
+        for (uword jj = 0; jj < Ns; jj++) {
+
+            G[jj] = new Ggrid<T1>(Nd, 2.0, Nx, Ny, Nz, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz);
+            AObj[jj] = new FieldCorrection <T1, Ggrid<T1>>(*G[jj], vectorise(FMap), vectorise(Tvec.col(jj)),
+                                                           (uword) Nd, (uword)(Nx * Ny * Nz), (uword) L, type,
+                                                           (uword) 1);
+
+        }
+
     }
 
     //Overloaded operators go here
@@ -97,10 +120,12 @@ public:
         Mat <CxT1> temp;
         Mat <T1> temp2;
         for (unsigned int jj = 0; jj < Ns; jj++) {
-
+            /*
             Ggrid <T1>*  G = new Ggrid<T1>(Nd, 2.0, Nx, Ny, Nz, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz);
             FieldCorrection<T1,Ggrid<T1>>*  AObj = new FieldCorrection<T1,Ggrid<T1>>(*G, vectorise(FMap), vectorise(Tvec.col(jj)), (uword)Nd, (uword)(Nx * Ny * Nz), (uword)L,
                                                  type , (uword) 1);
+                                                 */
+            /*
             std::cout << "A address = " << &AObj << std::endl;
             std::cout << "Nd = " << Nd << std::endl;
             std::cout << "NxNyNz = " << (uword)(Nx * Ny * Nz) << std::endl;
@@ -108,12 +133,13 @@ public:
             std::cout << "A.n2 = " << AObj->n2 << std::endl;
             std::cout << "A.L = " << AObj->L << std::endl;
             std::cout << "A.Nshots = " << AObj->Nshots << std::endl;
+             */
 
             for (unsigned int ii = 0; ii < Nc; ii++) {
-                outData.col(jj + ii * Ns) = (*AObj) * (d % (SMap.col(ii) % exp(-i * (PMap.col(jj)))));
+                outData.col(jj + ii * Ns) = (*AObj[jj]) * (d % (SMap.col(ii) % exp(-i * (PMap.col(jj)))));
             }
-            delete AObj;
-            delete G;
+            //delete AObj;
+            //delete G;
         }
         //equivalent to returning col(output) in MATLAB with IRT
         return vectorise(outData);
@@ -130,22 +156,26 @@ public:
 
             //Use grid or DFT?
             //Gdft<T1> G(Nd, Ni, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz,FMap, vectorise(Tvec.col(jj)));
+            /*
             Ggrid <T1>* G = new Ggrid<T1>(Nd, 2.0, Nx, Ny, Nz, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz);
             FieldCorrection <T1, Ggrid<T1>>* AObj = new FieldCorrection<T1,Ggrid<T1>>(*G, vectorise(FMap), vectorise(Tvec.col(jj)), Nd, Nx * Ny * Nz, L, type);
+             */
 
             for (unsigned int ii = 0; ii < Nc; ii++) {
 
-                outData += conj(SMap.col(ii) % exp(-i * (PMap.col(jj)))) % ((*AObj) / inData.col(jj + ii * Ns));
+                outData += conj(SMap.col(ii) % exp(-i * (PMap.col(jj)))) % ((*AObj[jj]) / inData.col(jj + ii * Ns));
 
             }
-            delete AObj;
-            delete G;
+            //delete AObj;
+            //delete G;
         }
 
         //equivalent to returning col(output) in MATLAB with IRT
         return vectorise(outData);
 
     }
+
+
 };
 
 #endif

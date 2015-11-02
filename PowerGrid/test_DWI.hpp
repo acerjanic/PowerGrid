@@ -90,7 +90,7 @@ int test_DWI(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter
     Col<T1> W;
     //W = eye<sp_mat<T1>>(A.n1,A.n1); // Should be the size of k-space data: Is it right?
     //W=1.0;
-	W = ones(nro*nc);
+    W.ones(nro * nc);
 
     cout << "Runing pwls with ggrid" << endl;
     Col<CxT1> test_DWI_img;

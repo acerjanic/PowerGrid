@@ -204,11 +204,11 @@ public:
 
     CxT1 Denom(const Col<CxT1>& ddir,const Col<CxT1>& x) const
     {
-
 	    Col <CxT1> Cdir = zeros<Col<CxT1 >> (ddir.n_rows);
         Col <CxT1> Cx = zeros< Col < CxT1 >>(ddir.n_rows);
         CxT1 penal = 0;
         CxT1 temp;
+        CxT1 cxBeta = (this->Beta, 0);
         uword nd = 0;
         if(this->Nz == 1) {
             nd = 2;
@@ -224,10 +224,8 @@ public:
             penal += temp;
         }
 	    //cout << "Beta = " << Beta << endl;
-        return this->Beta*penal;
+        return penal * cxBeta;
     }
-
-
 
 };
 

@@ -165,6 +165,8 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 	Col <CxT1> test_pwls;
 	test_pwls = solve_pwls_pcg<T1, SENSE<T1, FieldCorrection<T1, Ggrid<T1>>>, QuadPenalty<T1>>(xinit, Sg, W, data, R,
 			niter);
+	//test_pwls = Sg/data;
+	//test_pwls = Sg*test_pwls;
 	savemat(testPath+"test_pwls.mat", "img", test_pwls);
 /*
     cout << "Runing pwls with ggrid" << endl;

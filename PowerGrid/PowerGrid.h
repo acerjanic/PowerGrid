@@ -8,14 +8,14 @@
 
 #ifndef PowerGrid_PowerGrid_h
 #define PowerGrid_PowerGrid_h
-//#define ARMA_NO_DEBUG // Disable this comment only for release.
+#define ARMA_NO_DEBUG // Disable this comment only for release.
 #include <iostream>
 #include <cmath>
 #include <string>
 #include "armadillo"
 
 //Support Headers for making it easier to work with Armadillo and Matio.
-#include "../Support/CeempleComplex.h"
+//#include "../Support/CeempleComplex.h"
 #include "../Support/CeempleArmadillo.h"
 #include "../Support/CeempleMatio.h"
 #include "impatientTypes.h"

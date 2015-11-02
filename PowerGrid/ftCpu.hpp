@@ -221,9 +221,10 @@ kziztpi, kx_i, ky_i, kz_i, t, idata_r, idata_i)
             expr = (kxtpi * ix[j] + kytpi * iy[j] + kztpi * iz[j] +
                     (FM[j] * myti));
 
-            cosexpr = COS(expr); sinexpr = SIN(expr);
+            //cosexpr = COS(expr); sinexpr = SIN(expr);
 
-            //cosexpr = cosf(expr); sinexpr = sinf(expr);
+            cosexpr = cosf(expr);
+            sinexpr = sinf(expr);
 
             sumr += (cosexpr * idata_r[j]) + (sinexpr * idata_i[j]);
             sumi += (-sinexpr * idata_r[j]) + (cosexpr * idata_i[j]);
@@ -298,9 +299,10 @@ fm, kdata_r, kdata_i)
                     ky[i] * itraj_y_tpi + kz[i] * itraj_z_tpi +
                     (myfmj * t[i]));
 
-            cosexpr = COS(expr); sinexpr = SIN(expr);
+            //cosexpr = COS(expr); sinexpr = SIN(expr);
 
-            //cosexpr = cosf(expr); sinexpr = sinf(expr);
+            cosexpr = cosf(expr);
+            sinexpr = sinf(expr);
 
             sumr += (cosexpr * kdata_r[i]) - (sinexpr * kdata_i[i]);
             sumi += (sinexpr * kdata_r[i]) + (cosexpr * kdata_i[i]);

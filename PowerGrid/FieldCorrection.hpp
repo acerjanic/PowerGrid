@@ -167,6 +167,7 @@ public:
 			    AA = repmat(tempAA, Nshots, 1);
 		    }
 	    }
+		savemat("aamat.mat", "AA", vectorise(AA));
 		cout << "Exiting class constructor." << endl;
     }
 
@@ -184,7 +185,7 @@ public:
 	    Col <CxT1> outData = zeros<Col<CxT1 >> (this->n1);
 		//cout << "OutData size = " << this->n1 << endl;
 	    Col <CxT1> Wo;
-
+		//uvec dataMaskTrimmed;
 	    //loop through time segments
 	    for (unsigned int ii = 0; ii<this->L; ii++) {
 		    //cout << "Entering time segmentation loop" << endl;
@@ -192,8 +193,12 @@ public:
 		    Wo = exp(-i*(this->fieldMap)*((ii)*this->tau+this->T_min));
 
 		    //perform multiplication by the object and sum up the time segments
-		    outData += (this->AA.col(ii))%(*G*(Wo%d));
+			//outData += (this->AA.col(ii))%(*G*(Wo%d));
 
+			//dataMaskTrimmed = find(abs(this->AA.col(ii)) > 0);
+			//std::cout << "Length dataMaskTrimmed = " << dataMaskTrimmed.n_rows << std::endl;
+
+			outData += (this->AA.col(ii)) % ((*G).trimmedForwardOp(Wo % d, this->AA.col(ii)));
 
 	    }
 	    return outData;
@@ -201,7 +206,7 @@ public:
 
     Col <CxT1> operator/(const Col <CxT1>& d) const
     {
-
+		Tobj *G = this->obj;
 	    //output is the size of the image
 	    Col <CxT1> outData = zeros<Col<CxT1 >> (this->n2);
 	    Col <CxT1> Wo;
@@ -212,7 +217,7 @@ public:
 		    Wo = exp(i*(this->fieldMap)*((ii)*this->tau+this->T_min));
 
 		    //perform adjoint operation by the object and sum up the time segments
-		    outData += Wo%((*this->obj)/(AA.col(ii)%d));
+			outData += Wo % ((*G).trimmedAdjointOp((AA.col(ii) % d), AA.col(ii)));
 
 	    }
 

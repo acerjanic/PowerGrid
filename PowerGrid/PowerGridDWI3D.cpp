@@ -73,7 +73,7 @@ int main(int argc, char** argv)
         }
 
         //int test = test_SpeedCompareGgrid<double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils);
-		int test = test_DWI<double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils);
+        int test = test_DWI<float>(testPath, Nx, Ny, Nz, NL, Niter, Ncoils);
 
     }
 
