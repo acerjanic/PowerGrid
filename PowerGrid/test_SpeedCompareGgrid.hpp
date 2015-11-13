@@ -118,7 +118,7 @@ int test_SpeedCompareGgrid(string dataPath, uword Nx, uword Ny, uword Nz, uword 
 	//Col <CxT1> data;
 	//data.copy_size(data_tmp);
 	//cast_data(data_tmp,data);
-	savemat(testPath+"datawrite.mat", "data", data);
+	//savemat(testPath+"datawrite.mat", "data", data);
 
 	// Variables needed for the recon: Penalty object, num of iterations
 	//ucube ReconMask(Nx,Ny,Nz);

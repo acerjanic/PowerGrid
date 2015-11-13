@@ -20,7 +20,7 @@ using namespace PowerGrid;
 
 int main(int argc, char** argv)
 {
-	std::string rawDataFilePath, outputImageFilePath, senseMapFilePath, fieldMapFilePath, precisionString, fieldCorrectionInterp;
+	std::string rawDataFilePath, outputImageFilePath, senseMapFilePath, fieldMapFilePath, precisionString, fieldCorrectionInterp, rawDataNavFilePath;
 	uword Nx, Ny, Nz, NShots = 1, type, L = 0, NIter = 10;
 	double beta = 0.0;
 
@@ -28,6 +28,7 @@ int main(int argc, char** argv)
 	desc.add_options()
 			("help,h", "produce help message")
 			("inputData,i", po::value<std::string>(&rawDataFilePath)->required(), "input ISMRMRD Raw Data file")
+			("inputDataNav,-N", po::value<std::string>(&rawDataNavFilePath), "input ISMRMRD Navigator Raw Data")
 			("outputImage,o", po::value<std::string>(&outputImageFilePath)->required(), "output ISMRMRD Image file")
 			("SENSEMap,S", po::value<std::string>(&senseMapFilePath),
 			 "Enable SENSE recon with the specified SENSE map in ISMRMRD image format")
@@ -98,7 +99,7 @@ int main(int argc, char** argv)
 
 	uword numAcq = d->getNumberOfAcquisitions();
 
-	//Grab first acquisiton to get paramters (We assume all subsequent acquisitions will be similar).
+	//Grab first acquisiton to get parameters (We assume all subsequent acquisitions will be similar).
 	ISMRMRD::Acquisition acq;
 	d->readAcquisition(0, acq);
 	uword nro = acq.number_of_samples();

@@ -17,7 +17,9 @@ public:
     //Default Class Constructor and Destructor
     Gdft();
     //Class Constructor
-    Gdft(uword a, uword b, const Col<T1> &k1, const Col<T1> &k2, const Col<T1> &k3, const Col<T1> &i1, const Col<T1> &i2, const Col<T1> &i3,const Col<T1> &f1, const Col<T1> &t1) //Change these argumenst as you need to setup the object
+    Gdft(uword a, uword b, const Col <T1> &k1, const Col <T1> &k2, const Col <T1> &k3, const Col <T1> &i1,
+         const Col <T1> &i2, const Col <T1> &i3, const Col <T1> &f1,
+         const Col <T1> &t1) //Change these arguments as you need to setup the object
     {
         n1 = a;
         n2 = b;

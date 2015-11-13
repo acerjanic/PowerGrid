@@ -6,25 +6,26 @@
 //  Copyright (c) 2015 MRFIL. All rights reserved.
 //
 
-#ifndef PowerGrid_DWICGMC_hpp
-#define PowerGrid_DWICGMC_hpp
+#ifndef PowerGrid_DWICGMCDFT_hpp
+#define PowerGrid_DWICGMCDFT_hpp
 using namespace arma;
 
 template<typename T1>
-class DWICGMC {
+class DWICGMCDFT {
     typedef std::complex <T1> CxT1;
 public:
-    DWICGMC();
+    DWICGMCDFT();
 
-    ~DWICGMC() {
+    ~DWICGMCDFT() {
 
         for (uword jj = 0; jj < Ns; jj++) {
             delete AObj[jj];
-            delete G[jj];
+            //delete G[jj];
         }
         delete[] AObj;
-        delete[] G;
+        //delete[] G;
     }
+
     //Class variables go here
     uword Nd = 0; //Data size  (the size of one gdft or ggrid object, length of a single shot)
     uword Ni = 0; //Image size
@@ -46,12 +47,12 @@ public:
     CxT1 i = CxT1(0., 1.);
     uword type = 1; // 2 for min max time seg and 1 for Hanning
     uword L = 20;
-    Ggrid <T1> **G = NULL;
-    FieldCorrection <T1, Ggrid<T1>> **AObj = NULL;
+    Gdft <T1> **AObj = NULL;
+    //FieldCorrection <T1, Ggrid<T1>> **AObj = NULL;
 
     //Class constructor
-    DWICGMC(Col <T1> kx, Col <T1> ky, Col <T1> kz, uword nx, uword ny, uword nz, uword nc, Col <T1> t,
-            Col <CxT1> SENSEmap, Col <T1> FieldMap, Col <T1> ShotPhaseMap) {
+    DWICGMCDFT(Col <T1> kx, Col <T1> ky, Col <T1> kz, uword nx, uword ny, uword nz, uword nc, Col <T1> t,
+               Col <CxT1> SENSEmap, Col <T1> FieldMap, Col <T1> ShotPhaseMap) {
         Ni = nx * ny * nz;
         Nc = nc;
         Ns = ShotPhaseMap.n_elem / Ni;
@@ -95,16 +96,17 @@ public:
         Iy = vectorise(iy);
         Iz = vectorise(iz);
 
-        G = new Ggrid <T1> *[Ns];
-        AObj = new FieldCorrection <T1, Ggrid<T1>> *[Ns];
+        AObj = new Gdft <T1> *[Ns];
+        //AObj = new FieldCorrection <T1, Ggrid<T1>> *[Ns];
 
         // Initialize the field correction and G objects we need for this reconstruction
         for (uword jj = 0; jj < Ns; jj++) {
 
-            G[jj] = new Ggrid<T1>(Nd, 2.0, Nx, Ny, Nz, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz);
-            AObj[jj] = new FieldCorrection <T1, Ggrid<T1>>(*G[jj], vectorise(FMap), vectorise(Tvec.col(jj)),
-                                                           (uword) Nd, (uword)(Nx * Ny * Nz), (uword) L, type,
-                                                           (uword) 1);
+            AObj[jj] = new Gdft<T1>(Nd, Nx * Ny * Nz, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz, vectorise(FMap),
+                                    vectorise(Tvec.col(jj)));
+            //AObj[jj] = new FieldCorrection <T1, Ggrid<T1>>(*G[jj], vectorise(FMap), vectorise(Tvec.col(jj)),
+            //                                               (uword) Nd, (uword)(Nx * Ny * Nz), (uword) L, type,
+            //                                               (uword) 1);
 
         }
 
@@ -138,6 +140,7 @@ public:
             for (unsigned int ii = 0; ii < Nc; ii++) {
                 outData.col(jj + ii * Ns) = (*AObj[jj]) * (d % (SMap.col(ii) % exp(-i * (PMap.col(jj)))));
                 std::cout << "Processed shot # " << jj << " coil # " << ii << std::endl;
+
             }
             //delete AObj;
             //delete G;

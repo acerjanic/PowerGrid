@@ -68,15 +68,19 @@ set(POWERGRID_TEST_DWI3D
 		./PowerGrid/config.cxx
 )
 
+set(POWERGRID_TEST_DWI3DDFT
+		./PowerGrid/PowerGridDWI3DDFT.cpp
+		./PowerGrid/config.cxx
+		)
 
 add_executable(PowerGridGdft ${POWERGRID_TEST_GDFT})
 add_executable(PowerGridGgrid ${POWERGRID_TEST_GGRID})
 add_executable(PowerGridDWI3D ${POWERGRID_TEST_DWI3D})
-
+add_executable(PowerGridDWI3DDFT ${POWERGRID_TEST_DWI3DDFT})
 target_link_libraries(PowerGridGdft ${LIBS})
 target_link_libraries(PowerGridGgrid ${LIBS})
 target_link_libraries(PowerGridDWI3D ${LIBS})
-
+target_link_libraries(PowerGridDWI3DDFT ${LIBS})
 if (ISMRMRD)
 	set(POWERGRID_ISMRMRD
 			./PowerGrid/PowerGridIsmrmrd.cpp
@@ -94,12 +98,13 @@ if(APPLE)
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lgfortran")
 else()
 	if(CMAKE_COMPILER_IS_GNUCXX)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native ")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -m
+		arch=native ")
 	else()
 		if(OPENACC)
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gopt -fast -Minfo=accel -ta=tesla -fpermissive -pgf77libs")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gopt -O -Minfo=accel -ta=multicore -fpermissive -pgf77libs")
 		else()
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gopt -fast -fpermissive -pgf77libs ")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gopt -O -fpermissive -pgf77libs ")
 		endif()
 	endif()
 endif()

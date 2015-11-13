@@ -64,6 +64,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,
         //cout << "About to calculate the gradient of the cost function" << endl;
         ngrad = A / (W % (yi - Ax));
         if (norm_grad<T1>(ngrad,yi,W) < 1e-10) {
+            //savemat("testgrad.mat","ngrad",ngrad);
             cout << "Terminating early due to zero gradient." << endl;
             return x;
         }
@@ -100,6 +101,8 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,
         
         // Step size in search direction
         Adir = A * ddir;
+        //savemat("testAdir.mat","Adir",Adir);
+
         WAdir = W % Adir;
         temp = conj(Adir).eval();
         dAWAd = as_scalar(real(dot_double(temp,WAdir)));
@@ -116,8 +119,10 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const& A,
             denom = dAWAd + pdenom;
             
             if (std::abs(denom) < 1e-10 || std::abs(denom) > 1e25) {
-              if (as_scalar(real(dot_double(ngrad,ngrad))) < 1e-10) {
-                cout << " Found exact solution" << endl;
+                //if (as_scalar(real(dot_double(conj(ngrad),ngrad))) < 1e-10) {
+                if (norm(ngrad, 2) == 0) {
+                    //savemat("testgrad.mat","ngrad",ngrad);
+                    cout << " Found exact solution" << endl;
                   return x;
               } else {
                 cout << "inf denom" << endl;

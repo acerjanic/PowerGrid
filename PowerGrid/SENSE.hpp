@@ -45,8 +45,9 @@ public:
 	    Mat <CxT1> outData = zeros<Mat<CxT1 >> (this->n1, this->nc);
 	    //Col<CxT1> temp;
 	    //In SENSE we store coil data using the columns of the data matrix, and we weight the data by the coil sensitivies from the SENSE map
+
 	    for (unsigned int ii = 0; ii<this->nc; ii++) {
-		    //temp = d%(this->SMap.col(ii));
+
 		    outData.col(ii) = (*this->G_obj)*(d%(this->SMap.col(ii)));
 
 	    }
@@ -63,15 +64,13 @@ public:
 	    Mat <CxT1> inData = reshape(d, this->n1, this->nc);
 
 	    Col <CxT1> outData = zeros<Col<CxT1 >> (this->n2);
+		//Mat <CxT1> coilImages(n2,nc);
 
 	    for (unsigned int ii = 0; ii<this->nc; ii++) {
-
+			//coilImages.col(ii) = (*this->G_obj)/inData.col(ii);
 		    outData += conj(this->SMap.col(ii))%((*this->G_obj)/inData.col(ii));
-		    // temp = ((*this->G_obj)/data);
-		    // savemat("/shared/mrfil-data/data/PowerGridTest/64_64_16_4coils/coil_img_" + std::to_string(ii) + ".mat","img",temp);
-
 	    }
-
+		//outData = sum(conj(SMap)%coilImages,2);
 	    //equivalent to returning col(output) in MATLAB with IRT
 	    return vectorise(outData);
 
