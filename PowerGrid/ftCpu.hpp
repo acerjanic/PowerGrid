@@ -174,57 +174,27 @@ ftCpu(T1 *kdata_r, T1 *kdata_i,
       const int num_k, const int num_i
       )
 {
-    //startMriTimer(getMriTimer()->timer_ftCpu);
     
     T1 sumr = 0, sumi = 0, tpi = 0, kzdeltaz = 0, kziztpi = 0,
     expr = 0, cosexpr = 0, sinexpr = 0, t_tpi = 0,
     kx_N = 0, ky_N = 0, kxtpi = 0, kytpi = 0, kztpi = 0;
-    int i = 0, j = 0;
-    
-    //--------------------------------------------------------------------
-    //                         Initialization
-    //--------------------------------------------------------------------
-    tpi = 2 * MRI_PI;
+    int i = 0, j = 0; tpi = 2 * MRI_PI;
 
-    //kzdeltaz = kz[0] * MRI_DELTAZ;
-    //kziztpi  = kz[0] * iz[0] * tpi;
-
-
-    
-    //--------------------------------------------------------------------
-    //                    Fourier Transform:       Gx=G * x
-    //--------------------------------------------------------------------
     // NON-conjugate transpose of G
-#if 0 //USE_OPENMP // FIXME: We can choose either this or the inner loop.
-#pragma omp parallel for
-#endif
 #pragma acc parallel loop
     for (i = 0; i < num_k; i++) { // i is the time point in k-space
         sumr = 0.0;
         sumi = 0.0;
-        
-        //t_tpi = t[i] / tpi;
-        //kx_N = kx[i] / MRI_NN; // MRI_NN for normalized kx
-        //ky_N = ky[i] / MRI_NN;
-        kxtpi = kx[i] * tpi;
-        kytpi = ky[i] * tpi;
-        kztpi = kz[i]  * tpi;
-        
-#if USE_OPENMP
-#pragma omp parallel for default(none) reduction(+:sumr, sumi) \
-private(expr, cosexpr, sinexpr) \
-shared(i, kx_N, ky_N, kzdeltaz, t_tpi, fm, kxtpi, kytpi, \
-kziztpi, kx_i, ky_i, kz_i, t, idata_r, idata_i)
-#endif
+
+        kxtpi = kx[i] * 2 * MRI_PI;
+        kytpi = ky[i] * 2 * MRI_PI;
+        kztpi = kz[i] * 2 * MRI_PI;
+    
         T1 myti = t[i];
         for (j = 0; j < num_i; j++) { // j is the pixel point in image-space
-            expr = (kxtpi * ix[j] + kytpi * iy[j] + kztpi * iz[j] +
-                    (FM[j] * myti));
+            expr = (kxtpi * ix[j] + kytpi * iy[j] + kztpi * iz[j] + (FM[j] * myti));
 
-            //cosexpr = COS(expr); sinexpr = SIN(expr);
-
-            cosexpr = cosf(expr);
-            sinexpr = sinf(expr);
+            cosexpr = cosf(expr);  sinexpr = sinf(expr);
 
             sumr += (cosexpr * idata_r[j]) + (sinexpr * idata_i[j]);
             sumi += (-sinexpr * idata_r[j]) + (cosexpr * idata_i[j]);
@@ -232,10 +202,7 @@ kziztpi, kx_i, ky_i, kz_i, t, idata_r, idata_i)
         }
         kdata_r[i] = sumr; // Real part
         kdata_i[i] = sumi; // Imaginary part
-        //cout << "kdata[" << i << "] = " << sumr << " + 1j*" << sumi << endl ;
     }
-
-    //stopMriTimer(getMriTimer()->timer_ftCpu);
 }
 
 /*===========================================================================*/

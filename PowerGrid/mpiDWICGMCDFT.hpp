@@ -1,22 +1,22 @@
 //
-//  DWI_CGMC.hpp
+//  mpiDWICGMCDFT.hpp
 //  PowerGrid
 //
 //  Created by Joe Holtrop on 4/22/15.
 //  Copyright (c) 2015 MRFIL. All rights reserved.
 //
 
-#ifndef PowerGrid_DWICGMCDFT_hpp
-#define PowerGrid_DWICGMCDFT_hpp
+#ifndef PowerGrid_mpiDWICGMCDFT_hpp
+#define PowerGrid_mpiDWICGMCDFT_hpp
 using namespace arma;
 
 template<typename T1>
-class DWICGMCDFT {
+class mpiDWICGMCDFT {
     typedef std::complex <T1> CxT1;
 public:
-    DWICGMCDFT();
+    mpiDWICGMCDFT();
 
-    ~DWICGMCDFT() {
+    ~mpiDWICGMCDFT() {
 
         for (uword jj = 0; jj < Ns; jj++) {
             delete AObj[jj];
@@ -51,8 +51,8 @@ public:
     //FieldCorrection <T1, Ggrid<T1>> **AObj = NULL;
 
     //Class constructor
-    DWICGMCDFT(Col <T1> kx, Col <T1> ky, Col <T1> kz, uword nx, uword ny, uword nz, uword nc, Col <T1> t,
-               Col <CxT1> SENSEmap, Col <T1> FieldMap, Col <T1> ShotPhaseMap) {
+    mpiDWICGMCDFT(Col <T1> kx, Col <T1> ky, Col <T1> kz, uword nx, uword ny, uword nz, uword nc, Col <T1> t,
+               Col <CxT1> SENSEmap, Col <T1> FieldMap, Col <T1> ShotPhaseMap, mpi::environment en, mpi::communicator wor) {
         Ni = nx * ny * nz;
         Nc = nc;
         Ns = ShotPhaseMap.n_elem / Ni;
@@ -71,7 +71,8 @@ public:
         Ny = ny;
         Nz = nz;
         Tvec = reshape(t, Nd, Ns);
-
+        env = en;
+        world = wor;
 
         Cube <T1> ix;
         ix.zeros(Nx, Ny, Nz);
@@ -96,11 +97,11 @@ public:
         Iy = vectorise(iy);
         Iz = vectorise(iz);
 
-        AObj = new Gdft <T1> *[Ns];
+        //AObj = new Gdft <T1> *[Ns];
         //AObj = new FieldCorrection <T1, Ggrid<T1>> *[Ns];
-
+        //AObj = new Gdft <T1>;
         // Initialize the field correction and G objects we need for this reconstruction
-        for (uword jj = 0; jj < Ns; jj++) {
+        /*for (uword jj = 0; jj < Ns; jj++) {
 
             AObj[jj] = new Gdft<T1>(Nd, Nx * Ny * Nz, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz, vectorise(FMap),
                                     vectorise(Tvec.col(jj)));
@@ -108,7 +109,12 @@ public:
             //                                               (uword) Nd, (uword)(Nx * Ny * Nz), (uword) L, type,
             //                                               (uword) 1);
 
-        }
+        } */
+        //This gives us the rank (index) of the process in the collective MPI space.
+        //The process will only calculate shot jj of the acquisition.
+        uword ShotRank = world.rank();
+        uword numShots = Ns/word.size();
+        AObj = new Gdft<T1>(Nd, Nx * Ny * Nz, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz, vectorise(FMap));
 
     }
 
@@ -119,33 +125,35 @@ public:
     Col <CxT1> operator*(const Col <CxT1> &d) const {
 
         Mat <CxT1> outData = zeros < Mat < CxT1 >> (Nd, Ns * Nc);
-        Mat <CxT1> temp;
-        Mat <T1> temp2;
-        //Shot loop. Each shot has it's own kspace trajectory
-        for (unsigned int jj = 0; jj < Ns; jj++) {
-            /*
-            Ggrid <T1>*  G = new Ggrid<T1>(Nd, 2.0, Nx, Ny, Nz, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz);
-            FieldCorrection<T1,Ggrid<T1>>*  AObj = new FieldCorrection<T1,Ggrid<T1>>(*G, vectorise(FMap), vectorise(Tvec.col(jj)), (uword)Nd, (uword)(Nx * Ny * Nz), (uword)L,
-                                                 type , (uword) 1);
-                                                 */
-            /*
-            std::cout << "A address = " << &AObj << std::endl;
-            std::cout << "Nd = " << Nd << std::endl;
-            std::cout << "NxNyNz = " << (uword)(Nx * Ny * Nz) << std::endl;
-            std::cout << "A.n1 = " << AObj->n1 << std::endl;
-            std::cout << "A.n2 = " << AObj->n2 << std::endl;
-            std::cout << "A.L = " << AObj->L << std::endl;
-            std::cout << "A.Nshots = " << AObj->Nshots << std::endl;
-             */
-            //Coil loop. Each coil exists for each shot, so we need to work with these.
-            for (unsigned int ii = 0; ii < Nc; ii++) {
-                outData.col(jj + ii * Ns) = (*AObj[jj]) * (d % (SMap.col(ii) % exp(-i * (PMap.col(jj)))));
-                std::cout << "Processed shot # " << jj << " coil # " << ii << std::endl;
+        Mat <CxT1> tempOutData = zeros < Mat < CxT1 >> (Nd, Ns);
 
+        //Shot loop. Each shot has it's own kspace trajectory
+        //for (unsigned int jj = 0; jj < Ns; jj++) {
+
+            //Coil loop. Each coil exists for each shot, so we need to work with these.
+            for (uword ii = 0; ii < Nc; ii++) {
+                tempOutData.col(ii) = AObj * (d % (SMap.col(ii) % exp(-i * (PMap.col(ShotRank)))));
             }
-            //delete AObj;
-            //delete G;
+
+        //}
+        //Now let's do some MPI stuff here.
+        if(world.rank() == 0) {
+            std::vector<Mat <CxT1>> OutDataGather;
+            // Collect all the data into OutDataGather an std::vector collective
+            mpi::gather<Col<CxT1>>(world,tempOutData,OutDataGather,0);
+            for(uword jj = 0; jj < Ns; jj++) {
+                for(ii = 0; ii < Nc; ii++) {
+                    //Now we will manually reduce the data by adding across the elements.
+                    tempOutData = OutDataGather[jj];
+
+                }
+            }
+
+        } else {
+            mpi::gather<Col<CxT1>>(world,tempOutData,0);
+
         }
+
         //equivalent to returning col(output) in MATLAB with IRT
         return vectorise(outData);
     }
@@ -155,27 +163,35 @@ public:
 
         Mat <CxT1> inData = reshape(d, Nd, Ns * Nc);
 
+        //Col <CxT1> tempOutData = zeros < Col < CxT1 >> (Ni);
         Col <CxT1> outData = zeros < Col < CxT1 >> (Ni);
         //Shot Loop. Each shot has it's own k-space trajectory
-        for (unsigned int jj = 0; jj < Ns; jj++) {
+        //for (unsigned int jj = 0; jj < Ns; jj++) {
 
-            //Use grid or DFT?
-            //Gdft<T1> G(Nd, Ni, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz,FMap, vectorise(Tvec.col(jj)));
-            /*
-            Ggrid <T1>* G = new Ggrid<T1>(Nd, 2.0, Nx, Ny, Nz, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz);
-            FieldCorrection <T1, Ggrid<T1>>* AObj = new FieldCorrection<T1,Ggrid<T1>>(*G, vectorise(FMap), vectorise(Tvec.col(jj)), Nd, Nx * Ny * Nz, L, type);
-             */
             //Coil Loop - for each shot we have a full set of coil data.
             for (unsigned int ii = 0; ii < Nc; ii++) {
-
-                outData += conj(SMap.col(ii) % exp(-i * (PMap.col(jj)))) % ((*AObj[jj]) / inData.col(jj + ii * Ns));
-                std::cout << "Processed shot # " << jj << " coil # " << ii << std::endl;
-
+                outData += conj(SMap.col(ii) % exp(-i * (PMap.col(ShotRank)))) % (AObj / inData.col(ShotRank + ii * Ns));
+                //std::cout << "Processed shot # " << jj << " coil # " << ii << std::endl;
             }
-            //delete AObj;
-            //delete G;
-        }
 
+        //}
+        if(world.rank() == 0) {
+            std::vector<Col<CxT1>> OutDataGather;
+            // Collect all the data into OutDataGather an std::vector collective
+            mpi::gather<Col<CxT1>>(world,outData,OutDataGather,0);
+            for(uword jj = 1; jj < Ns; jj++) {
+                //Skip the zeroth rank because that is the outData we started with on this processor.
+                //Now we will manually reduce the data by adding across the elements.
+                outData += OutDataGather[jj];
+            }
+
+        } else {
+            mpi::gather<Col<CxT1>>(world,outData,0);
+
+        }
+        //Broadcast will send the data to all machines if the rank==0 and receive the broadcasted data from rank=0 to
+        // all other machines in the communicator, overwriting the outData value already there.
+        mpi::broadcast<Col<CxT1>>(world,outData,0);
         //equivalent to returning col(output) in MATLAB with IRT
         return vectorise(outData);
 
@@ -184,4 +200,4 @@ public:
 
 };
 
-#endif
+#endif //PowerGrid_mpiDWICGMCDFT_hpp

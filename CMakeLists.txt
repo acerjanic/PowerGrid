@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 project("PowerGrid" CXX)
 
 
-option(OPENACC "Enable OpenACC support" ON)
-option(ISMRMRD "Enable ISMRMRD Suppport" ON)
+option(OPENACC "Enable OpenACC support" OFF)
+option(ISMRMRD "Enable ISMRMRD Suppport" OFF)
+option(MPI "Enable MPI Support" ON)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED 1)
@@ -12,7 +13,7 @@ find_package(MATIO)
 include_directories(${MATIO_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${MATIO_LIBRARIES})
 set(BOOST_LIBRARYDIR /usr/lib/x86_64-linux-gnu/)
-find_package(Boost 1.43 COMPONENTS program_options)
+find_package(Boost 1.43 COMPONENTS program_options serialization mpi)
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
 include_directories(${Boost_INCLUDE_DIRS})
 
@@ -50,6 +51,7 @@ if(ISMRMRD)
     find_package(HDF5)
     include_directories(${HDF5_INCLUDE_DIRS})
 endif(ISMRMRD)
+
 set(LIBS ${LIBS} ${HDF5_C_LIBRARIES})
 set(LIBS ${LIBS} ${HDF5_CXX_LIBRARIES})
 
@@ -73,6 +75,7 @@ set(POWERGRID_TEST_DWI3DDFT
 		./PowerGrid/config.cxx
 		)
 
+
 add_executable(PowerGridGdft ${POWERGRID_TEST_GDFT})
 add_executable(PowerGridGgrid ${POWERGRID_TEST_GGRID})
 add_executable(PowerGridDWI3D ${POWERGRID_TEST_DWI3D})
@@ -92,14 +95,21 @@ if (ISMRMRD)
 	target_link_libraries(PowerGridIsmrmrd ${LIBS})
 
 endif (ISMRMRD)
+if(MPI)
+	set(mpi_POWERGRID_DWI3DDFT
+			./PowerGrid/mpiPowerGridDWI3DDFT.cpp
+			./PowerGrid/config.cxx
+			)
+	add_executable(mpiPowerGrid3DDFT ${mpi_POWERGRID_DWI3DDFT})
+	target_link_libraries(mpiPowerGrid3DDFT ${LIBS})
+endif(MPI)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/usr/include")
 if(APPLE)
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lgfortran")
 else()
 	if(CMAKE_COMPILER_IS_GNUCXX)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -m
-		arch=native ")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  ")
 	else()
 		if(OPENACC)
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gopt -O -Minfo=accel -ta=multicore -fpermissive -pgf77libs")
@@ -128,6 +138,6 @@ if(APPLE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -flto")
 endif(APPLE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -lfftw3")
-add_definitions(-D__STRICT_ANSI__)
+#add_definitions(-D__STRICT_ANSI__)
 #remove_definitions(_DARMA_NO_DEBUG)
-add_definitions(-DARMA_DONT_USE_CXX11)
+#add_definitions(-DARMA_DONT_USE_CXX11)

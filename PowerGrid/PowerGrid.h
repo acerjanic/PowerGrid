@@ -1,3 +1,4 @@
+
 //
 //  PowerGrid.h
 //  PowerGrid
@@ -58,6 +59,7 @@ namespace PowerGrid {
 #include "FieldCorrection.hpp"
 #include "DWICGMC.hpp"
 #include "DWICGMCDFT.hpp"
+#include "mpiDWICGMCDFT.hpp"
 #include "test_FieldCorrection.hpp"
 #include "test_3D.hpp"
 #include "test_DWI.hpp"
