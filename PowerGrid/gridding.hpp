@@ -17,22 +17,22 @@
 #include "fftGPU.hpp"
 #include "cufft.h"
 
-#define MIN std::min
-#define MAX std::max
-#define SQRT std::sqrt
-#define CEIL std::ceil
-#define FLOOR std::floor
-#define ABS std::abs
+#define MIN(a,b) std::min(a,b)
+#define MAX(a,b) std::max(a,b)
+#define SQRT(a) std::sqrt(a)
+#define CEIL(a) std::ceil(a)
+#define FLOOR(a) std::floor(a)
+#define ABS(a) std::abs(a)
 #else //CPU version
 
 #include "fftCPU.hpp"
 
-#define MIN std::min
-#define MAX std::max
-#define SQRT std::sqrt
-#define CEIL std::ceil
-#define FLOOR std::floor
-#define ABS std::abs
+#define MIN(a, b) std::min(a,b)
+#define MAX(a, b) std::max(a,b)
+#define SQRT(a) std::sqrt(a)
+#define CEIL(a) std::ceil(a)
+#define FLOOR(a) std::floor(a)
+#define ABS(a) std::abs(a)
 #endif
 
 using namespace arma;

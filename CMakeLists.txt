@@ -76,14 +76,14 @@ set(POWERGRID_TEST_DWI3DDFT
 		)
 
 
-add_executable(PowerGridGdft ${POWERGRID_TEST_GDFT})
-add_executable(PowerGridGgrid ${POWERGRID_TEST_GGRID})
-add_executable(PowerGridDWI3D ${POWERGRID_TEST_DWI3D})
-add_executable(PowerGridDWI3DDFT ${POWERGRID_TEST_DWI3DDFT})
-target_link_libraries(PowerGridGdft ${LIBS})
-target_link_libraries(PowerGridGgrid ${LIBS})
-target_link_libraries(PowerGridDWI3D ${LIBS})
-target_link_libraries(PowerGridDWI3DDFT ${LIBS})
+#add_executable(PowerGridGdft ${POWERGRID_TEST_GDFT})
+#add_executable(PowerGridGgrid ${POWERGRID_TEST_GGRID})
+#add_executable(PowerGridDWI3D ${POWERGRID_TEST_DWI3D})
+#add_executable(PowerGridDWI3DDFT ${POWERGRID_TEST_DWI3DDFT})
+#target_link_libraries(PowerGridGdft ${LIBS})
+#target_link_libraries(PowerGridGgrid ${LIBS})
+#target_link_libraries(PowerGridDWI3D ${LIBS})
+#target_link_libraries(PowerGridDWI3DDFT ${LIBS})
 if (ISMRMRD)
 	set(POWERGRID_ISMRMRD
 			./PowerGrid/PowerGridIsmrmrd.cpp
@@ -96,12 +96,18 @@ if (ISMRMRD)
 
 endif (ISMRMRD)
 if(MPI)
+	find_package(MPI)
+	include_directories(${MPI_CXX_INCLUDE_PATH})
 	set(mpi_POWERGRID_DWI3DDFT
 			./PowerGrid/mpiPowerGridDWI3DDFT.cpp
 			./PowerGrid/config.cxx
 			)
 	add_executable(mpiPowerGrid3DDFT ${mpi_POWERGRID_DWI3DDFT})
-	target_link_libraries(mpiPowerGrid3DDFT ${LIBS})
+	set(mpiLIBS ${LIBS})
+	set(mpiLIBS ${mpiLIBS} ${MPI_CXX_LIBRARIES})
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
+	SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS}  ${MPI_CXX_LINK_FLAGS}")
+	target_link_libraries(mpiPowerGrid3DDFT ${mpiLIBS})
 endif(MPI)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/usr/include")
@@ -109,7 +115,7 @@ if(APPLE)
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lgfortran")
 else()
 	if(CMAKE_COMPILER_IS_GNUCXX)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  ")
+		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  ")
 	else()
 		if(OPENACC)
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gopt -O -Minfo=accel -ta=multicore -fpermissive -pgf77libs")

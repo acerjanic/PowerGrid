@@ -7,10 +7,7 @@
 //
 
 #include "PowerGrid.h" //Project headers.
-#include "../Support/CeempleMatio.h" //Headers for using savemat and loadmat
-#include <boost/mpi/environment.hpp>
-#include <boost/mpi/communicator.hpp>
-#include <iostream>
+
 namespace mpi = boost::mpi;
 
 using namespace arma; //Armdillo stuff is in the arma namespace
@@ -19,7 +16,7 @@ using namespace PowerGrid;
 
 int main(int argc, char **argv) {
 
-    mpi::environment env;
+    mpi::environment env(argc, argv, true);
     mpi::communicator world;
 
     uword Nx, Ny, Nz, Niter = 1, NL = 1, Ncoils;
@@ -75,7 +72,7 @@ int main(int argc, char **argv) {
         }
 
         //int test = test_SpeedCompareGgrid<double>(testPath, Nx,Ny,Nz,NL,Niter,Ncoils);
-        int test = test_DWIDft<float>(testPath, Nx, Ny, Nz, NL, Niter, Ncoils);
+        int test = test_DWIDft<float>(testPath, Nx, Ny, Nz, NL, Niter, Ncoils, env, world);
 
     }
 

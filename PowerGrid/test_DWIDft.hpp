@@ -12,7 +12,7 @@
 #include "PowerGrid.h"
 
 using namespace arma;
-namespace mpi = boost::mpi;
+namespace bmpi = boost::mpi;
 
 template<typename T1>
 int test_DWIDft(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter, uword nc) {
@@ -103,7 +103,9 @@ int test_DWIDft(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword ni
 }
 
 //boost::mpi version of DWIDft reconstruction routine.
-int test_DWIDft(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter, uword nc, mpi::environment env, mpi::communicator world)
+template<typename T1>
+int test_DWIDft(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword niter, uword nc, bmpi::environment &env,
+                bmpi::communicator &world)
 {
     string testPath = dataPath;
     typedef complex<T1> CxT1;
@@ -157,7 +159,7 @@ int test_DWIDft(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword ni
     loadmat(testPath + "PMap.mat", "PMap", &PMap);
     //PMap.zeros();
     //The navigator phase is being referenced to zero
-    mpiDWICGMCDFT<T1> S_DWI(kx, ky, kz, Nx, Ny, Nz, nc, tvec, SMap, vectorise(FM), 0 - PMap);
+    mpiDWICGMCDFT<T1> S_DWI(kx, ky, kz, Nx, Ny, Nz, nc, tvec, SMap, vectorise(FM), 0 - PMap, env, world);
 
     cout << "loading data" << endl;
     Col < CxT1 > data;
@@ -181,9 +183,10 @@ int test_DWIDft(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword ni
 
     cout << "Runing pwls with ggrid" << endl;
     Col < CxT1 > test_DWI_img;
-    test_DWI_img = solve_pwls_pcg < T1, DWICGMCDFT<T1>, QuadPenalty < T1 >> (xinit, S_DWI, W, data, R, niter);
-    savemat(testPath + "test_DWICGMC.mat", "img", test_DWI_img);
-
+    test_DWI_img = solve_pwls_pcg < T1, mpiDWICGMCDFT<T1>, QuadPenalty < T1 >> (xinit, S_DWI, W, data, R, niter);
+    if (world.rank() == 0) {
+        savemat(testPath + "test_DWICGMC.mat", "img", test_DWI_img);
+    }
     return 0;
 
 }

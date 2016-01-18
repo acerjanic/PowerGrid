@@ -114,9 +114,9 @@ iftCpu(T1 *idata_r, T1 *idata_i,
 #ifdef _OPENACC
 #include "openacc.h"
 #include "accelmath.h"
-#define COS(a) cos(a)
-#define SIN(a) sin(a)
-#define SQRT(a) sqrt(a)
+#define COS(a) std::cos(a)
+#define SIN(a) std::sin(a)
+#define SQRT(a) std::sqrt(a)
 #else
 #define COS(a) std::cos(a)
 #define SIN(a) std::sin(a)
