@@ -98,6 +98,7 @@ endif (ISMRMRD)
 if(MPI)
 	find_package(MPI)
 	include_directories(${MPI_CXX_INCLUDE_PATH})
+	include_directories(Support)
 	set(mpi_POWERGRID_DWI3DDFT
 			./PowerGrid/mpiPowerGridDWI3DDFT.cpp
 			./PowerGrid/config.cxx

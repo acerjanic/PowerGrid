@@ -13,16 +13,18 @@
 #include <iostream>
 #include <cmath>
 #include <string>
-#include "armadillo"
+
 #include <boost/mpi.hpp>
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
 
 //Support Headers for making it easier to work with Armadillo and Matio.
 //#include "../Support/CeempleComplex.h"
+#include "../Support/ArmaExtensions/arma_extensions.h"
+
 #include "../Support/CeempleArmadillo.h"
 #include "../Support/CeempleMatio.h"
-#include "../Support/Boost/ArmaSerialization.hpp"
+
 #include "impatientTypes.h"
 #include "config.hxx"
 #include <memory>
@@ -34,12 +36,6 @@
 #include "ismrmrd/version.h"
 
 
-//These headers add a circshift routine to armadillo in the arma namespace
-namespace arma {
-#include "op_circshift_bones.hpp"
-#include "op_circshift_meat.hpp"
-#include "fn_circshift.hpp"
-}
 
 //
 namespace PowerGrid {

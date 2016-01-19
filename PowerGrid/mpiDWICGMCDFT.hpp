@@ -143,17 +143,20 @@ public:
                 tempOutData.col(ii) = (*AObj) * (d % (SMap.col(ii) % exp(-i * (PMap.col(ShotRank)))));
             }
         std::cout << "Performed forward xforms." << std::endl;
+        std::string forwardRank("ForwardRank");
+        forwardRank += std::to_string(world->rank());
+        savemat(forwardRank.c_str(), "test", tempOutData);
         //}
         //Now let's do some MPI stuff here.
         if (world->rank() == 0) {
             std::vector <Mat<CxT1>> OutDataGather(world->size());
             // Collect all the data into OutDataGather an std::vector collective
-            std::cout << "Rank #: " << world->rank() << " reached foward xform gather" << std::endl;
+            //std::cout << "Rank #: " << world->rank() << " reached foward xform gather" << std::endl;
             bmpi::gather < Mat < CxT1 >> (*world, tempOutData, OutDataGather, 0);
-            std::cout << "Rank #: " << world->rank() << " passed forward xform gather" << std::endl;
+            //std::cout << "Rank #: " << world->rank() << " passed forward xform gather" << std::endl;
             for(uword jj = 0; jj < Ns; jj++) {
-                std::cout << "About to access element #" << jj << " in gathered data" << std::endl;
-                std::cout << "Size of returned stl::vector<> = " << OutDataGather.size() << std::endl;
+                //std::cout << "About to access element #" << jj << " in gathered data" << std::endl;
+                //std::cout << "Size of returned stl::vector<> = " << OutDataGather.size() << std::endl;
                 tempOutData2 = OutDataGather[jj];
                 for (uword ii = 0; ii < Nc; ii++) {
                     outData.col(ii + jj * Nc) = tempOutData2.col(ii);
@@ -165,7 +168,7 @@ public:
             bmpi::gather < Mat < CxT1 >> (*world, tempOutData, 0);
         }
         std::cout << "Rank #: " << world->rank() << " reached foward xform broadcast" << std::endl;
-        bmpi::broadcast < Mat < CxT1 >> (*world, outData, 0);
+        bmpi::broadcast(*world, outData, 0);
         std::cout << "Rank #: " << world->rank() << " passed foward xform broadcast" << std::endl;
 
         //equivalent to returning col(output) in MATLAB with IRT

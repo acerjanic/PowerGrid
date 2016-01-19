@@ -163,6 +163,7 @@ int test_DWIDft(string dataPath, uword Nx, uword Ny, uword Nz, uword L, uword ni
 
     cout << "loading data" << endl;
     Col < CxT1 > data;
+    data = 1E-6 * data;
     loadmat(testPath + "data.mat", "data", &data);
 
     // Variables needed for the recon: Penalty object, num of iterations
