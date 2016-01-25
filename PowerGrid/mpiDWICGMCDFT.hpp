@@ -138,14 +138,14 @@ public:
         //Shot loop. Each shot has it's own kspace trajectory
         //for (unsigned int jj = 0; jj < Ns; jj++) {
 
-            //Coil loop. Each coil exists for each shot, so we need to work with these.
-            for (uword ii = 0; ii < Nc; ii++) {
-                tempOutData.col(ii) = (*AObj) * (d % (SMap.col(ii) % exp(-i * (PMap.col(ShotRank)))));
-            }
-        std::cout << "Performed forward xforms." << std::endl;
-        std::string forwardRank("ForwardRank");
-        forwardRank += std::to_string(world->rank());
-        savemat(forwardRank.c_str(), "test", tempOutData);
+        //Coil loop. Each coil exists for each shot, so we need to work with these.
+        for (uword ii = 0; ii < Nc; ii++) {
+            tempOutData.col(ii) = (*AObj) * (d % (SMap.col(ii) % exp(-i * (PMap.col(ShotRank)))));
+        }
+        //std::cout << "Performed forward xforms." << std::endl;
+        //std::string forwardRank("ForwardRank");
+        //forwardRank += std::to_string(world->rank());
+        //savemat(forwardRank.c_str(), "test", tempOutData);
         //}
         //Now let's do some MPI stuff here.
         if (world->rank() == 0) {
@@ -184,7 +184,6 @@ public:
         Col <CxT1> outData = zeros < Col < CxT1 >> (Ni);
         //Shot Loop. Each shot has it's own k-space trajectory
         //for (unsigned int jj = 0; jj < Ns; jj++) {
-
             //Coil Loop - for each shot we have a full set of coil data.
             for (unsigned int ii = 0; ii < Nc; ii++) {
                 outData += conj(SMap.col(ii) % exp(-i * (PMap.col(ShotRank)))) %
@@ -192,20 +191,18 @@ public:
                 //std::cout << "Processed shot # " << jj << " coil # " << ii << std::endl;
             }
 
-        //}
         if (world->rank() == 0) {
             std::vector<Col<CxT1>> OutDataGather;
             // Collect all the data into OutDataGather an std::vector collective
             bmpi::gather < Col < CxT1 >> (*world, outData, OutDataGather, 0);
-            for(uword jj = 1; jj < Ns; jj++) {
+            outData.zeros(Ni);
+            for(uword jj = 0; jj < Ns; jj++) {
                 //Skip the zeroth rank because that is the outData we started with on this processor.
                 //Now we will manually reduce the data by adding across the elements.
                 outData += OutDataGather.at(jj);
             }
-
         } else {
             bmpi::gather < Col < CxT1 >> (*world, outData, 0);
-
         }
         //Broadcast will send the data to all machines if the rank==0 and receive the broadcasted data from rank=0 to
         // all other machines in the communicator, overwriting the outData value already there.
