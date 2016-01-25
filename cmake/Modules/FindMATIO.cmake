@@ -6,13 +6,13 @@
 # Look for the header file.
 FIND_PATH(MATIO_INCLUDE_DIR NAMES matio.h
 		PATHS /usr/include /shared/mrfil-data/Software/MRFIL-Modules/PowerGridSupport/include
-		"/u/staff/arnoldg/PowerGrid/include" )
+		"/u/sciteam/cerjanic/PGProj/libraries/include" )
 MARK_AS_ADVANCED(MATIO_INCLUDE_DIR)
 # Look for the library.
 FIND_LIBRARY(MATIO_LIBRARY NAMES matio
 			   PATH_SUFFIXES lib64 libs lib
 		           PATHS  /usr/local /usr /usr/lib /usr/lib/x86_64-linux-gnu/ /shared/mrfil-data/Software/MRFIL-Modules/PowerGridSupport/lib
-				"/u/staff/arnoldg/PowerGrid/lib" )
+				"/u/sciteam/cerjanic/PGProj/libraries" )
 MARK_AS_ADVANCED(MATIO_LIBRARY)
 # handle the QUIETLY and REQUIRED arguments and set MATIO_FOUND to TRUE if
 # all listed variables are TRUE
