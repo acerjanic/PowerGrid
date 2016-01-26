@@ -159,7 +159,7 @@ public:
                 //std::cout << "Size of returned stl::vector<> = " << OutDataGather.size() << std::endl;
                 tempOutData2 = OutDataGather[jj];
                 for (uword ii = 0; ii < Nc; ii++) {
-                    outData.col(ii + jj * Nc) = tempOutData2.col(ii);
+                    outData.col(jj + ii * Ns) = tempOutData2.col(ii);
                 }
             }
 
