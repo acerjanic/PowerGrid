@@ -182,7 +182,7 @@ public:
             //std::cout << "Rank #: " << world->rank() << " reached foward xform gather" << std::endl;
             bmpi::gather < Mat < CxT1 >> (*world, tempOutData, OutDataGather, 0);
             //std::cout << "Rank #: " << world->rank() << " passed forward xform gather" << std::endl;
-            for(uword jj = 0; jj < world->rank(); jj++) {
+            for(uword jj = 0; jj < world->size(); jj++) {
                 //std::cout << "About to access element #" << jj << " in gathered data" << std::endl;
                 //std::cout << "Size of returned stl::vector<> = " << OutDataGather.size() << std::endl;
                 tempOutData2 = OutDataGather[jj];
@@ -232,7 +232,7 @@ public:
             // Collect all the data into OutDataGather an std::vector collective
             bmpi::gather < Col < CxT1 >> (*world, outData, OutDataGather, 0);
             outData.zeros(Ni);
-            for(uword jj = 0; jj < world->rank(); jj++) {
+            for(uword jj = 0; jj < world->size(); jj++) {
                 //Skip the zeroth rank because that is the outData we started with on this processor.
                 //Now we will manually reduce the data by adding across the elements.
                 outData += OutDataGather.at(jj);
