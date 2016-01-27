@@ -18,15 +18,12 @@ public:
     mpiDWICGMCDFT();
 
     ~mpiDWICGMCDFT() {
-        /*
-        for (uword jj = 0; jj < Ns; jj++) {
+
+        for (uword jj = 0; jj < (*taskList)[world->rank()].size(); jj++) {
             delete AObj[jj];
-            //delete G[jj];
         }
         delete[] AObj;
-        //delete[] G;
-        */
-        delete AObj;
+        delete[] taskList;
     }
 
     //Class variables go here
@@ -51,10 +48,14 @@ public:
     uword type = 1; // 2 for min max time seg and 1 for Hanning
     uword L = 20;
     //Gdft <T1> **AObj = NULL;
-    Gdft <T1> *AObj = NULL;
+    Gdft <T1> **AObj = NULL;
     //FieldCorrection <T1, Ggrid<T1>> **AObj = NULL;
+    // MPI Stuff
     bmpi::environment *env;
     bmpi::communicator *world;
+    Col<uword> shotList;
+    Col<uword> coilList;
+    std::vector<std::vector<uword>>* taskList;
     //Class constructor
     mpiDWICGMCDFT(Col <T1> kx, Col <T1> ky, Col <T1> kz, uword nx, uword ny, uword nz, uword nc, Col <T1> t,
                   Col <CxT1> SENSEmap, Col <T1> FieldMap, Col <T1> ShotPhaseMap, bmpi::environment &en,
@@ -103,25 +104,50 @@ public:
         Iy = vectorise(iy);
         Iz = vectorise(iz);
 
-        //AObj = new Gdft <T1> *[Ns];
-        //AObj = new FieldCorrection <T1, Ggrid<T1>> *[Ns];
-        //AObj = new Gdft <T1>;
-        // Initialize the field correction and G objects we need for this reconstruction
-        /*for (uword jj = 0; jj < Ns; jj++) {
-
-            AObj[jj] = new Gdft<T1>(Nd, Nx * Ny * Nz, Kx.col(jj), Ky.col(jj), Kz.col(jj), Ix, Iy, Iz, vectorise(FMap),
-                                    vectorise(Tvec.col(jj)));
-            //AObj[jj] = new FieldCorrection <T1, Ggrid<T1>>(*G[jj], vectorise(FMap), vectorise(Tvec.col(jj)),
-            //                                               (uword) Nd, (uword)(Nx * Ny * Nz), (uword) L, type,
-            //                                               (uword) 1);
-
-        } */
+        //Deal with task allocation to the MPI ranks
         //This gives us the rank (index) of the process in the collective MPI space.
         //The process will only calculate shot jj of the acquisition.
         uword ShotRank = world->rank();
         uword numShots = Ns / world->size();
-        AObj = new Gdft<T1>(Nd, Nx * Ny * Nz, Kx.col(ShotRank), Ky.col(ShotRank), Kz.col(ShotRank), Ix, Iy, Iz,
-                            vectorise(FMap), vectorise(Tvec.col(ShotRank)));
+
+        shotList.resize(Ns*Nc);
+        coilList.resize(Ns*Nc);
+        // Need to generate a mapping of task number to coils and to shots separately.
+        for (uword ii = 0; ii < Ns; ii++) { //Shot loop
+            for (uword jj = 0; jj < Nc; jj++) { //Coil Loop
+                shotList(ii*Nc + jj) = ii;
+                coilList(ii*Nc + jj) = jj;
+            }
+        }
+
+        //Now all we have to do is generate a mapping of tasks to MPI ranks.
+
+        //Start by creating a 2D vector (vector of vectors) to hold the MPI rank -> task mapping
+        vector<uword> init(0);
+        taskList = new std::vector<std::vector<uword>>(world->size(),init);
+        uword remaining = Ns*Nc;
+        uword process = 0;
+        for(uword task = 0; task < Ns*Nc; task++) {
+            (*taskList)[process].push_back(task);
+            process++;
+            if (process == world->size()) {
+                process = 0;
+            }
+        }
+
+
+
+        AObj = new Gdft <T1> *[taskList[world->rank()].size()];
+        uword taskIndex;
+        uword coilIndex;
+        uword shotIndex;
+        // Initialize the field correction and G objects we need for this reconstruction
+        for (uword jj = 0; jj < (*taskList)[world->rank()].size(); jj++) {
+            taskIndex = (*taskList)[world->rank()].at(jj);
+            shotIndex = shotList(taskIndex);
+            AObj[jj] = new Gdft<T1>(Nd, Nx * Ny * Nz, Kx.col(shotIndex), Ky.col(shotIndex), Kz.col(shotIndex), Ix, Iy, Iz, vectorise(FMap), vectorise(Tvec.col(shotIndex)));
+
+        }
 
     }
 
@@ -130,22 +156,24 @@ public:
     //Forward transformation is *
     // d is the vector of data of type T1, note it is const, so we don't modify it directly rather return another vector of type T1
     Col <CxT1> operator*(const Col <CxT1> &d) const {
-        uword ShotRank = world->rank();
+        //uword ShotRank = world->rank();
         Mat <CxT1> outData = zeros < Mat < CxT1 >> (Nd, Ns * Nc);
-        Mat <CxT1> tempOutData = zeros < Mat < CxT1 >> (Nd, Nc);
-        Mat <CxT1> tempOutData2 = zeros < Mat < CxT1 >> (Nd, Nc);
-
+        Mat <CxT1> tempOutData = zeros < Mat < CxT1 >> (Nd, taskList[world->rank()].size());
+        Mat <CxT1> tempOutData2 = zeros < Mat < CxT1 >> (Nd, taskList[world->rank()].size());
+        uword taskIndex;
+        uword coilIndex;
+        uword shotIndex;
         //Shot loop. Each shot has it's own kspace trajectory
         //for (unsigned int jj = 0; jj < Ns; jj++) {
 
         //Coil loop. Each coil exists for each shot, so we need to work with these.
-        for (uword ii = 0; ii < Nc; ii++) {
-            tempOutData.col(ii) = (*AObj) * (d % (SMap.col(ii) % exp(-i * (PMap.col(ShotRank)))));
+        for (uword jj = 0; jj < taskList[world->rank()].size(); jj++) {
+            taskIndex = (*taskList)[world->rank()].at(jj);
+            shotIndex = shotList(taskIndex);
+            coilIndex = coilList(taskIndex);
+            tempOutData.col(jj) = (*AObj[jj]) * (d % (SMap.col(coilIndex) % exp(-i * (PMap.col(shotIndex)))));
         }
-        //std::cout << "Performed forward xforms." << std::endl;
-        //std::string forwardRank("ForwardRank");
-        //forwardRank += std::to_string(world->rank());
-        //savemat(forwardRank.c_str(), "test", tempOutData);
+
         //}
         //Now let's do some MPI stuff here.
         if (world->rank() == 0) {
@@ -154,12 +182,15 @@ public:
             //std::cout << "Rank #: " << world->rank() << " reached foward xform gather" << std::endl;
             bmpi::gather < Mat < CxT1 >> (*world, tempOutData, OutDataGather, 0);
             //std::cout << "Rank #: " << world->rank() << " passed forward xform gather" << std::endl;
-            for(uword jj = 0; jj < Ns; jj++) {
+            for(uword jj = 0; jj < world->rank(); jj++) {
                 //std::cout << "About to access element #" << jj << " in gathered data" << std::endl;
                 //std::cout << "Size of returned stl::vector<> = " << OutDataGather.size() << std::endl;
                 tempOutData2 = OutDataGather[jj];
-                for (uword ii = 0; ii < Nc; ii++) {
-                    outData.col(jj + ii * Ns) = tempOutData2.col(ii);
+                for (uword ii = 0; ii < taskList[jj].size(); ii++) {
+                    taskIndex = (*taskList)[jj].at(ii);
+                    shotIndex = shotList(taskIndex);
+                    coilIndex = coilList(taskIndex);
+                    outData.col(shotIndex + coilIndex * Ns) = tempOutData2.col(ii);
                 }
             }
 
@@ -177,17 +208,22 @@ public:
 
     //For the adjoint operation, we have to weight the adjoint transform of the coil data by the SENSE map.
     Col <CxT1> operator/(const Col <CxT1> &d) const {
-        uword ShotRank = world->rank();
+        //uword ShotRank = world->rank();
         Mat <CxT1> inData = reshape(d, Nd, Ns * Nc);
-
+        uword taskIndex;
+        uword coilIndex;
+        uword shotIndex;
         //Col <CxT1> tempOutData = zeros < Col < CxT1 >> (Ni);
         Col <CxT1> outData = zeros < Col < CxT1 >> (Ni);
         //Shot Loop. Each shot has it's own k-space trajectory
         //for (unsigned int jj = 0; jj < Ns; jj++) {
             //Coil Loop - for each shot we have a full set of coil data.
-            for (unsigned int ii = 0; ii < Nc; ii++) {
-                outData += conj(SMap.col(ii) % exp(-i * (PMap.col(ShotRank)))) %
-                           ((*AObj) / inData.col(ShotRank + ii * Ns));
+        for (uword jj = 0; jj < (*taskList)[world->rank()].size(); jj++) {
+            taskIndex = (*taskList)[world->rank()].at(jj);
+            shotIndex = shotList(taskIndex);
+            coilIndex = coilList(taskIndex);
+                outData += conj(SMap.col(coilIndex) % exp(-i * (PMap.col(shotIndex)))) %
+                           ((*AObj[jj]) / inData.col(shotIndex + coilIndex * Ns));
                 //std::cout << "Processed shot # " << jj << " coil # " << ii << std::endl;
             }
 
@@ -196,7 +232,7 @@ public:
             // Collect all the data into OutDataGather an std::vector collective
             bmpi::gather < Col < CxT1 >> (*world, outData, OutDataGather, 0);
             outData.zeros(Ni);
-            for(uword jj = 0; jj < Ns; jj++) {
+            for(uword jj = 0; jj < world->rank(); jj++) {
                 //Skip the zeroth rank because that is the outData we started with on this processor.
                 //Now we will manually reduce the data by adding across the elements.
                 outData += OutDataGather.at(jj);
