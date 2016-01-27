@@ -165,7 +165,7 @@ public:
         uword shotIndex;
         //Shot loop. Each shot has it's own kspace trajectory
         //for (unsigned int jj = 0; jj < Ns; jj++) {
-
+        std::cout << "Task Number = " << taskList[world->rank()].size() << std::endl;
         //Coil loop. Each coil exists for each shot, so we need to work with these.
         for (uword jj = 0; jj < taskList[world->rank()].size(); jj++) {
             taskIndex = (*taskList)[world->rank()].at(jj);
