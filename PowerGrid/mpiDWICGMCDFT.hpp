@@ -137,7 +137,7 @@ public:
 
 
 
-        AObj = new Gdft <T1> *[taskList[world->rank()].size()];
+        AObj = new Gdft <T1> *[(*taskList)[world->rank()].size()];
         uword taskIndex;
         uword coilIndex;
         uword shotIndex;
@@ -158,16 +158,16 @@ public:
     Col <CxT1> operator*(const Col <CxT1> &d) const {
         //uword ShotRank = world->rank();
         Mat <CxT1> outData = zeros < Mat < CxT1 >> (Nd, Ns * Nc);
-        Mat <CxT1> tempOutData = zeros < Mat < CxT1 >> (Nd, taskList[world->rank()].size());
-        Mat <CxT1> tempOutData2 = zeros < Mat < CxT1 >> (Nd, taskList[world->rank()].size());
+        Mat <CxT1> tempOutData = zeros < Mat < CxT1 >> (Nd, (*taskList)[world->rank()].size());
+        Mat <CxT1> tempOutData2 = zeros < Mat < CxT1 >> (Nd, (*taskList)[world->rank()].size());
         uword taskIndex;
         uword coilIndex;
         uword shotIndex;
         //Shot loop. Each shot has it's own kspace trajectory
         //for (unsigned int jj = 0; jj < Ns; jj++) {
-        std::cout << "Task Number = " << taskList[world->rank()].size() << std::endl;
+        std::cout << "Task Number = " << (*taskList)[world->rank()].size() << std::endl;
         //Coil loop. Each coil exists for each shot, so we need to work with these.
-        for (uword jj = 0; jj < taskList[world->rank()].size(); jj++) {
+        for (uword jj = 0; jj < (*taskList)[world->rank()].size(); jj++) {
             taskIndex = (*taskList)[world->rank()].at(jj);
             shotIndex = shotList(taskIndex);
             coilIndex = coilList(taskIndex);
@@ -186,7 +186,7 @@ public:
                 //std::cout << "About to access element #" << jj << " in gathered data" << std::endl;
                 //std::cout << "Size of returned stl::vector<> = " << OutDataGather.size() << std::endl;
                 tempOutData2 = OutDataGather[jj];
-                for (uword ii = 0; ii < taskList[jj].size(); ii++) {
+                for (uword ii = 0; ii < (*taskList)[jj].size(); ii++) {
                     taskIndex = (*taskList)[jj].at(ii);
                     shotIndex = shotList(taskIndex);
                     coilIndex = coilList(taskIndex);
