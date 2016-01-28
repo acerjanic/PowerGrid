@@ -22,8 +22,12 @@ public:
         for (uword jj = 0; jj < (*taskList)[world->rank()].size(); jj++) {
             delete AObj[jj];
         }
+        std::cout << "Deleted Objects in AObj array" << std::endl;
         delete[] AObj;
+        std::cout << "Deleted Objects AObj array" << std::endl;
         delete[] taskList;
+        std::cout << "Deleted taskList array" << std::endl;
+
     }
 
     //Class variables go here
