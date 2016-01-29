@@ -25,7 +25,7 @@ public:
         std::cout << "Deleted Objects in AObj array" << std::endl;
         delete[] AObj;
         std::cout << "Deleted Objects AObj array" << std::endl;
-        delete[] taskList;
+        delete taskList;
         std::cout << "Deleted taskList array" << std::endl;
 
     }
