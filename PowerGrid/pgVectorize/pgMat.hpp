@@ -3,8 +3,8 @@
 #ifndef POWER_GRID_pgMat_hpp
 #define POWER_GRID_pgMat_hpp
 
-#include "PGIncludes.h"
-#include "pgComplex.hpp"
+#include "../PGIncludes.h"
+//#include "pgComplex.hpp"
 #include "pgCol.hpp"
 
 #ifdef _OPENACC
@@ -204,7 +204,7 @@ void ones() {
 // Conversion from pgMat to arma::Mat
 arma::Mat<T> getArma() {
     #pragma acc update host(mem[0:n_elem])
-    arma::Mat<T> armaT(mem, nRows, nCols, true, false);
+    arma::Mat<T> armaT(mem, n_rows, n_cols, true, false);
 
     return armaT;
 }
@@ -375,7 +375,7 @@ pgMat<T>& operator/=(const pgMat<X> &pgA) {
 }
 
 // Operators(pgMat, scalar)
-template<typename T>
+//template<typename T>
 pgMat<T> operator+(const T& B) {
     pgMat<T> pgC(n_elem);
 
@@ -386,7 +386,7 @@ pgMat<T> operator+(const T& B) {
     return std::move(pgC);
 }
 
-template<typename T>
+//template<typename T>
 pgMat<T> operator-( const T& B) {
     pgMat<T> pgC(n_elem);
 
@@ -397,7 +397,7 @@ pgMat<T> operator-( const T& B) {
     return std::move(pgC);
 }
 
-template<typename T>
+//template<typename T>
 pgMat<T> operator%(const T& B) {
     pgMat<T> pgC(n_elem);
 
@@ -408,7 +408,7 @@ pgMat<T> operator%(const T& B) {
     return std::move(pgC);
 }
 
-template<typename T>
+//template<typename T>
 pgMat<T> operator/(const T& B) {
     pgMat<T> pgC(n_elem);
 
@@ -467,7 +467,7 @@ pgMat<T> operator/(const pgMat<X>& pgB) {
 };
 
 template<typename T>
-const pgCol<pgComplex<T>> sum(const pgMat<pgComplex<T>> &pgA, const arma::uword dim = 0) {
+const pgCol<std::complex<T>> sum(const pgMat<std::complex<T>> &pgA, const arma::uword dim = 0) {
     pgCol<T> sumReal = {};
     pgCol<T> sumImag = {};
 
@@ -515,12 +515,12 @@ const pgCol<pgComplex<T>> sum(const pgMat<pgComplex<T>> &pgA, const arma::uword 
         std::cout << "pgMat::sum Error! Unrecognized dimension: dim = " << dim << std::endl;       
 
     }
-    pgComplex<T> J(0,1.0);
+    std::complex<T> J(0,1.0);
 
-    pgCol<pgComplex<T>> out(sumReal.n_elem);
+    pgCol<std::complex<T>> out(sumReal.n_elem);
     #pragma acc parallel loop present(sum, sumReal, sumImag)
     for(arma::uword jj = 0; jj < sumReal.n_elem; jj++) {
-        out.at(jj) = pgComplex<T>(sumReal.at(jj),sumImag.at(jj));
+        out.at(jj) = std::complex<T>(sumReal.at(jj),sumImag.at(jj));
     }
     
     return std::move(out);
@@ -565,7 +565,7 @@ const pgCol<T> vectorise(const pgMat<T> &pgA) {
 
     #pragma acc parallel loop present(pgA, vectA)
     for(arma::uword ii = 0; ii < pgA.n_elem; ii++) {
-        vectA.at(ii = pgA.at(ii);
+        vectA.at(ii) = pgA.at(ii);
     }
     return std::move(vectA);
 }

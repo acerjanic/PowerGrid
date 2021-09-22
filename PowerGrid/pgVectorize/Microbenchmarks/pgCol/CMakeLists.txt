@@ -8,12 +8,18 @@ set(CMAKE_CXX_STANDARD 11)
 
 project("PowerGridpgColBench" CXX)
 
+# Find Armadillo
+find_package(Armadillo REQUIRED)
+include_directories(${ARMADILLO_INCLUDE_DIRS})
+# set(LIBS ${LIBS} ${ARMADILLO_LIBRARIES})
+
 set(TEST_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -acc -Minfo=acc -ta=nvidia:cc60,fastmath,flushz -fast -Minline -fpermissive ")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fast -fpermissive")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 add_definitions(-DARMA_NO_DEBUG)
 # Make test executable
 add_executable(pgCol ${TEST_SOURCES})
-#target_link_libraries(tests Catchf
+#target_link_libraries(tests Catch)

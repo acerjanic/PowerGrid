@@ -1,10 +1,13 @@
-#include "catch.hpp"
+#include "../../../Support/Catch/catch.hpp"
 
-#include "../PGIncludes.h"
-#include "../pgVectorize/pgCol.hpp"
+#include "../../PGIncludes.h"
+#include "../pgCol.hpp"
 #include <cmath>
 #include <iostream>
+#ifdef _OPENACC
+#include "openacc.h"
 #include "accel.h"
+#endif
 
 TEST_CASE("pgCol<float>: operators", "[pgCol<float>]") {
 

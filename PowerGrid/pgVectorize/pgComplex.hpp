@@ -15,6 +15,7 @@ private:
     T __im_;
 
 public:
+    typedef T value_type;
     pgComplex(const T& real = T(), const T& imag = T() )
         : __re_(real),
           __im_(imag) 
@@ -273,19 +274,19 @@ bool operator!=(const T &A, const pgComplex<T> &pgB) {
 //        to support real(pgC) and real(T) syntax
 template<typename T>
 inline
-T real(const pgComplex<T> &pgA){
+T real(const T &pgA){
     return pgA.real();
 }
 
 template<typename T>
 inline
 T real(const T &A){
-    return T;
+    return A;
 }
 
 template<typename T>
 inline
-T imag(const pgComplex<T> &pgA){
+T imag(const std::complex<T> &pgA){
     return pgA.imag();
 }
 

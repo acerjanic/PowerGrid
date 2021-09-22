@@ -1,6 +1,6 @@
 // pgSubview_Col.hpp
 
-#include "PGIncludes.h"
+#include "../PGIncludes.h"
 
 template<typename T>
 class subview_col<T> {

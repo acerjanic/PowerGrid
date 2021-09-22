@@ -8,6 +8,10 @@ set(CMAKE_CXX_STANDARD 11)
 
 project("PowerGridTests" CXX)
 
+# Find Armadillo
+find_package(Armadillo REQUIRED)
+include_directories(${ARMADILLO_INCLUDE_DIRS})
+set(LIBS ${LIBS} ${ARMADILLO_LIBRARIES})
 
 # Prepare "Catch" library for other executables
 set(CATCH_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../Support/Catch)
@@ -16,14 +20,14 @@ target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 
 set(TEST_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/pgComplexTests.cpp
+    #${CMAKE_CURRENT_SOURCE_DIR}/pgComplexTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/pgColTests.cpp  
     ${CMAKE_CURRENT_SOURCE_DIR}/pgColCplxTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/pgMatTests.cpp   
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -acc -ta=tesla -fast")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -acc -fast -pgf90libs")
 
 # Make test executable
 add_executable(tests ${TEST_SOURCES})
-target_link_libraries(tests Catch)
+target_link_libraries(tests Catch ${LIBS})

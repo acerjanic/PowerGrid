@@ -1,34 +1,34 @@
-#include "catch.hpp"
+#include "../../../Support/Catch/catch.hpp"
 
 #ifdef _OPENACC
 #include "openacc.h"
 #include "accel.h"
 #endif
 
-#include "../PGIncludes.h"
-#include "../pgVectorize/pgCol.hpp"
-#include "../pgVectorize/pgComplex.hpp"
+#include "../../PGIncludes.h"
+#include "../pgCol.hpp"
+//#include "../pgVectorize/std::complex.hpp"
 #include <cmath>
 #include <iostream>
 
-TEST_CASE("pgCol<pgComplex<float>>: operators", "[pgCol<pgComplex>>]") {
+TEST_CASE("pgCol<std::complex<float>>: operators", "[pgCol<std::complex>>]") {
 
     // Setup Prerequsites for test
     arma::uword lengthA = 100000;
     arma::uword lengthB = 256 * 256;
     
-    pgCol<pgComplex<float>> pgCA(lengthA);
-    pgCol<pgComplex<float>> pgCB(lengthB);
-    pgCol<pgComplex<float>> pgCC;
-    pgCol<pgComplex<float>> pgCD;
+    pgCol<std::complex<float>> pgCA(lengthA);
+    pgCol<std::complex<float>> pgCB(lengthB);
+    pgCol<std::complex<float>> pgCC;
+    pgCol<std::complex<float>> pgCD;
     pgCA.zeros();
     pgCB.zeros();
 
     pgCC.set_size(lengthA);
     pgCD.set_size(lengthB);
 
-    pgCol<pgComplex<float>> pgCZeros(lengthA);
-    pgCol<pgComplex<float>> pgDZeros(lengthB);
+    pgCol<std::complex<float>> pgCZeros(lengthA);
+    pgCol<std::complex<float>> pgDZeros(lengthB);
     pgCZeros.zeros();
     pgDZeros.zeros();
 

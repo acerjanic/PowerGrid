@@ -1,11 +1,11 @@
-#include "catch.hpp"
+#include "../../../Support/Catch/catch.hpp"
 
 #ifdef _OPENACC
 #include "accel.h"
 #endif
 
-#include "../PGIncludes.h"
-#include "../pgVectorize/pgMat.hpp"
+#include "../../PGIncludes.h"
+#include "../pgMat.hpp"
 #include <cmath>
 #include <iostream>
 

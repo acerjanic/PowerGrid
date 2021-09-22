@@ -1,9 +1,10 @@
 
-#include "../../PGIncludes.h"
+#include "../../../PGIncludes.h"
 
+//#include "../../pgComplex.hpp"
 #include "../../pgCol.hpp"
 #include "../../pgMat.hpp"
-#include "../../pgComplex.hpp"
+
 
 #ifdef _OPENACC
 #include "openacc.h"
@@ -46,27 +47,27 @@ int main()
   
     start = std::chrono::high_resolution_clock::now();
     {
-    pgCol<pgComplex<float>> A1(N1);
-    pgCol<pgComplex<float>> A2(N1);
+    pgCol<std::complex<float>> A1(N1);
+    pgCol<std::complex<float>> A2(N1);
 
     A1.ones();
     A2.ones();
 
-    pgCol<pgComplex<float>> A = A1 % A2 + A1;
+    pgCol<std::complex<float>> A = A1 % A2 + A1;
     //A1+=A2;
 
-    pgCol<pgComplex<float>> B1(N2);
-    pgCol<pgComplex<float>> B2(N2);
+    pgCol<std::complex<float>> B1(N2);
+    pgCol<std::complex<float>> B2(N2);
 
     B1.ones();
     B2.ones();
 
-    pgCol<pgComplex<float>> B = B1 % B2 + B1;
+    pgCol<std::complex<float>> B = B1 % B2 + B1;
     }
     finish = std::chrono::high_resolution_clock::now();
 
     elapsed = finish - start;
-    std::cout << "pgCol<pgComplex<float>> For Elapsed time: " << elapsed.count() << " s\n";
+    std::cout << "pgCol<std::complex<float>> For Elapsed time: " << elapsed.count() << " s\n";
     
     start = std::chrono::high_resolution_clock::now();
     {
@@ -90,27 +91,27 @@ int main()
   
     start = std::chrono::high_resolution_clock::now();
     {
-    pgMat<pgComplex<float>> A1(N1,N3);
-    pgMat<pgComplex<float>> A2(N1,N3);
+    pgMat<std::complex<float>> A1(N1,N3);
+    pgMat<std::complex<float>> A2(N1,N3);
 
     A1.ones();
     A2.ones();
 
-    pgMat<pgComplex<float>> A = A1 % A2 + A1;
+    pgMat<std::complex<float>> A = A1 % A2 + A1;
     //A1+=A2;
 
-    pgMat<pgComplex<float>> B1(N2,N3);
-    pgMat<pgComplex<float>> B2(N2,N3);
+    pgMat<std::complex<float>> B1(N2,N3);
+    pgMat<std::complex<float>> B2(N2,N3);
 
     B1.ones();
     B2.ones();
 
-    pgMat<pgComplex<float>> B = B1 % B2 + B1;
+    pgMat<std::complex<float>> B = B1 % B2 + B1;
     }
     finish = std::chrono::high_resolution_clock::now();
 
     elapsed = finish - start;
-    std::cout << "pgMat<pgComplex<float>> For Elapsed time: " << elapsed.count() << " s\n";
+    std::cout << "pgMat<std::complex<float>> For Elapsed time: " << elapsed.count() << " s\n";
     
     
     
