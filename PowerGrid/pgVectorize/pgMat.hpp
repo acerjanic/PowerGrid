@@ -208,19 +208,19 @@ arma::Mat<T> getArma() {
 
     return armaT;
 }
-/*
+
 // Return a column for use
-pgCol<T> col(const arma::uword colIndx) {
+pgSubviewCol<T> col(const arma::uword colIndx) {
 
-    arma::pgCol<T> pgC(n_rows);
-
-    #pragma acc parallel loop present(pgC, mem[0:n_elem])
-    for(arma::uword ii = 0; ii < n_rows; ii++ ) {
-        pgC.at(ii) = mem[n_rows*colIndx + ii];
-    }
+    // Calculate some of the prerequisites
+    arma::uword n_elemCol = this.n_row;
+    arma::uword uiColHeader = this.n_row * colIndx;
+    T* pMem = this.mem;
+    pgSubviewCol<T> pgC(mem, this.n_elem, n_elemCol, uiColHeader);
+    
     return std::move(pgC);
 }
-*/
+
 // Operators for element manipulation
 // We'll assume .at() is for fast, GPU manipulation
 inline
