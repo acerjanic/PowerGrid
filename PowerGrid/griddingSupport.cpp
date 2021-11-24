@@ -237,45 +237,45 @@ void deapodization2d(T1* __restrict pDst, T1* __restrict pSrc, int imageX,
     }
     
 
-#pragma acc parallel loop collapse(2) independent present(pDst [0:2 * imageX * imageY]) present( \
+//#pragma acc parallel loop collapse(2) independent present(pDst [0:2 * imageX * imageY], \
     pSrc [0:2 * imageX * imageY]) 
-    {
-        for (X = 0; X < imageX; X++) {
-            for (Y = 0; Y < imageY; Y++) {
+#pragma acc parallel loop collapse(2) independent present(pDst [0:2 * imageX * imageY], \
+    pSrc [0:2 * imageX * imageY]) 
+    for (X = 0; X < imageX; X++) {
+        for (Y = 0; Y < imageY; Y++) {
 
-                gridKernelY = (T1)(Y - (imageY / 2)) / (T1)imageY;
-                gridKernelX = (T1)(X - (imageX / 2)) / (T1)imageX;
+            gridKernelY = (T1)(Y - (imageY / 2)) / (T1)imageY;
+            gridKernelX = (T1)(X - (imageX / 2)) / (T1)imageX;
 
-                common_exprX = (MRI_PI * MRI_PI * kernelWidth * kernelWidth * gridKernelX * gridKernelX - beta * beta);
-                common_exprY = (MRI_PI * MRI_PI * kernelWidth * kernelWidth * gridKernelY * gridKernelY - beta * beta);
+            common_exprX = (MRI_PI * MRI_PI * kernelWidth * kernelWidth * gridKernelX * gridKernelX - beta * beta);
+            common_exprY = (MRI_PI * MRI_PI * kernelWidth * kernelWidth * gridKernelY * gridKernelY - beta * beta);
 
-                if (common_exprX >= 0)
-                    common_exprX1 = (std::sin(std::sqrt(common_exprX)) / std::sqrt(common_exprX));
-                else
-                    common_exprX1 = (std::sinh(std::sqrt((T1)-1.0 * common_exprX)) / std::sqrt((T1)-1.0 * common_exprX));
+            if (common_exprX >= 0)
+                common_exprX1 = (std::sin(std::sqrt(common_exprX)) / std::sqrt(common_exprX));
+            else
+                common_exprX1 = (std::sinh(std::sqrt((T1)-1.0 * common_exprX)) / std::sqrt((T1)-1.0 * common_exprX));
 
-                if (common_exprY >= 0)
-                    common_exprY1 = (std::sin(std::sqrt(common_exprY)) / std::sqrt(common_exprY));
-                else
-                    common_exprY1 = (std::sinh(std::sqrt((T1)-1.0 * common_exprY)) / std::sqrt((T1)-1.0 * common_exprY));
+            if (common_exprY >= 0)
+                common_exprY1 = (std::sin(std::sqrt(common_exprY)) / std::sqrt(common_exprY));
+            else
+                common_exprY1 = (std::sinh(std::sqrt((T1)-1.0 * common_exprY)) / std::sqrt((T1)-1.0 * common_exprY));
 
-                gridKernel = common_exprX1 * common_exprY1;
-                common_index = Y + X * imageY;
+            gridKernel = common_exprX1 * common_exprY1;
+            common_index = Y + X * imageY;
 
-                if (!isnanPG(gridKernel)) // Check for NaN
-                {
+            if (!isnanPG(gridKernel)) // Check for NaN
+            {
 
-                    gridOS2 = gridOS * gridOS;
+                gridOS2 = gridOS * gridOS;
 
-                    // dst[common_index] =
-                    // (src[common_index]) / gridKernel *(1.0 / gridOS2);
-                    // //???
-                    pDst[2 * common_index] = (pSrc[2 * common_index]) / gridKernel * ((T1)1.0 / gridOS2); // Real
-                    pDst[2 * common_index + 1] = (pSrc[2 * common_index + 1]) / gridKernel * ((T1)1.0 / gridOS2); // Imaginary
-                } else {
-                    pDst[2 * common_index] = 0.0;
-                    pDst[2 * common_index + 1] = 0.0;
-                }
+                // dst[common_index] =
+                // (src[common_index]) / gridKernel *(1.0 / gridOS2);
+                // //???
+                pDst[2 * common_index] = (pSrc[2 * common_index]) / gridKernel * ((T1)1.0 / gridOS2); // Real
+                pDst[2 * common_index + 1] = (pSrc[2 * common_index + 1]) / gridKernel * ((T1)1.0 / gridOS2); // Imaginary
+            } else {
+                pDst[2 * common_index] = 0.0;
+                pDst[2 * common_index + 1] = 0.0;
             }
         }
     }
@@ -317,50 +317,47 @@ void deapodization3d(T1* __restrict pDst, T1* __restrict pSrc, int imageX,
     }
 
 #pragma acc parallel loop collapse(3)                          \
-    independent present(pSrc [0:2 * imageX * imageY * imageZ]) \
-        present(pDst [0:2 * imageX * imageY * imageZ]) 
-    {
-        for (Z = 0; Z < imageZ; Z++) {
-            for (X = 0; X < imageX; X++) {
-                for (Y = 0; Y < imageY; Y++) {
+    independent present(pSrc [0:2 * imageX * imageY * imageZ], pDst [0:2 * imageX * imageY * imageZ])
+    for (Z = 0; Z < imageZ; Z++) {
+        for (X = 0; X < imageX; X++) {
+            for (Y = 0; Y < imageY; Y++) {
 
-                    gridKernelZ = (T1)((Z) - ((T1)imageZ / 2.0)) / (T1)imageZ;
-                    gridKernelY = (T1)((Y) - ((T1)imageY / 2.0)) / (T1)imageY;
-                    gridKernelX = (T1)((X) - ((T1)imageX / 2.0)) / (T1)imageX;
+                gridKernelZ = (T1)((Z) - ((T1)imageZ / 2.0)) / (T1)imageZ;
+                gridKernelY = (T1)((Y) - ((T1)imageY / 2.0)) / (T1)imageY;
+                gridKernelX = (T1)((X) - ((T1)imageX / 2.0)) / (T1)imageX;
 
-                    common_exprX = (MRI_PI * MRI_PI * kernelWidth * kernelWidth * gridKernelX * gridKernelX - beta * beta);
-                    common_exprY = (MRI_PI * MRI_PI * kernelWidth * kernelWidth * gridKernelY * gridKernelY - beta * beta);
-                    common_exprZ = (MRI_PI * MRI_PI * kernelWidth * kernelWidth * gridKernelZ * gridKernelZ - beta * beta);
+                common_exprX = (MRI_PI * MRI_PI * kernelWidth * kernelWidth * gridKernelX * gridKernelX - beta * beta);
+                common_exprY = (MRI_PI * MRI_PI * kernelWidth * kernelWidth * gridKernelY * gridKernelY - beta * beta);
+                common_exprZ = (MRI_PI * MRI_PI * kernelWidth * kernelWidth * gridKernelZ * gridKernelZ - beta * beta);
 
-                    if (common_exprX >= 0)
-                        common_exprX1 = (std::sin(std::sqrt(common_exprX)) / std::sqrt(common_exprX));
-                    else
-                        common_exprX1 = (std::sinh(std::sqrt(-1.0 * common_exprX)) / std::sqrt(-1.0 * common_exprX));
+                if (common_exprX >= 0)
+                    common_exprX1 = (std::sin(std::sqrt(common_exprX)) / std::sqrt(common_exprX));
+                else
+                    common_exprX1 = (std::sinh(std::sqrt(-1.0 * common_exprX)) / std::sqrt(-1.0 * common_exprX));
 
-                    if (common_exprY >= 0)
-                        common_exprY1 = (std::sin(std::sqrt(common_exprY)) / std::sqrt(common_exprY));
-                    else
-                        common_exprY1 = (std::sinh(std::sqrt(-1.0 * common_exprY)) / std::sqrt(-1.0 * common_exprY));
+                if (common_exprY >= 0)
+                    common_exprY1 = (std::sin(std::sqrt(common_exprY)) / std::sqrt(common_exprY));
+                else
+                    common_exprY1 = (std::sinh(std::sqrt(-1.0 * common_exprY)) / std::sqrt(-1.0 * common_exprY));
 
-                    if (common_exprZ >= 0)
-                        common_exprZ1 = (std::sin(std::sqrt(common_exprZ)) / std::sqrt(common_exprZ));
-                    else
-                        common_exprZ1 = (std::sinh(std::sqrt(-1.0 * common_exprZ)) / std::sqrt(-1.0 * common_exprZ));
+                if (common_exprZ >= 0)
+                    common_exprZ1 = (std::sin(std::sqrt(common_exprZ)) / std::sqrt(common_exprZ));
+                else
+                    common_exprZ1 = (std::sinh(std::sqrt(-1.0 * common_exprZ)) / std::sqrt(-1.0 * common_exprZ));
 
-                    T1 gridKernel = common_exprX1 * common_exprY1 * common_exprZ1;
-                    int common_index = Z * imageY * imageX + X * imageY + Y;
+                T1 gridKernel = common_exprX1 * common_exprY1 * common_exprZ1;
+                int common_index = Z * imageY * imageX + X * imageY + Y;
 
-                    if (!isnanPG(gridKernel)) // Checking for NaN
-                    {
-                        gridOS3 = gridOS * gridOS * gridOS;
-                        // dst[common_index] =
-                        //(src[common_index]) / gridKernel *(1.0 / gridOS3);
-                        pDst[2 * common_index] = (pSrc[2 * common_index]) / gridKernel * (1.0 / gridOS3); // Real
-                        pDst[2 * common_index + 1] = (pSrc[2 * common_index + 1]) / gridKernel * (1.0 / gridOS3); // Imaginary
-                    } else {
-                        pDst[2 * common_index] = 0.0;
-                        pDst[2 * common_index + 1] = 0.0;
-                    }
+                if (!isnanPG(gridKernel)) // Checking for NaN
+                {
+                    gridOS3 = gridOS * gridOS * gridOS;
+                    // dst[common_index] =
+                    //(src[common_index]) / gridKernel *(1.0 / gridOS3);
+                    pDst[2 * common_index] = (pSrc[2 * common_index]) / gridKernel * (1.0 / gridOS3); // Real
+                    pDst[2 * common_index + 1] = (pSrc[2 * common_index + 1]) / gridKernel * (1.0 / gridOS3); // Imaginary
+                } else {
+                    pDst[2 * common_index] = 0.0;
+                    pDst[2 * common_index + 1] = 0.0;
                 }
             }
         }
