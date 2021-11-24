@@ -6,6 +6,7 @@
 #include "../PGIncludes.h"
 //#include "pgComplex.hpp"
 #include "pgCol.hpp"
+#include "pgSubviewCol.hpp"
 
 #ifdef _OPENACC
 #include "openacc.h"
@@ -16,7 +17,7 @@ class pgMat {
 
 private:
 
-T *mem; //Pointer to raw data
+
 bool isInitialized; 
 bool isOnGPU; 
 
@@ -24,7 +25,7 @@ bool isOnGPU;
 //arma::uword n_elem;
 
 public:
-
+T *mem; //Pointer to raw data
 const arma::uword n_elem;
 const arma::uword n_rows;
 const arma::uword n_cols;
@@ -163,7 +164,7 @@ void reset_mem() {
 
 }
 
-void set_size(arma::uword nCols, arma::uword nRows) {
+void set_size(arma::uword nRows, arma::uword nCols) {
     if (isInitialized) {
         if (isOnGPU) {
             #pragma acc exit data finalize detach(mem) delete(mem[0:n_elem])
@@ -176,26 +177,26 @@ void set_size(arma::uword nCols, arma::uword nRows) {
     isInitialized = true;
     arma::access::rw(n_cols) = nCols;
     arma::access::rw(n_rows) = nRows;
-    arma::access::rw(n_elem) = nCols * nRows;
+    arma::access::rw(n_elem) = nRows * nCols;
 
     mem = new T[n_elem];
     #ifdef _OPENACC
         isOnGPU = true;
     #endif
-    #pragma acc update device(this)
+    #pragma acc update device(this[0:1])
     #pragma acc enter data create(mem[0:n_elem])
 
 } 
 
 void zeros() {
-    #pragma acc parallel loop present(mem[0:n_elem])
+    #pragma acc parallel loop copyin(this [0:1]) present(mem[0:n_elem])
     for(arma::uword ii = 0; ii < n_elem; ii++) {
         mem[ii] = T();
     }
 }
 
 void ones() {
-    #pragma acc parallel loop present(mem[0:n_elem])
+    #pragma acc parallel loop copyin(this [0:1]) present(mem[0:n_elem])
     for(arma::uword ii = 0; ii < n_elem; ii++) {
         mem[ii] = T(1.0);
     }
@@ -209,58 +210,86 @@ arma::Mat<T> getArma() {
     return armaT;
 }
 
+template<typename T_> 
+arma::Mat<T_> 
+    getArma(typename std::enable_if<std::is_same<T_,std::complex<float>>::value, std::nullptr_t>::type = nullptr)
+{
+#pragma acc update host(mem [0:2*inT.n_elem])
+    arma::Col<std::complex<float>> armaT(mem, n_elem, true, false);
+
+    return armaT;
+}
+
+template<typename T_> 
+arma::Mat<T_> 
+    getArma(typename std::enable_if<std::is_same<T_,std::complex<double>>::value, std::nullptr_t>::type = nullptr)
+{
+#pragma acc update host(mem [0:2*inT.n_elem])
+    arma::Col<std::complex<double>> armaT(mem, n_elem, true, false);
+
+    return armaT;
+}
+
 // Return a column for use
 pgSubviewCol<T> col(const arma::uword colIndx) {
 
     // Calculate some of the prerequisites
-    arma::uword n_elemCol = this.n_row;
-    arma::uword uiColHeader = this.n_row * colIndx;
-    T* pMem = this.mem;
-    pgSubviewCol<T> pgC(mem, this.n_elem, n_elemCol, uiColHeader);
+    arma::uword n_elemCol = this->n_rows;
+    arma::uword uiColHeader = this->n_rows * colIndx;
+    T* pMem = this->mem;
+    pgSubviewCol<T> pgC(pMem, this->n_elem, n_elemCol, uiColHeader);
     
     return std::move(pgC);
 }
 
 // Operators for element manipulation
 // We'll assume .at() is for fast, GPU manipulation
+#pragma acc routine seq
 inline
 const T at(const arma::uword d) const {
     return mem[d];
 }
 
+#pragma acc routine seq
 inline
 const T at(const arma::uword rowIdx, const arma::uword colIdx) const {
     return mem[n_cols * colIdx + rowIdx];
 }
 
+#pragma acc routine seq
 inline
 T& at(const arma::uword d) {
     return mem[d];
 }
 
+#pragma acc routine seq
 inline
 T& at(const arma::uword rowIdx, const arma::uword colIdx) {
     return mem[n_cols * colIdx + rowIdx];
 }
 
+#pragma acc routine seq
 inline
 T& operator()(const arma::uword d) {
     //#pragma acc update_host(mem)
     return mem[d];
 }
 
+#pragma acc routine seq
 inline
 const T operator()(const arma::uword d) const {
     //#pragma acc update_host(mem)
     return mem[d];
 }
 
+#pragma acc routine seq
 inline
 T& operator()(const arma::uword rowIdx, const arma::uword colIdx) {
     //#pragma acc update_host(mem)
     return mem[n_cols * colIdx + rowIdx];
 }
 
+#pragma acc routine seq
 inline
 const T operator()(const arma::uword rowIdx, const arma::uword colIdx) const {
     //#pragma acc update_host(mem)
@@ -304,7 +333,7 @@ pgMat<T>& operator=(pgMat<T>&& d) {
 
 pgMat<T>& operator+=(const T& A) {
 
-    #pragma acc parallel loop present(mem[0:n_elem])
+    #pragma acc parallel loop copyin(this [0:1]) present(mem[0:n_elem])
     for(arma::uword ii = 0; ii < n_elem; ii++) {
         this->mem[ii] += A;
     }
@@ -312,7 +341,7 @@ pgMat<T>& operator+=(const T& A) {
 }
 
 pgMat<T>& operator-=(const T& A) {
-    #pragma acc parallel loop present(this, mem[0:n_elem])
+    #pragma acc parallel loop present(this [0:1], mem[0:n_elem])
     for(arma::uword ii = 0; ii < n_elem; ii++) {
         this->mem[ii] -= A;
     }
@@ -531,7 +560,7 @@ template<typename T>
 const pgCol<T> sum(const pgMat<T> &pgA, const arma::uword dim = 0) {
     pgCol<T> sumA;
 
-    if (dim == 0) { // Colum-wise sums (default)
+    if (dim == 0) { // Column-wise sums (default)
         sumA.set_size(pgA.n_cols);
         sumA.zeros();
         #pragma acc parallel loop present(pgA, sumA)
@@ -558,12 +587,22 @@ const pgCol<T> sum(const pgMat<T> &pgA, const arma::uword dim = 0) {
     return std::move(sumA);
 }
 
+template<typename T>
+const T accu(const pgMat<T> &pgA) {
+    T sumA = 0;
+    #pragma acc parallel loop present(pgA, pgA.mem[0:pgA.n_elem]) reduction(+ : sumA)
+    for(arma::uword ii = 0; ii < pgA.n_elem; ii++) {
+        sumA += pgA.at(ii);
+    }
+
+    return sumA;
+}
 
 template<typename T>
 const pgCol<T> vectorise(const pgMat<T> &pgA) {
     pgCol<T> vectA(pgA.n_elem);
 
-    #pragma acc parallel loop present(pgA, vectA)
+    #pragma acc parallel loop present(pgA, vectA, pgA.mem[0:pgA.n_elem], vectA.mem[0:vectA.n_elem])
     for(arma::uword ii = 0; ii < pgA.n_elem; ii++) {
         vectA.at(ii) = pgA.at(ii);
     }

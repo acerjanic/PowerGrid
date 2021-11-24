@@ -14,8 +14,8 @@
 TEST_CASE("pgCol<std::complex<float>>: operators", "[pgCol<std::complex>>]") {
 
     // Setup Prerequsites for test
-    arma::uword lengthA = 100000;
-    arma::uword lengthB = 256 * 256;
+    arma::uword lengthA = 100;
+    arma::uword lengthB = 256;
     
     pgCol<std::complex<float>> pgCA(lengthA);
     pgCol<std::complex<float>> pgCB(lengthB);
@@ -47,8 +47,8 @@ TEST_CASE("pgCol<std::complex<float>>: operators", "[pgCol<std::complex>>]") {
     SECTION( "Test zeros and sum" ) {
         pgCC.zeros();
         pgCD.zeros();
-        REQUIRE(abs(sum(pgCC)) == 0);
-        REQUIRE(abs(sum(pgCD)) == 0);
+        REQUIRE(abs(sum(pgCC)) == (float)0);
+        REQUIRE(abs(sum(pgCD)) == (float)0);
     }
 
     SECTION( "Test  ones and sum()" ) {

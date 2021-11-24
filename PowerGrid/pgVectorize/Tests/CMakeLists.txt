@@ -24,10 +24,11 @@ set(TEST_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/pgColTests.cpp  
     ${CMAKE_CURRENT_SOURCE_DIR}/pgColCplxTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/pgMatTests.cpp   
+    ${CMAKE_CURRENT_SOURCE_DIR}/pgSubviewColTests.cpp   
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -acc -fast -pgf90libs")
-
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fast -acc -Minfo -ta=tesla -pgf90libs")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pgf90libs")
 # Make test executable
 add_executable(tests ${TEST_SOURCES})
 target_link_libraries(tests Catch ${LIBS})

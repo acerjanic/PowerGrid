@@ -20,10 +20,10 @@ using namespace std;
 int main()
 {
     typedef std::complex<float> CxT1;
-    arma::uword N1 = 128*128;
+    arma::uword N1 = 256*256;
 
-    arma::uword N2 = 256*256;
-    arma::uword N3 = 20;
+    arma::uword N2 = 512*512;
+    arma::uword N3 = 128;
     // Establish Armadillo timeframes
     auto start = std::chrono::high_resolution_clock::now();
     {
@@ -67,7 +67,7 @@ int main()
     finish = std::chrono::high_resolution_clock::now();
 
     elapsed = finish - start;
-    std::cout << "pgCol<std::complex<float>> For Elapsed time: " << elapsed.count() << " s\n";
+    std::cout << "pgCol<std::complex<float>> Test Elapsed time: " << elapsed.count() << " s\n";
     
     start = std::chrono::high_resolution_clock::now();
     {
@@ -111,7 +111,7 @@ int main()
     finish = std::chrono::high_resolution_clock::now();
 
     elapsed = finish - start;
-    std::cout << "pgMat<std::complex<float>> For Elapsed time: " << elapsed.count() << " s\n";
+    std::cout << "pgMat<std::complex<float>> Test Elapsed time: " << elapsed.count() << " s\n";
     
     
     

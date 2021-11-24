@@ -16,13 +16,13 @@
         {
             "label": "start prod env",
             "type": "shell",
-            "command": "docker-compose -f ./docker/prod-compose.yml run --name prodenv prod-image bash",
+            "command": "docker-ccompose -f ./docker/prod-compose.yml run --name prodenv prod-image bash",
             "problemMatcher": []
         },
         {
             "label": "stop prod env",
             "type": "shell",
-            "command": "docker-compose -f ./docker/prod-compose.yml down",
+            "command": "docker-ccompose -f ./docker/prod-compose.yml down",
             "problemMatcher": []
         },
         {

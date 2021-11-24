@@ -17,8 +17,8 @@ set(TEST_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
 )
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fast -fpermissive")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fast ")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 add_definitions(-DARMA_NO_DEBUG)
 # Make test executable
 add_executable(pgCol ${TEST_SOURCES})

@@ -31,6 +31,18 @@ public:
 #define RANGE(name) Tracer uniq_name_using_macros(name);
 #else
 #define RANGE(name)
+
+class Tracer {
+public:
+    Tracer(const char* name)
+    {
+        
+    }
+    ~Tracer()
+    {
+        
+    }
+};
 #endif
 
 #endif

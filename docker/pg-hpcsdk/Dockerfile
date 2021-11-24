@@ -1,10 +1,9 @@
-FROM ubuntu:18.04
-
+FROM nvidia/cuda:11.4.2-devel-ubuntu18.04
 # Run everything in /root
 WORKDIR /root
 
 # Add needed packages
-RUN apt-get -y update && apt-get install -y g++ gcc curl wget libopenblas-dev \
+RUN apt-get -y update && apt-get install -y pkg-config g++ gcc curl wget libopenblas-dev \
 						libarpack2-dev nano wget git make libssl-dev \
 						libhdf5-dev libfftw3-dev libnl-route-3-200 && apt-get clean all;
 
@@ -25,35 +24,36 @@ RUN chown -Rv _apt:root /var/cache/apt/archives/partial/; \
 chmod -Rv 700 /var/cache/apt/archives/partial/
 
 # Download and install NVIDIA HPC SDK 20.11
-RUN  wget https://developer.download.nvidia.com/hpc-sdk/20.11/nvhpc-20-11_20.11_arm64.deb \
-	https://developer.download.nvidia.com/hpc-sdk/20.11/nvhpc-2020_20.11_arm64.deb; \
-	apt-get install -y ./nvhpc-20-11_20.11_arm64.deb ./nvhpc-2020_20.11_arm64.deb; \
-	rm ./nvhpc-20-11_20.11_arm64.deb ./nvhpc-2020_20.11_arm64.deb;
+RUN  wget https://developer.download.nvidia.com/hpc-sdk/21.9/nvhpc-21-9_21.9_amd64.deb \
+	https://developer.download.nvidia.com/hpc-sdk/21.9/nvhpc-2021_21.9_amd64.deb; \
+	apt-get install -y ./nvhpc-2021_21.9_amd64.deb ./nvhpc-21-9_21.9_amd64.deb; \
+	rm ./nvhpc-21-9_21.9_amd64.deb ./nvhpc-2021_21.9_amd64.deb;
 
 # Handle NVIDIA HPC SDK specific stuff
-ENV NVARCH=Linux_aarch64
+ENV NVARCH=Linux_x86_64
 ENV NVCOMPILERS=/opt/nvidia/hpc_sdk
-ENV NVSDKVER=20.11
+ENV NVSDKVER=21.9
+ENV NVSDKYEAR=2021
 ENV CUDA_PATH="${NVCOMPILERS}/${NVARCH}/${NVSDKVER}/cuda"
-ENV MANPATH="${MANPATH}:${NVCOMPILERS}/${NVARCH}/20.11/compilers/man"
+ENV MANPATH="${MANPATH}:${NVCOMPILERS}/${NVARCH}/${NVSDKVER}/compilers/man"
 ENV LD_LIBRARY_PATH="${CUDA_PATH}/lib64:${LD_LIBRARY_PATH}"
-ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/20.11/compilers/lib:${LD_LIBRARY_PATH}"
-ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/2020/compilers/lib:${LD_LIBRARY_PATH}"
-ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/20.11/math_libs/lib64:${LD_LIBRARY_PATH}"
-ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/2020/math_libs/lib64:${LD_LIBRARY_PATH}"
-ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/20.11/comm_libs/mpi/lib:${LD_LIBRARY_PATH}"
-ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/2020/comm_libs/mpi/lib:${LD_LIBRARY_PATH}"
-ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/20.11/comm_libs/nccl/lib:${LD_LIBRARY_PATH}"
-ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/2020/comm_libs/nccl/lib:${LD_LIBRARY_PATH}"
-ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/20.11/comm_libs/nvshmem/lib:${LD_LIBRARY_PATH}"
-ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/2020/comm_libs/nvshmem/lib:${LD_LIBRARY_PATH}"
-ENV OPAL_PREFIX="${NVCOMPILERS}/${NVARCH}/20.11/comm_libs/mpi/"
-ENV PATH="${NVCOMPILERS}/${NVARCH}/20.11/compilers/bin:${PATH}"
-ENV PATH="${NVCOMPILERS}/${NVARCH}/20.11/comm_libs/mpi/bin:${PATH}"
-ENV MANPATH="${MANPATH}:${NVCOMPILERS}/${NVARCH}/20.11/comm_libs/mpi/man"
+ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/${NVSDKVER}/compilers/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/${NVSDKYEAR}/compilers/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/${NVSDKVER}/math_libs/lib64:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/${NVSDKYEAR}/math_libs/lib64:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/${NVSDKVER}/comm_libs/mpi/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/${NVSDKYEAR}/comm_libs/mpi/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/${NVSDKVER}/comm_libs/nccl/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/${NVSDKYEAR}/comm_libs/nccl/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/${NVSDKVER}/comm_libs/nvshmem/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="${NVCOMPILERS}/${NVARCH}/${NVSDKYEAR}/comm_libs/nvshmem/lib:${LD_LIBRARY_PATH}"
+ENV OPAL_PREFIX="${NVCOMPILERS}/${NVARCH}/NVSDKVER/comm_libs/mpi/"
+ENV PATH="${NVCOMPILERS}/${NVARCH}/${NVSDKVER}/compilers/bin:${PATH}"
+ENV PATH="${NVCOMPILERS}/${NVARCH}/${NVSDKVER}/comm_libs/mpi/bin:${PATH}"
+ENV MANPATH="${MANPATH}:${NVCOMPILERS}/${NVARCH}/${NVSDKVER}/comm_libs/mpi/man"
 
 # Install custom compile of boost for mpi.
-RUN wget -O ~/boost_1_75_0.tar.bz2 -c 'https://dl.bintray.com/boostorg/release/1.75.0/source/boost_1_75_0.tar.bz2' --max-redirect=100;\
+RUN wget -O ~/boost_1_75_0.tar.bz2 -c 'https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.bz2' --max-redirect=100;\
 	tar xjf ~/boost_1_75_0.tar.bz2; \
 	cd ~/boost_1_75_0/; \
 	./bootstrap.sh --prefix=/usr/local --with-toolset=pgi;  \
@@ -109,3 +109,4 @@ RUN git clone https://github.com/acerjanic/ismrmrd.git; \
 
 ENV LD_LIBRARY_PATH="/opt/PowerGrid/lib:${LD_LIBRARY_PATH}"
 ENV PATH="${PATH}:/opt/PowerGrid/bin"
+

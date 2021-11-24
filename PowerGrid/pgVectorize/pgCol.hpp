@@ -22,7 +22,7 @@ template <typename T>
 class pgCol {
 
 private:
-    T* mem; //Pointer to raw data
+
     bool isInitialized;
     bool isOnGPU;
     bool isCopy;
@@ -31,7 +31,7 @@ private:
 
 public:
     const arma::uword n_elem;
-
+    T* mem; //Pointer to raw data
     // Constructors
 
     pgCol<T>()
@@ -61,9 +61,8 @@ public:
         , isCopy(false)
         , n_elem(0)
     {
-        std::cout << "Entering pgCol<T> copy from Armadillo constructor" << std::endl;
 
-#pragma acc enter data create(this)
+#pragma acc enter data create(this[0:1])
         set_size(cSCplx.n_elem);
         memcpy(this->mem, cSCplx.memptr(), sizeof(T) * cSCplx.n_elem);
 
@@ -79,13 +78,12 @@ public:
         , isCopy(false)
         , n_elem(0)
     {
-        std::cout << "Entering pgCol<T> copy from Armadillo cplx constructor" << std::endl;
 
-#pragma acc enter data create(this)
+#pragma acc enter data create(this[0:1])
         set_size(cSCplx.n_elem);
         memcpy(this->mem, reinterpret_cast<float*>(cSCplx.memptr()), 2 * sizeof(float) * cSCplx.n_elem);
 
-#pragma acc update device(mem [0:n_elem])
+#pragma acc update device(this[0:1], mem [0:n_elem])
     }
 
     template<typename T_ = T>
@@ -103,7 +101,7 @@ public:
         set_size(cSCplx.n_elem);
         memcpy(this->mem, reinterpret_cast<double*>(cSCplx.memptr()), 2 * sizeof(double) * cSCplx.n_elem);
 
-#pragma acc update device(mem [0:n_elem])
+#pragma acc update device(this[0:1], mem [0:n_elem])
     }
 
     // Copy Constructor
@@ -143,7 +141,7 @@ public:
         isOnGPU = true;
 #endif
 
-#pragma acc update device(this)
+#pragma acc update device(this[0:1])
 #ifdef _OPENACC
         acc_attach((void**)&mem);
 #endif
@@ -164,7 +162,7 @@ public:
             delete[] mem;
         }
 
-#pragma acc exit data delete (this)
+#pragma acc exit data delete (this[0:1])
     }
 
     T* memptr() const
@@ -202,13 +200,13 @@ public:
 #ifdef _OPENACC
         isOnGPU = true;
 #endif
-#pragma acc update device(this)
+#pragma acc update device(this [0:1])
 #pragma acc enter data create(mem [0:n_elem])
     }
 
     void zeros()
     {
-#pragma acc parallel loop present(mem [0:n_elem])
+#pragma acc parallel loop copyin(this [0:1]) present(mem [0:n_elem])
         for (arma::uword ii = 0; ii < n_elem; ii++) {
             mem[ii] = T(0.0);
         }
@@ -216,7 +214,7 @@ public:
 
     void ones()
     {
-#pragma acc parallel loop present(mem [0:n_elem])
+#pragma acc parallel loop copyin(this [0:1]) present(mem [0:n_elem])
         for (arma::uword ii = 0; ii < n_elem; ii++) {
             mem[ii] = T(1.0);
         }
@@ -224,48 +222,53 @@ public:
     
     arma::Col<T> getArma()
     {
-#pragma acc update host(mem [0:n_elem])
+        #pragma acc update host(mem [0:n_elem])
         arma::Col<T> armaT(mem, n_elem, true, false);
 
         return armaT;
     }
-    /*
-template <typename U = T>
-arma::Col<std::complex<double>> getArma(typename std::enable_if<std::is_same<U, std::complex<double>>::value,
-                                               int>::type dummy = 0) {
-    #pragma acc update host(mem[0:n_elem])
-    arma::Col<T> armaT(reinterpret_cast<float *>(mem), n_elem, true, false);
+
+template<typename T_> 
+arma::Col<T_> 
+    getArma(typename std::enable_if<std::is_same<T_,std::complex<float>>::value, std::nullptr_t>::type = nullptr)
+{
+    #pragma acc update host(mem [0:2*inT.n_elem])
+    arma::Col<std::complex<float>> armaT(mem, n_elem, true, false);
 
     return armaT;
 }
 
-template <typename U = T>
-arma::Col<std::complex<float>> getArma(typename std::enable_if<std::is_same<T, std::complex<float>>::value,
-                                               int>::type dummy = 0) {
-    #pragma acc update host(mem[0:n_elem])
-    arma::Col<T> armaT(reinterpret_cast<double *>(mem), n_elem, true, false);
+template<typename T_> 
+arma::Col<T_> 
+    getArma(typename std::enable_if<std::is_same<T_,std::complex<double>>::value, std::nullptr_t>::type = nullptr)
+{
+    #pragma acc update host(mem [0:2*inT.n_elem])
+    arma::Col<std::complex<double>> armaT(mem, n_elem, true, false);
 
     return armaT;
 }
-*/
     // Operators for element manipulation
     // We'll assume .at() is for fast, GPU manipulation
+    #pragma acc routine seq
     inline const T at(const arma::uword d) const
     {
         return mem[d];
     }
 
+    #pragma acc routine seq
     inline T& at(const arma::uword d)
     {
         return mem[d];
     }
 
+    #pragma acc routine seq
     inline T& operator()(const arma::uword d)
     {
         //#pragma acc update_host(mem)
         return mem[d];
     }
 
+    #pragma acc routine seq
     inline const T operator()(const arma::uword d) const
     {
         //#pragma acc update_host(mem)
@@ -440,7 +443,7 @@ arma::Col<std::complex<float>> getArma(typename std::enable_if<std::is_same<T, s
     {
         pgCol<T> pgC(n_elem);
 
-#pragma acc parallel loop present(mem [0:n_elem], pgB, pgC)
+#pragma acc parallel loop copyin(this [0:1]) present(mem [0:n_elem], pgB, pgC)
         for (arma::uword ii = 0; ii < n_elem; ii++) {
             pgC.at(ii) = mem[ii] + pgB.at(ii);
         }
@@ -452,7 +455,7 @@ arma::Col<std::complex<float>> getArma(typename std::enable_if<std::is_same<T, s
     {
         pgCol<T> pgC(n_elem);
 
-#pragma acc parallel loop present(mem [0:n_elem], pgB, pgC)
+#pragma acc parallel loop copyin(this [0:1]) present(mem [0:n_elem], pgB, pgC)
         for (arma::uword ii = 0; ii < n_elem; ii++) {
             pgC.at(ii) = mem[ii] - pgB.at(ii);
         }
@@ -484,41 +487,19 @@ arma::Col<std::complex<float>> getArma(typename std::enable_if<std::is_same<T, s
     }
 };
 
-template<typename T_> 
-arma::Col<T_> 
-    getArma(pgCol<T_> inT,
-            typename std::enable_if<std::is_same<T_,std::complex<float>>::value, std::nullptr_t>::type = nullptr)
-{
-//#pragma acc update host(mem [0:2*inT.n_elem])
-    arma::Col<std::complex<float>> armaT(inT.memptr(), inT.n_elem, true, false);
-
-    return armaT;
-}
-
-template<typename T_> 
-arma::Col<T_> 
-    getArma(pgCol<T_> inT,
-            typename std::enable_if<std::is_same<T_,std::complex<double>>::value, std::nullptr_t>::type = nullptr)
-{
-//#pragma acc update host(mem [0:2*inT.n_elem])
-    arma::Col<std::complex<double>> armaT(inT.memptr(), inT.n_elem, true, false);
-
-    return armaT;
-}
-
 template <typename T>
 const std::complex<T> sum(const pgCol<std::complex<T>>& pgA)
 {
-    T sumReal = {};
-    T sumImag = {};
+    T sumReal = 0;
+    T sumImag = 0;
 
-#pragma acc parallel loop present(pgA) reduction(+ \
+#pragma acc parallel loop present(pgA, pgA.mem[0:pgA.n_elem]) reduction(+ \
                                                  : sumReal)
     for (arma::uword ii = 0; ii < pgA.n_elem; ii++) {
         sumReal += real(pgA.at(ii));
     }
 
-#pragma acc parallel loop present(pgA) reduction(+ \
+#pragma acc parallel loop present(pgA, pgA.mem[0:pgA.n_elem]) reduction(+ \
                                                  : sumImag)
     for (arma::uword ii = 0; ii < pgA.n_elem; ii++) {
         sumImag += imag(pgA.at(ii));
@@ -530,13 +511,15 @@ const std::complex<T> sum(const pgCol<std::complex<T>>& pgA)
 template <typename T>
 const T sum(const pgCol<T>& pgA)
 {
-    T sumA = {};
+
+    T sumA = 0;
 
 #pragma acc parallel loop present(pgA) reduction(+ \
-                                                 : sumA)
+                                                 : sumA) copy(sumA) 
     for (arma::uword ii = 0; ii < pgA.n_elem; ii++) {
         sumA += pgA.at(ii);
     }
+
     return sumA;
 }
 #endif //POWER_GRID_pgCol_hpp

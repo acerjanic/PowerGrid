@@ -12,8 +12,8 @@
 TEST_CASE("pgCol<float>: operators", "[pgCol<float>]") {
 
     // Setup Prerequsites for test
-    arma::uword lengthA = 100000;
-    arma::uword lengthB = 256 * 256;
+    arma::uword lengthA = 100;
+    arma::uword lengthB = 256;
     
     pgCol<float> pgA(lengthA);
     pgCol<float> pgB(lengthB);
@@ -85,5 +85,53 @@ TEST_CASE("pgCol<float>: operators", "[pgCol<float>]") {
         REQUIRE(sum( pgD % pgDZeros) == 0);
         
     }
+
+    SECTION( "Test getArma()" ) {
+        arma::Col<float> armaC;
+        arma::Col<float> armaD;
+        arma::Col<float> armaCZeros;
+        arma::Col<float> armaDZeros;
+        pgC.ones();
+        pgD.ones();
+
+        pgCZeros.zeros();
+        pgDZeros.zeros();
+
+        armaC = pgC.getArma();
+        armaD = pgD.getArma();
+        armaCZeros = pgCZeros.getArma();
+        armaDZeros = pgDZeros.getArma();
+
+        REQUIRE(sum( armaC % armaC ) == lengthA);
+        REQUIRE(sum( armaD % armaD ) == lengthB);
+        REQUIRE(sum( armaC % armaCZeros) == 0);
+        REQUIRE(sum( armaD % armaDZeros) == 0);
+        
+    }
+
+    SECTION( "Test pgCol from arma::Col()" ) {
+        arma::Col<float> armaC(lengthA);
+        arma::Col<float> armaD(lengthB);
+        arma::Col<float> armaCZeros(lengthA);
+        arma::Col<float> armaDZeros(lengthB);
+
+        armaC.ones();
+        armaD.ones();
+
+        armaCZeros.zeros();
+        armaDZeros.zeros();
+
+        pgCol<float> pgC(armaC);
+        pgCol<float>  pgD(armaD);
+        pgCol<float>  pgCZeros(armaCZeros);
+        pgCol<float>  pgDZeros(armaDZeros);
+
+        REQUIRE(sum( pgC % pgC ) == lengthA);
+        REQUIRE(sum( pgD % pgD ) == lengthB);
+        REQUIRE(sum( pgC % pgCZeros) == 0);
+        REQUIRE(sum( pgD % pgDZeros) == 0);
+        
+    }
+
 
 }
