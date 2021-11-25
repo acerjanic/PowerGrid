@@ -412,8 +412,6 @@ void getCompleteISMRMRDAcqData(ISMRMRD::Dataset *d, acqTracking *acqTrack, uword
 
 				ISMRMRD::EncodingCounters encIdx = acq.idx();
 
-				std::cout << "Grabbing acq index #" << acqIndx << std::endl;
-
 				for (uword jj = 0; jj<nc; jj++) {
 					for (uword kk = 0; kk<nro; kk++) {
 						acqWork(kk, jj) = static_cast<std::complex<T1>>(acq.data(kk, jj));

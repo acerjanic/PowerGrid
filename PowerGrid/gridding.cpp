@@ -56,6 +56,8 @@ int gridding_adjoint_2D(unsigned int n, parameters<T1> params, T1 beta,
     unsigned int Ny = params.imageSize[1];
     int gridNumElems = params.gridSize[0] * params.gridSize[1];
 
+    T1 kernelScale = ((T1)4.0 / (kernelWidth * kernelWidth) * (T1)sizeLUT);
+
 #pragma acc parallel loop independent gang vector present(LUT [0:sizeLUT], \
     pGData [0:gridNumElems * 2], sample [0:n]) copyin(params, params.gridSize[0:3])
     for (int i = 0; i < n; i++) {
@@ -75,9 +77,9 @@ int gridding_adjoint_2D(unsigned int n, parameters<T1> params, T1 beta,
 #pragma acc loop seq
         for (nx = NxL; nx <= NxH; ++nx) {
             int k0;
-            distX = std::abs(shiftedKx - ((T1)nx)) / (gridOS);
+            distX = (shiftedKx - ((T1)nx)) / (gridOS);
 
-            k0 = (int)((distX * distX * (T1)4.0 / (kernelWidth * kernelWidth)) * (T1)sizeLUT);
+            k0 = (int)(distX * distX * kernelScale);
             if (k0 >= sizeLUT)
                 kbX = (T1)0.0;
             else
@@ -85,9 +87,9 @@ int gridding_adjoint_2D(unsigned int n, parameters<T1> params, T1 beta,
 
 #pragma acc loop seq
             for (ny = NyL; ny <= NyH; ++ny) {
-                distY = std::abs(shiftedKy - ((T1)ny)) / (gridOS);
+                distY = (shiftedKy - ((T1)ny)) / (gridOS);
 
-                k0 = (int)((distY * distY * (T1)4.0 / (kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                k0 = (int)(distY * distY * kernelScale);
 
                 if (k0 >= sizeLUT)
                     kbY = (T1)0.0;
@@ -165,7 +167,7 @@ int gridding_adjoint_3D(unsigned int n, parameters<T1> params, T1 beta,
         NzL = (int)(std::max((T1)0.0, std::ceil(shiftedKz - kernelWidth * (gridOS) / (T1)2.0)));
         NzH = (int)(std::min((gridOS * (T1)Nz - (T1)1.0),
             std::floor(shiftedKz + kernelWidth * (gridOS) / (T1)2.0)));
-#pragma acc loop independent seq
+#pragma acc loop seq
         for (nz = NzL; nz <= NzH; ++nz) {
             int k0;
             distZ = std::abs(shiftedKz - ((T1)nz)) / (gridOS);
@@ -238,7 +240,8 @@ int gridding_forward_2D(unsigned int n, parameters<T1> params, const T1* kx,
     int Nx = params.imageSize[0];
     int Ny = params.imageSize[1];
     int gridNumElems = params.gridSize[0] * params.gridSize[1];
-
+    
+    T1 kernelScale = ((T1)4.0 / (kernelWidth * kernelWidth) * (T1)sizeLUT);
 
 #pragma acc parallel loop gang vector present(kx [0:n], ky [0:n], pSamples [0:n * 2], \
     LUT [0:sizeLUT], pGridData [0:gridNumElems * 2]) copyin(params, params.gridSize[0:3])
@@ -258,9 +261,9 @@ int gridding_forward_2D(unsigned int n, parameters<T1> params, const T1* kx,
 #pragma acc loop seq
         for (nx = NxL; nx <= NxH; ++nx) {
             int k0;
-            distX = std::abs(shiftedKx - ((T1)nx)) / (gridOS);
+            distX = (shiftedKx - ((T1)nx)) / (gridOS);
 
-            k0 = (int)((distX * distX * (T1)4.0 / (kernelWidth * kernelWidth)) * (T1)sizeLUT);
+            k0 = (int)(distX * distX * kernelScale);
             if (k0 >= sizeLUT)
                 kbX = (T1)0.0;
             else
@@ -268,9 +271,9 @@ int gridding_forward_2D(unsigned int n, parameters<T1> params, const T1* kx,
 
 #pragma acc loop seq
             for (ny = NyL; ny <= NyH; ++ny) {
-                distY = std::abs(shiftedKy - ((T1)ny)) / (gridOS);
+                distY = (shiftedKy - ((T1)ny)) / (gridOS);
 
-                k0 = (int)((distY * distY * (T1)4.0 / (kernelWidth * kernelWidth)) * (T1)sizeLUT);
+                k0 = (int)(distY * distY * kernelScale);
                 if (k0 >= sizeLUT)
                     kbY = (T1)0.0;
                 else
@@ -401,10 +404,10 @@ int gridding_forward_3D(unsigned int n, parameters<T1> params, const T1* kx,
                     /* grid data */
                     idx = ny + (nx)*params.gridSize[1] + (nz)*params.gridSize[0] * params.gridSize[1];
 
-#pragma acc atomic update
+//#pragma acc atomic update
                     pSamples[2 * i] += w * pGridData[2 * idx];
 
-#pragma acc atomic update
+//#pragma acc atomic update
                     pSamples[2 * i + 1] += w * pGridData[2 * idx + 1];
                 }
             }

@@ -57,7 +57,6 @@ Col<complex<T1>> SENSE<T1, Tobj>::operator*(const Col<complex<T1>>& d) const
     // In SENSE we store coil data using the columns of the data matrix, and we
     // weight the data by the coil sensitivies from the SENSE map
     outImg = this->SMap;
-#pragma omp parallel for schedule(dynamic) shared(outData, d, SMap)
     for (unsigned int ii = 0; ii < this->nc; ii++) {
         outImg.unsafe_col(ii) %= d;
     }
@@ -83,12 +82,11 @@ Col<complex<T1>> SENSE<T1, Tobj>::operator/(const Col<complex<T1>>& d) const
 
     for (unsigned int ii = 0; ii < this->nc; ii++) {
         // coilImages.col(ii) = (*this->G_obj)/inData.col(ii);
-        outImg.unsafe_col(ii) = (*this->G_obj) / d.subvec((ii)*n1, ((ii + 1) * n1) - 1);
+        outImg.col(ii) = (*this->G_obj) / d.subvec((ii)*n1, ((ii + 1) * n1) - 1);
     }
 
-#pragma omp parallel for schedule(dynamic) shared(outImg, conjSMap)
     for (unsigned int ii = 0; ii < this->nc; ii++) {
-        outImg.unsafe_col(ii) %= this->conjSMap.unsafe_col(ii);
+        outImg.col(ii) %= this->conjSMap.col(ii);
     }
     // outData = sum(conj(SMap)%coilImages,2);
 

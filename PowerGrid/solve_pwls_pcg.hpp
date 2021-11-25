@@ -50,6 +50,8 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
                                 Col<T1> const &W, Col<complex<T1>> const &yi,
                                 Robj const &R, uword niter) {
   typedef complex<T1> CxT1;
+
+  RANGE(__FUNCTION__)
   // Initialize projection
   cout << "Entering solve_pwls_pcg" << endl;
   Col<CxT1> Ax = A * xInitial;

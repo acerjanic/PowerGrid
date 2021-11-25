@@ -263,36 +263,44 @@ operator*(const Col<complex<T1>>& d) const
     //Col<complex<T1>> temp;
     //uvec dataMaskTrimmed;
     // loop through time segments
-    tempD = Wo;
+    if(this->L == 1) {
+        outData = (*G * d);
+        
+        return outData;
 
-    for (unsigned int ii = 0; ii < this->L; ii++) {
-        tempD.col(ii) %= d;
+    } else {
+        tempD = Wo;
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            tempD.col(ii) %= d;
+        }
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            // cout << "Entering time segmentation loop" << endl;
+            // apply a phase to each time segment
+            //Wo = exp(-i * (this->fieldMap) * ((ii) * this->tau + this->T_min));
+
+            // perform multiplication by the object and sum up the time segments
+            //temp = (this->Wo.col(ii)) % d;
+            outData.col(ii) = (*G * tempD.col(ii));
+
+            // dataMaskTrimmed = find(abs(this->AA.col(ii)) > 0);
+            // std::cout << "Length dataMaskTrimmed = " << dataMaskTrimmed.n_rows <<
+            // std::endl;
+
+            // outData +=
+            //    (this->AA.col(ii)) % ((*G).trimmedForwardOp(Wo % d,
+            //    this->AA.col(ii)));
+        }
+
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            outData.col(ii) %= AA.col(ii);
+        }
+        return sum(outData, 1);
     }
 
-    for (unsigned int ii = 0; ii < this->L; ii++) {
-        // cout << "Entering time segmentation loop" << endl;
-        // apply a phase to each time segment
-        //Wo = exp(-i * (this->fieldMap) * ((ii) * this->tau + this->T_min));
 
-        // perform multiplication by the object and sum up the time segments
-        //temp = (this->Wo.col(ii)) % d;
-        outData.col(ii) = (*G * tempD.col(ii));
-
-        // dataMaskTrimmed = find(abs(this->AA.col(ii)) > 0);
-        // std::cout << "Length dataMaskTrimmed = " << dataMaskTrimmed.n_rows <<
-        // std::endl;
-
-        // outData +=
-        //    (this->AA.col(ii)) % ((*G).trimmedForwardOp(Wo % d,
-        //    this->AA.col(ii)));
-    }
-
-
-    for (unsigned int ii = 0; ii < this->L; ii++) {
-        outData.col(ii) %= AA.col(ii);
-    }
-
-    return sum(outData, 1);
 }
 template <typename T1, typename Tobj>
 inline Col<complex<T1>> TimeSegmentation<T1, Tobj>::
@@ -301,26 +309,32 @@ operator/(const Col<complex<T1>>& d) const
     RANGE(__FUNCTION__)
 
     Tobj* G = this->obj;
-    tempAD = conj(AA);
-// output is the size of the image
-//Col<complex<T1>> outData = zeros<Col<complex<T1>>>(this->n2);
+    if (this->L == 1) {
+        outImg = ((*G) / d);
+        
+        return outImg;
+    } else {
+        tempAD = conj(AA);
+    // output is the size of the image
+    //Col<complex<T1>> outData = zeros<Col<complex<T1>>>(this->n2);
 
-    for (unsigned int ii = 0; ii < this->L; ii++) {
-        tempAD.col(ii) %= d;
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            tempAD.col(ii) %= d;
+        }
+        // loop through the time segments
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+
+            // perform adjoint operation by the object and sum up the time segments
+            outImg.col(ii) = ((*G) / tempAD.col(ii));
+        }
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            outImg.col(ii) %= WoH.col(ii);
+        }
+
+        return sum(outImg, 1);
     }
-    // loop through the time segments
-
-    for (unsigned int ii = 0; ii < this->L; ii++) {
-
-        // perform adjoint operation by the object and sum up the time segments
-        outImg.col(ii) = ((*G) / tempAD.col(ii));
-    }
-
-    for (unsigned int ii = 0; ii < this->L; ii++) {
-        outImg.col(ii) %= WoH.col(ii);
-    }
-
-    return sum(outImg, 1);
 }
 
 // Explicit Instantiations
