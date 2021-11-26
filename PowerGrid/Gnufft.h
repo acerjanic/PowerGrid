@@ -32,6 +32,28 @@ Developed by:
 #define PowerGrid_Gnufft_h
 
 #include "PGIncludes.h"
+
+#ifdef OPENACC_GPU // GPU Version
+    #include "cufft.h"
+    #include "fftGPU.h"
+    #include "fftCPU.h"
+    #include "griddingSupport.h"
+    #include "griddingTypes.h"
+    #include "openacc.h"
+    #define CFTHandle cufftHandle
+#elif _OPENACC
+    #include "fftCPU.h"
+    #include "griddingSupport.h"
+    #include "griddingTypes.h"
+    #define CFTHandle void
+    #include "openacc.h"
+#else // CPU version
+    #include "fftCPU.h"
+    #include "griddingSupport.h"
+    #include "griddingTypes.h"
+    #define CFTHandle void
+#endif
+
 #include "gridding.h"
 
 using namespace arma;
@@ -83,10 +105,10 @@ public:
   uword imageNumElems;
   uword gridNumElems;
 
-  T1 *pGridData, *pGridData_d, *pGridData_os, *pGridData_os_d;
-  T1 *pSamples;
-  complex<T1> *gridData, *gridData_d, *gridData_os, *gridData_os_d;
-  complex<T1> *samples;
+  mutable T1 *pGridData, *pGridData_d, *pGridData_os, *pGridData_os_d;
+  mutable T1 *pSamples;
+  mutable complex<T1> *gridData, *gridData_d, *gridData_os, *gridData_os_d;
+  mutable complex<T1> *samples;
 
   mutable Col<CxT1> XformedData;
   mutable Col<CxT1> XformedImg;  
@@ -100,17 +122,56 @@ public:
   // Adjoint transform operation
   Col<CxT1> operator/(const Col<CxT1> &d) const;
 
+
+  // 2D adjoint gridding on CPU
+int gridding_adjoint_2D(unsigned int n, parameters<T1> params, T1 beta,
+                        ReconstructionSample<T1> *__restrict sample,
+                        const T1 *LUT, const uword sizeLUT,
+                        T1 *__restrict gridData) const;
+
+// 3D adjoint gridding on CPU
+int gridding_adjoint_3D(unsigned int n, parameters<T1> params, T1 beta,
+                        ReconstructionSample<T1> *__restrict sample,
+                        const T1 *LUT, const uword sizeLUT,
+                        T1 *gridData) const;
+
+// 2D forward gridding on CPU
+int gridding_forward_2D(unsigned int n, parameters<T1> params, const T1 *kx,
+                        const T1 *ky, T1 beta, T1 *__restrict pSamples,
+                        const T1 *LUT, const uword sizeLUT,
+                        T1 *__restrict pGridData) const; 
+
+// 3D forward gridding on CPU
+int gridding_forward_3D(unsigned int n, parameters<T1> params, const T1 *kx,
+                        const T1 *ky, const T1 *kz, T1 beta,
+                        T1 *__restrict pSamples, const T1 *LUT,
+                        const uword sizeLUT, T1 *__restrict pGridData) const;
+
+// Calculates the gridded adjoint transform
+void computeFH_CPU_Grid(int numK_per_coil, const T1 *__restrict kx,
+                        const T1 *__restrict ky, const T1 *__restrict kz,
+                        const T1 *__restrict dIn,
+                        int Nx, int Ny, int Nz, T1 gridOS,
+                        const T1 kernelWidth, const T1 beta, const T1 *LUT,
+                        const uword sizeLUT, void *stream, CFTHandle *plan,
+                        T1 *pGridData_crop_deAp, T1 *pGridData_crop_d,
+                        T1 *pGridData, T1 *pGridData_d) const;
+
+// Calculates the gridded forward fourier transform
+void computeFd_CPU_Grid(int numK_per_coil, const T1 *__restrict kx,
+                        const T1 *__restrict ky, const T1 *__restrict kz,
+                        const T1 *__restrict dIn,
+                        int Nx, int Ny, int Nz, T1 gridOS,
+                        const T1 kernelWidth, const T1 beta, const T1 *LUT,
+                        const uword sizeLUT, void *stream, CFTHandle *plan,
+                        T1 *pGridData, T1 *pGridData_d, T1 *pGridData_os,
+                        T1 *pGridData_os_d, T1 *pSamples) const;
+
+// Extra functions for density compensation function calculation ala Pipe method.
   Col<CxT1> forwardSpatialInterp(const Col<CxT1> &d) const;
   // Adjoint transform operation
   Col<CxT1> adjointSpatialInterp(const Col<CxT1> &d) const;
-/*
-  Col<CxT1> trimmedForwardOp(const Col<CxT1> &d,
-                             const Col<CxT1> &tempInterp) const;
 
-  // Adjoint transform operation
-  Col<CxT1> trimmedAdjointOp(const Col<CxT1> &d,
-                             const Col<CxT1> &tempInterp) const;
-                             */
 };
 
 // Explicit Instantiation

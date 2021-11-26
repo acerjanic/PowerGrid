@@ -29,30 +29,10 @@ Developed by:
 #define PowerGrid_gridding_hpp
 
 #include <cstdlib>
-
-#ifdef OPENACC_GPU // GPU Version
-    #include "cufft.h"
-    #include "fftGPU.h"
-    #include "fftCPU.h"
-    #include "griddingSupport.h"
-    #include "griddingTypes.h"
-    #include "openacc.h"
-    #define CFTHandle cufftHandle
-#elif _OPENACC
-    #include "fftCPU.h"
-    #include "griddingSupport.h"
-    #include "griddingTypes.h"
-    #define CFTHandle void
-    #include "openacc.h"
-#else // CPU version
-    #include "fftCPU.h"
-    #include "griddingSupport.h"
-    #include "griddingTypes.h"
-    #define CFTHandle void
-#endif
+#include "Gnufft.h"
 
 using namespace arma;
-
+/*
 // 2D adjoint gridding on CPU
 template <typename T1>
 int gridding_adjoint_2D(unsigned int n, parameters<T1> params, T1 beta,
@@ -102,69 +82,75 @@ void computeFd_CPU_Grid(int numK_per_coil, const T1 *__restrict kx,
                         T1 *pGridData, T1 *pGridData_d, T1 *pGridData_os,
                         T1 *pGridData_os_d, T1 *pSamples);
 
+*/
+/*
 // Explicit Instantiations
-extern template int gridding_adjoint_2D<float>(unsigned int, parameters<float>,
+extern template int Gnufft<float>::gridding_adjoint_2D(unsigned int, parameters<float>,
                                                float,
                                                ReconstructionSample<float> *,
                                                const float *, const uword,
-                                               float *);
-extern template int gridding_adjoint_2D<double>(unsigned int,
+                                               float *) const;
+extern template int Gnufft<double>::gridding_adjoint_2D(unsigned int,
                                                 parameters<double>, double,
                                                 ReconstructionSample<double> *,
                                                 const double *, const uword,
-                                                double *);
-extern template int gridding_adjoint_3D<float>(unsigned int, parameters<float>,
+                                                double *) const;
+extern template int Gnufft<float>::gridding_adjoint_3D(unsigned int, parameters<float>,
                                                float,
                                                ReconstructionSample<float> *,
                                                const float *, const uword,
-                                               float *);
-extern template int gridding_adjoint_3D<double>(unsigned int,
+                                               float *) const;
+extern template int Gnufft<double>::gridding_adjoint_3D(unsigned int,
                                                 parameters<double>, double,
                                                 ReconstructionSample<double> *,
                                                 const double *, const uword,
-                                                double *);
-extern template int gridding_forward_2D<float>(unsigned int, parameters<float>,
+                                                double *) const;
+extern template int Gnufft<float>::gridding_forward_2D(unsigned int, parameters<float>,
                                                const float *, const float *,
                                                float beta, float *,
                                                const float *, const uword,
-                                               float *);
+                                               float *) const;
 extern template int
-gridding_forward_2D<double>(unsigned int, parameters<double>, const double *,
+Gnufft<double>::gridding_forward_2D(unsigned int, parameters<double>, const double *,
                             const double *, double beta, double *,
-                            const double *, const uword, double *);
-extern template int gridding_forward_3D<float>(unsigned int, parameters<float>,
+                            const double *, const uword, double *) const;
+extern template int Gnufft<float>::gridding_forward_3D(unsigned int, parameters<float>,
                                                const float *, const float *,
                                                const float *, float beta,
                                                float *, const float *,
-                                               const uword, float *);
+                                               const uword, float *) const;
 extern template int
-gridding_forward_3D<double>(unsigned int, parameters<double>, const double *,
+Gnufft<double>::gridding_forward_3D(unsigned int, parameters<double>, const double *,
                             const double *, const double *, double beta,
                             double *, const double *, const uword,
-                            double *);
+                            double *) const;
 extern template void
-computeFH_CPU_Grid<float>(int, const float *, const float *, const float *,
+Gnufft<float>::computeFH_CPU_Grid(int, const float *, const float *, const float *,
                           const float *, int, int, int,
                           float gridOS, const float,
                           const float, const float *, const uword, void *,
-                          CFTHandle *, float *, float *, float *, float *);
+                          CFTHandle *, float *, float *, float *, float *) const;
 extern template void
-computeFH_CPU_Grid<double>(int, const double *, const double *, const double *,
+Gnufft<double>::computeFH_CPU_Grid(int, const double *, const double *, const double *,
                            const double *, int, int, int,
                            double gridOS, const double,
                            const double, const double *, const uword, void *,
-                           CFTHandle *, double *, double *, double *, double *);
+                           CFTHandle *, double *, double *, double *, double *) const;
 extern template void 
-computeFd_CPU_Grid<float>(int, const float *,
+Gnufft<float>::computeFd_CPU_Grid(int, const float *,
                                         const float *, const float *, const float *,
                                         int, int, int, float, const float, const float,
                                         const float *, const uword, void *, CFTHandle *,
-                                        float *, float *, float *, float *, float *);
+                                        float *, float *, float *, float *, float *) const;
 extern template void 
-computeFd_CPU_Grid<double>(int, const double *,
+Gnufft<double>::computeFd_CPU_Grid(int, const double *,
                                         const double *, const double *, const double *,
                                         int, int, int, double, const double, const double,
                                         const double *, const uword, void *, CFTHandle *,
-                                        double *, double *, double *, double *, double *);
+                                        double *, double *, double *, double *, double *) const;
+
+*/
 
 #endif
+
+
