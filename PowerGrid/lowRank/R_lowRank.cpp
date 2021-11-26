@@ -38,7 +38,7 @@ R_lowRank<T1, Robj>::R_lowRank(Robj const &R1, uword rank, uword nImages, Mat<Cx
 
 template <typename T1, typename Robj>
 T1 R_lowRank<T1, Robj>::Penalty(const Col<complex<T1> > &x) const {
-        RANGE()
+        RANGE(__PRETTY_FUNCTION__)
         
         Col<CxT1> imgOut(Nimg);
 
@@ -54,7 +54,7 @@ T1 R_lowRank<T1, Robj>::Penalty(const Col<complex<T1> > &x) const {
 }
 template <typename T1, typename Robj>
 Col<complex<T1>> R_lowRank<T1, Robj>::Gradient(const Col<complex<T1> > &x) const {
-        RANGE()
+        RANGE(__PRETTY_FUNCTION__)
         
         uword N = x.n_rows/this->Nrank;
         Mat<CxT1> spatialBasis = reshape(x, N, this->Nrank);
@@ -73,7 +73,7 @@ Col<complex<T1>> R_lowRank<T1, Robj>::Gradient(const Col<complex<T1> > &x) const
 template <typename T1, typename Robj>
 complex<T1> R_lowRank<T1, Robj>::Denom(const Col<complex<T1> > &ddir,
                                const Col<complex<T1> > &x) const {
-        RANGE()
+        RANGE(__PRETTY_FUNCTION__)
         
 
         uword N = x.n_rows/this->Nrank;

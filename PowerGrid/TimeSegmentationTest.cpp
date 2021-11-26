@@ -184,7 +184,7 @@ TimeSegmentation<T1, Tobj>::TimeSegmentation(Tobj &G, Col<T1> map_in,
 template <typename T1, typename Tobj>
 inline Col<complex<T1>> TimeSegmentation<T1, Tobj>::
 operator*(const Col<complex<T1>> &d) const {
-  RANGE()
+  RANGE(__PRETTY_FUNCTION__)
   auto start = std::chrono::high_resolution_clock::now();
 
   Tobj *G = this->obj;
@@ -237,7 +237,7 @@ auto finish = std::chrono::high_resolution_clock::now();
 template <typename T1, typename Tobj>
 inline Col<complex<T1>> TimeSegmentation<T1, Tobj>::
 operator/(const Col<complex<T1>> &d) const {
-  RANGE()
+  RANGE(__PRETTY_FUNCTION__)
   auto start = std::chrono::high_resolution_clock::now();
 
   Tobj *G = this->obj;

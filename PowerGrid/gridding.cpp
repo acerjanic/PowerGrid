@@ -34,7 +34,7 @@ int gridding_adjoint_2D(unsigned int n, parameters<T1> params, T1 beta,
     const T1* LUT, const uword sizeLUT,
     T1* __restrict pGData)
 {
-    RANGE(__FUNCTION__)
+    RANGE(__PRETTY_FUNCTION__)
     unsigned int NxL, NxH;
     unsigned int NyL, NyH;
 
@@ -122,7 +122,7 @@ int gridding_adjoint_3D(unsigned int n, parameters<T1> params, T1 beta,
     const T1* LUT, const uword sizeLUT,
     T1* pGData)
 {
-    RANGE(__FUNCTION__)
+    RANGE(__PRETTY_FUNCTION__)
     int NxL, NxH;
     int NyL, NyH;
     int NzL, NzH;
@@ -222,7 +222,7 @@ int gridding_forward_2D(unsigned int n, parameters<T1> params, const T1* kx,
     const T1* LUT, const uword sizeLUT,
     T1* __restrict pGridData)
 {
-    RANGE(__FUNCTION__)
+    RANGE(__PRETTY_FUNCTION__)
     int NxL, NxH;
     int NyL, NyH;
 
@@ -310,7 +310,7 @@ int gridding_forward_3D(unsigned int n, parameters<T1> params, const T1* kx,
     T1* __restrict pSamples, const T1* LUT,
     const uword sizeLUT, T1* __restrict pGridData)
 {
-    RANGE(__FUNCTION__)
+    RANGE(__PRETTY_FUNCTION__)
     int NxL, NxH;
     int NyL, NyH;
     int NzL, NzH;
@@ -429,7 +429,7 @@ void computeFH_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
     T1* pGridData, T1* pGridData_d)
 {
 
-    RANGE(__FUNCTION__)
+    RANGE(__PRETTY_FUNCTION__)
     parameters<T1> params;
     params.sync = 0;
     params.binsize = 128;
@@ -595,7 +595,7 @@ void computeFd_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
     T1* pGridData_os_d, T1* pSamples)
 {
 
-    RANGE(__FUNCTION__)
+    RANGE(__PRETTY_FUNCTION__)
     parameters<T1> params;
     params.sync = 0;
     params.binsize = 128;

@@ -45,20 +45,20 @@ QuadPenalty<T1>::QuadPenalty(uword nx, uword ny, uword nz, T1 beta, uword dims2p
 template <typename T1>
 inline
 Col<complex<T1> > QuadPenalty<T1>::wpot(const Col<complex<T1> > &d) const {
-        RANGE()
+        RANGE(__PRETTY_FUNCTION__)
         return ones<Col<complex<T1> > >(d.n_rows);
 }
 
 template <typename T1>
 inline
 Col<complex<T1> > QuadPenalty<T1>::dpot(const Col<complex<T1> > &d) const {
-        RANGE()
+        RANGE(__PRETTY_FUNCTION__)
         return d;
 }
 template <typename T1>
 inline
 Col<complex<T1> > QuadPenalty<T1>::pot(const Col<complex<T1> > &d) const {
-        RANGE()
+        RANGE(__PRETTY_FUNCTION__)
         Col<T1> temp = abs(d) % abs(d) / 2.0;
         return conv_to<Col<complex<T1> > >::from(temp);
 }

@@ -53,7 +53,7 @@ SENSE<T1, Tobj>::SENSE(Tobj &G, Col<complex<T1>> SENSEmap, uword a, uword b,
 // directly rather return another vector of type T1
 template <typename T1, typename Tobj>
 inline Col<complex<T1>> SENSE<T1, Tobj>::operator*(const Col<complex<T1>> &d) const {
-  RANGE()
+  RANGE(__PRETTY_FUNCTION__)
   auto start = std::chrono::high_resolution_clock::now();
 
   //Mat<complex<T1>> outData = zeros<Mat<complex<T1>>>(this->n1, this->nc);
@@ -84,7 +84,7 @@ inline Col<complex<T1>> SENSE<T1, Tobj>::operator*(const Col<complex<T1>> &d) co
 // coil data by the SENSE map.
 template <typename T1, typename Tobj>
 inline Col<complex<T1>> SENSE<T1, Tobj>::operator/(const Col<complex<T1>> &d) const {
-  RANGE()
+  RANGE(__PRETTY_FUNCTION__)
     auto start = std::chrono::high_resolution_clock::now();
 
   Mat<complex<T1>> inData = reshape(d, this->n1, this->nc);

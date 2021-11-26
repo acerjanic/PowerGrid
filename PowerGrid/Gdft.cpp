@@ -51,7 +51,7 @@ Gdft<T1>::Gdft(
 // Forward transform operation
 template <typename T1>
 Col<complex<T1>> Gdft<T1>::operator*(const Col<complex<T1>> &d) const {
-  RANGE()
+  RANGE(__PRETTY_FUNCTION__)
   // This is just specifying size assuming things are the same size, change as
   // necessary
   Col<T1> realData = real(d);
@@ -99,7 +99,7 @@ Col<complex<T1>> Gdft<T1>::operator*(const Col<complex<T1>> &d) const {
 // Adjoint transform operation
 template <typename T1>
 Col<complex<T1>> Gdft<T1>::operator/(const Col<complex<T1>> &d) const {
-  RANGE()
+  RANGE(__PRETTY_FUNCTION__)
   Col<T1> realData = real(d);
   Col<T1> imagData = imag(d);
 

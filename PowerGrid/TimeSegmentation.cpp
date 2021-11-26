@@ -253,7 +253,7 @@ template <typename T1, typename Tobj>
 inline Col<complex<T1>> TimeSegmentation<T1, Tobj>::
 operator*(const Col<complex<T1>>& d) const
 {
-    RANGE(__FUNCTION__)
+    RANGE(__PRETTY_FUNCTION__)
 
     Tobj* G = this->obj;
     // output is the size of the kspace data
@@ -306,7 +306,7 @@ template <typename T1, typename Tobj>
 inline Col<complex<T1>> TimeSegmentation<T1, Tobj>::
 operator/(const Col<complex<T1>>& d) const
 {
-    RANGE(__FUNCTION__)
+    RANGE(__PRETTY_FUNCTION__)
 
     Tobj* G = this->obj;
     if (this->L == 1) {

@@ -37,7 +37,7 @@ Gnufft<T1>::Gnufft(
     const Col<T1> &i2,
     const Col<T1> &i3) // Change these arguments as you need to setup the object
 {
-  
+  RANGE(__PRETTY_FUNCTION__)
   // cout << "Entering the class constructor for Ggrid" << endl;
   n1 = nx * ny * nz;
   n2 = dataLength;
@@ -123,7 +123,7 @@ Gnufft<T1>::Gnufft(
 
 // Class destructor to free LUT
 template <typename T1> Gnufft<T1>::~Gnufft() {
-  RANGE()
+  RANGE(__PRETTY_FUNCTION__)
   #ifdef OPENACC_GPU
     cufftDestroy(plan);
   #endif
@@ -153,7 +153,7 @@ template <typename T1>
 inline Col<complex<T1>> Gnufft<T1>::
 operator*(const Col<complex<T1>> &d) const // Don't change these arguments
 {
-RANGE()
+  RANGE(__PRETTY_FUNCTION__)
 
   const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
 
@@ -181,7 +181,7 @@ inline Col<complex<T1>> Gnufft<T1>::operator/(const Col<complex<T1>> &d) const {
   // Let's trim the operations to avoid data overhead and transfers
   // Basically if we know that the data points are zero, they have no impact
   // on the transform
-
+  RANGE(__PRETTY_FUNCTION__)
   uword dataLength = this->n2;
 
   //Col<T1> realData = real(d).eval();
