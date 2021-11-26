@@ -116,8 +116,27 @@ Gnufft<T1>::Gnufft(
   // cout << "Calculating look up table" << endl;
   calculateLUT(beta, kernelWidth, LUT, sizeLUT);
 
-#pragma acc enter data copyin(LUT[0 : sizeLUT], kx[0:n2], ky[0:n2], \
-  kz[0:n2]) create(pGridData[0:2*imageNumElems], pGridData_d[0:2*imageNumElems], \
+
+  
+  params.sync = 0;
+  params.binsize = 128;
+  params.useLUT = 1;
+  params.kernelWidth = kernelWidth;
+  params.gridOS = gridOS;
+  params.imageSize[0] = Nx; // gridSize is gridOS times larger than imageSize.
+  params.imageSize[1] = Ny;
+  params.imageSize[2] = Nz;
+  params.gridSize[0] = std::ceil(gridOS * (T1)Nx);
+  params.gridSize[1] = std::ceil(gridOS * (T1)Ny);
+  if (params.gridSize[0] % 2) // 3D case, gridOS is adjusted on the z dimension:
+    params.gridSize[0] += 1; // That why we need to make sure here that the xy
+  if (params.gridSize[1] % 2) // dimensions have even sizes.
+    params.gridSize[1] += 1;
+  params.gridSize[2] = (Nz == 1) ? Nz : (std::ceil(gridOS * (T1)Nz)); // 2D or 3D
+  params.numSamples = dataLength;
+
+#pragma acc enter data copyin(this[0:1], LUT[0 : sizeLUT], kx[0:n2], ky[0:n2], \
+  kz[0:n2], params, params.gridSize[0:3]) create(pGridData[0:2*imageNumElems], pGridData_d[0:2*imageNumElems], \
   pGridData_os[0:2*gridNumElems], pGridData_os_d[0:2*gridNumElems], pSamples[0:2*n2])
 }
 
@@ -200,7 +219,7 @@ inline Col<complex<T1>> Gnufft<T1>::operator/(const Col<complex<T1>> &d) const {
   #else
   void *nPlan = NULL;
   #endif
-  computeFH_CPU_Grid(dataLength, kx, ky, kz,
+  computeFH_CPU_Grid(dataLength,
                          dataPtr, Nx, Ny, Nz, gridOS,
                          kernelWidth,
                          beta, LUT, sizeLUT, stream, nPlan, pGridData,
@@ -212,27 +231,9 @@ inline Col<complex<T1>> Gnufft<T1>::operator/(const Col<complex<T1>> &d) const {
 
 template <typename T1>
 inline Col<complex<T1>> Gnufft<T1>::forwardSpatialInterp(const Col<complex<T1>> &d) const {
-  uword dataLength = this->n2;
+  //uword dataLength = this->n2;
 
   const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
-
-  parameters<T1> params;
-  params.sync = 0;
-  params.binsize = 128;
-  params.useLUT = 1;
-  params.kernelWidth = kernelWidth;
-  params.gridOS = gridOS;
-  params.imageSize[0] = Nx; // gridSize is gridOS times larger than imageSize.
-  params.imageSize[1] = Ny;
-  params.imageSize[2] = Nz;
-  params.gridSize[0] = std::ceil(gridOS * (T1)Nx);
-  params.gridSize[1] = std::ceil(gridOS * (T1)Ny);
-  if (params.gridSize[0] % 2) // 3D case, gridOS is adjusted on the z dimension:
-    params.gridSize[0] += 1; // That why we need to make sure here that the xy
-  if (params.gridSize[1] % 2) // dimensions have even sizes.
-    params.gridSize[1] += 1;
-  params.gridSize[2] = (Nz == 1) ? Nz : (std::ceil(gridOS * (T1)Nz)); // 2D or 3D
-  params.numSamples = dataLength;
 
   unsigned int n = params.numSamples;
   
@@ -246,12 +247,12 @@ inline Col<complex<T1>> Gnufft<T1>::forwardSpatialInterp(const Col<complex<T1>> 
     #pragma acc update device(pSamples [0:2 * n])
 
     if (Nz == 1) {
-      gridding_forward_2D(n, params, kx,
-                         ky, beta, pSamples, LUT,
+      gridding_forward_2D(n,
+                          beta, pSamples, LUT,
                           sizeLUT, pGridData_os);
     } else {
-      gridding_forward_3D(n, params, kx,
-                      ky, kz, beta, pSamples, LUT,
+      gridding_forward_3D(n,
+                      beta, pSamples, LUT,
                       sizeLUT, pGridData_os);
     }
 
@@ -265,30 +266,12 @@ inline Col<complex<T1>> Gnufft<T1>::forwardSpatialInterp(const Col<complex<T1>> 
 template <typename T1>
 inline Col<complex<T1>> Gnufft<T1>::adjointSpatialInterp(const Col<complex<T1>> &d) const {
 
-  uword dataLength = this->n2;
+  //uword dataLength = this->n2;
 
   const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
 
-  parameters<T1> params;
-  params.sync = 0;
-  params.binsize = 128;
-  params.useLUT = 1;
-  params.kernelWidth = kernelWidth;
-  params.gridOS = gridOS;
-  params.imageSize[0] = Nx; // gridSize is gridOS times larger than imageSize.
-  params.imageSize[1] = Ny;
-  params.imageSize[2] = Nz;
-  params.gridSize[0] = std::ceil(gridOS * (T1)Nx);
-  params.gridSize[1] = std::ceil(gridOS * (T1)Ny);
-  if (params.gridSize[0] % 2) // 3D case, gridOS is adjusted on the z dimension:
-    params.gridSize[0] += 1; // That why we need to make sure here that the xy
-  if (params.gridSize[1] % 2) // dimensions have even sizes.
-    params.gridSize[1] += 1;
-  params.gridSize[2] = (Nz == 1) ? Nz : (std::ceil(gridOS * (T1)Nz)); // 2D or 3D
-  params.numSamples = dataLength;
-
   unsigned int n = params.numSamples;
-
+  /*
   ReconstructionSample<T1>* samples; // Input Data
   // allocate samples
   samples = (ReconstructionSample<T1>*)malloc(
@@ -302,9 +285,9 @@ inline Col<complex<T1>> Gnufft<T1>::adjointSpatialInterp(const Col<complex<T1>> 
   //
   for (int i = 0; i < params.numSamples; i++) {
 
-    samples[i].kX = kx[i];
-    samples[i].kY = ky[i];
-    samples[i].kZ = kz[i];
+    //samples[i].kX = kx[i];
+    //samples[i].kY = ky[i];
+    //samples[i].kZ = kz[i];
 
     samples[i].real = dataPtr[2 * i];
     samples[i].imag = dataPtr[2 * i + 1];
@@ -312,8 +295,8 @@ inline Col<complex<T1>> Gnufft<T1>::adjointSpatialInterp(const Col<complex<T1>> 
     //samples[i].sdc = (T1)1.0;
     // samples[i].t = t[i];
   }
-
-  #pragma acc enter data copyin(samples [0:n])
+  */
+  #pragma acc enter data copyin(dataPtr [0:2*n])
 
   //#pragma acc parallel loop 
     for (int i = 0; i < gridNumElems; i++) {
@@ -324,10 +307,10 @@ inline Col<complex<T1>> Gnufft<T1>::adjointSpatialInterp(const Col<complex<T1>> 
   #pragma acc update device(pGridData_os[0:2*gridNumElems])
 
   if (Nz == 1) {
-    gridding_adjoint_2D(n, params, beta, samples,
+    gridding_adjoint_2D(n, beta, dataPtr,
                         LUT, sizeLUT, pGridData_os);
   } else {
-    gridding_adjoint_3D(n, params, beta, samples,
+    gridding_adjoint_3D(n, beta, dataPtr,
                         LUT, sizeLUT, pGridData_os);
   }
 
@@ -338,8 +321,8 @@ inline Col<complex<T1>> Gnufft<T1>::adjointSpatialInterp(const Col<complex<T1>> 
 
 // 2D adjoint gridding on CPU
 template <typename T1>
-int Gnufft<T1>::gridding_adjoint_2D(unsigned int n, parameters<T1> params, T1 beta,
-    ReconstructionSample<T1>* __restrict sample,
+int Gnufft<T1>::gridding_adjoint_2D(unsigned int n, T1 beta,
+    const T1* __restrict pDataIn,
     const T1* LUT, const uword sizeLUT,
     T1* __restrict pGData) const
 {
@@ -367,13 +350,13 @@ int Gnufft<T1>::gridding_adjoint_2D(unsigned int n, parameters<T1> params, T1 be
 
     T1 kernelScale = ((T1)4.0 / (kernelWidth * kernelWidth) * (T1)sizeLUT);
 
-#pragma acc parallel loop independent gang vector present(LUT [0:sizeLUT], \
-    pGData [0:gridNumElems * 2], sample [0:n]) copyin(params, params.gridSize[0:3])
+#pragma acc parallel loop independent gang vector present(this[0:1], kx[0:n], ky[0:n], LUT [0:sizeLUT], \
+    pGData [0:gridNumElems * 2], pDataIn [0:2*n], params, params.gridSize[0:3])
     for (int i = 0; i < n; i++) {
-        ReconstructionSample<T1> pt = sample[i];
+        //ReconstructionSample<T1> pt = sample[i];
 
-        shiftedKx = (gridOS) * (pt.kX + ((T1)Nx) / (T1)2.0);
-        shiftedKy = (gridOS) * (pt.kY + ((T1)Ny) / (T1)2.0);
+        shiftedKx = (gridOS) * (kx[i] + ((T1)Nx) / (T1)2.0);
+        shiftedKy = (gridOS) * (ky[i] + ((T1)Ny) / (T1)2.0);
 
         NxL = (int)(std::max((T1)0.0, std::ceil(shiftedKx - kernelWidth * (gridOS) / (T1)2.0)));
         NxH = (int)(std::min((gridOS * (T1)Nx - (T1)1.0),
@@ -411,10 +394,10 @@ int Gnufft<T1>::gridding_adjoint_2D(unsigned int n, parameters<T1> params, T1 be
                 idx = 2 * (ny + (nx)*params.gridSize[1]);
 
 #pragma acc atomic update
-                pGData[idx] += w * pt.real;
+                pGData[idx] += w * pDataIn[2*i];
 
 #pragma acc atomic update
-                pGData[idx + 1] += w * pt.imag;
+                pGData[idx + 1] += w * pDataIn[2*i + 1];
             }
         }
     }
@@ -426,8 +409,8 @@ int Gnufft<T1>::gridding_adjoint_2D(unsigned int n, parameters<T1> params, T1 be
 
 // 3D adjoint gridding on CPU
 template <typename T1>
-int Gnufft<T1>::gridding_adjoint_3D(unsigned int n, parameters<T1> params, T1 beta,
-    ReconstructionSample<T1>* __restrict sample,
+int Gnufft<T1>::gridding_adjoint_3D(unsigned int n, T1 beta,
+    const T1* __restrict pDataIn,
     const T1* LUT, const uword sizeLUT,
     T1* pGData) const
 {
@@ -456,14 +439,14 @@ int Gnufft<T1>::gridding_adjoint_3D(unsigned int n, parameters<T1> params, T1 be
     int gridNumElems = params.gridSize[0] * params.gridSize[1] * params.gridSize[2];
 
 
-#pragma acc parallel loop gang vector pcopy(LUT [0:sizeLUT], pGData [0:gridNumElems * 2]) \
-    pcopyin(params, params.gridSize [0:3], sample [0:n])
+#pragma acc parallel loop gang vector present(pGData [0:gridNumElems * 2], pDataIn [0:2*n], \
+    this[0:1], LUT [0:sizeLUT], params, params.gridSize [0:3], kx[0:n], ky[0:n], kz[0:n])
     for (int i = 0; i < n; i++) {
-        ReconstructionSample<T1> pt = sample[i];
+        //ReconstructionSample<T1> pt = sample[i];
 
-        shiftedKx = (gridOS) * (pt.kX + ((T1)Nx) / (T1)2.0);
-        shiftedKy = (gridOS) * (pt.kY + ((T1)Ny) / (T1)2.0);
-        shiftedKz = (gridOS) * (pt.kZ + ((T1)Nz) / (T1)2.0);
+        shiftedKx = (gridOS) * (kx[i] + ((T1)Nx) / (T1)2.0);
+        shiftedKy = (gridOS) * (ky[i] + ((T1)Ny) / (T1)2.0);
+        shiftedKz = (gridOS) * (kz[i] + ((T1)Nz) / (T1)2.0);
 
         NxL = (int)(std::max((T1)0.0, std::ceil(shiftedKx - kernelWidth * (gridOS) / (T1)2.0)));
         NxH = (int)(std::min((gridOS * (T1)Nx - (T1)1.0),
@@ -512,10 +495,10 @@ int Gnufft<T1>::gridding_adjoint_3D(unsigned int n, parameters<T1> params, T1 be
                     /* grid data */
                     idx = ny + (nx)*params.gridSize[1] + (nz)*params.gridSize[0] * params.gridSize[1];
 #pragma acc atomic update
-                    pGData[2 * idx] += w * pt.real;
+                    pGData[2 * idx] += w * pDataIn[2 * i];
 
 #pragma acc atomic update
-                    pGData[2 * idx + 1] += w * pt.imag;
+                    pGData[2 * idx + 1] += w * pDataIn[2 * i + 1];
                 }
             }
         }
@@ -526,8 +509,8 @@ int Gnufft<T1>::gridding_adjoint_3D(unsigned int n, parameters<T1> params, T1 be
 
 // 2D forward gridding on CPU
 template <typename T1>
-int Gnufft<T1>::gridding_forward_2D(unsigned int n, parameters<T1> params, const T1* kx,
-    const T1* ky, T1 beta, T1* __restrict pSamples,
+int Gnufft<T1>::gridding_forward_2D(unsigned int n, 
+    T1 beta, T1* __restrict pSamples,
     const T1* LUT, const uword sizeLUT,
     T1* __restrict pGridData) const
 {
@@ -552,8 +535,8 @@ int Gnufft<T1>::gridding_forward_2D(unsigned int n, parameters<T1> params, const
     
     T1 kernelScale = ((T1)4.0 / (kernelWidth * kernelWidth) * (T1)sizeLUT);
 
-#pragma acc parallel loop gang vector present(kx [0:n], ky [0:n], pSamples [0:n * 2], \
-    LUT [0:sizeLUT], pGridData [0:gridNumElems * 2]) copyin(params, params.gridSize[0:3])
+#pragma acc parallel loop gang vector present(this[0:1], kx [0:n], ky [0:n], pSamples [0:n * 2], \
+    LUT [0:sizeLUT], pGridData [0:gridNumElems * 2], params, params.gridSize[0:3])
     for (int i = 0; i < n; i++) {
 
         shiftedKx = (gridOS) * (kx[i] + ((T1)Nx) / (T1)2.0);
@@ -614,9 +597,8 @@ int Gnufft<T1>::gridding_forward_2D(unsigned int n, parameters<T1> params, const
 
 // 3D forward gridding on CPU
 template <typename T1>
-int Gnufft<T1>::gridding_forward_3D(unsigned int n, parameters<T1> params, const T1* kx,
-    const T1* ky, const T1* kz, T1 beta,
-    T1* __restrict pSamples, const T1* LUT,
+int Gnufft<T1>::gridding_forward_3D(unsigned int n,
+    T1 beta, T1* __restrict pSamples, const T1* LUT,
     const uword sizeLUT, T1* __restrict pGridData) const
 {
     RANGE(__PRETTY_FUNCTION__)
@@ -650,9 +632,9 @@ int Gnufft<T1>::gridding_forward_3D(unsigned int n, parameters<T1> params, const
     // Jiading GAI
     // float t0 = t[0];
 
-#pragma acc parallel loop gang vector present(LUT [0:sizeLUT],    \
+#pragma acc parallel loop gang vector present(this[0:1], LUT [0:sizeLUT],    \
     pGridData [0:gridNumElems * 2], kx [0:n], ky [0:n], kz [0:n], \
-    pSamples [0:n * 2]) copyin(params, params.gridSize[0:3])
+    pSamples [0:n * 2], params, params.gridSize[0:3])
     for (int i = 0; i < n; i++) {
         // complex<T1> pt = sample[i];
 
@@ -728,8 +710,7 @@ int Gnufft<T1>::gridding_forward_3D(unsigned int n, parameters<T1> params, const
 
 // Calculates the gridded adjoint transform
 template <typename T1>
-void Gnufft<T1>::computeFH_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
-    const T1* __restrict ky, const T1* __restrict kz,
+void Gnufft<T1>::computeFH_CPU_Grid(int numK_per_coil,
     const T1* __restrict dIn,
     int Nx, int Ny, int Nz, T1 gridOS,
     const T1 kernelWidth, const T1 beta, const T1* LUT,
@@ -739,25 +720,10 @@ void Gnufft<T1>::computeFH_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
 {
 
     RANGE(__PRETTY_FUNCTION__)
-    parameters<T1> params;
-    params.sync = 0;
-    params.binsize = 128;
 
-    params.useLUT = 1;
-    params.kernelWidth = kernelWidth;
-    params.gridOS = gridOS;
-    params.imageSize[0] = Nx; // gridSize is gridOS times larger than imageSize.
-    params.imageSize[1] = Ny;
-    params.imageSize[2] = Nz;
-    params.gridSize[0] = std::ceil(gridOS * (T1)Nx);
-    params.gridSize[1] = std::ceil(gridOS * (T1)Ny);
-    if (params.gridSize[0] % 2) // 3D case, gridOS is adjusted on the z dimension:
-        params.gridSize[0] += 1; // That why we need to make sure here that the xy
-    if (params.gridSize[1] % 2) // dimensions have even sizes.
-        params.gridSize[1] += 1;
-    params.gridSize[2] = (Nz == 1) ? Nz : (std::ceil(gridOS * (T1)Nz)); // 2D or 3D
-    params.numSamples = numK_per_coil;
+     unsigned int n = params.numSamples;
 
+    /*
     ReconstructionSample<T1>* samples; // Input Data
     // allocate samples
     samples = (ReconstructionSample<T1>*)malloc(
@@ -767,20 +733,14 @@ void Gnufft<T1>::computeFH_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
         printf("ERROR: Unable to allocate memory for input data\n");
         exit(1);
     }
-    unsigned int n = params.numSamples;
+   
     //
     for (int i = 0; i < params.numSamples; i++) {
 
-        samples[i].kX = kx[i];
-        samples[i].kY = ky[i];
-        samples[i].kZ = kz[i];
-
         samples[i].real = dIn[2 * i];
         samples[i].imag = dIn[2 * i + 1];
-
-        //samples[i].sdc = (T1)1.0;
-        // samples[i].t = t[i];
     }
+    */
     // grid_size in xy-axis has to be divisible-by-two:
     //       (required by the cropImageRegion)
     // grid_size in z-axis has to be divisible-by-four:
@@ -800,7 +760,7 @@ void Gnufft<T1>::computeFH_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
     // Have to set 'gridData' to zero.
     // Because they will be involved in accumulative operations
     // inside gridding functions.
-#pragma acc enter data copyin(samples [0:n])
+#pragma acc enter data copyin(dIn[0:2*n])
 
 #pragma acc parallel loop
     for (int i = 0; i < gridNumElems; i++) {
@@ -809,9 +769,9 @@ void Gnufft<T1>::computeFH_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
     }
     // Gridding with CPU - adjoint
     if (Nz == 1) {
-        gridding_adjoint_2D(n, params, beta, samples, LUT, sizeLUT, pGridData);
+        gridding_adjoint_2D(n, beta, dIn, LUT, sizeLUT, pGridData);
     } else {
-        gridding_adjoint_3D(n, params, beta, samples, LUT, sizeLUT, pGridData);
+        gridding_adjoint_3D(n, beta, dIn, LUT, sizeLUT, pGridData);
     }
 
     if (Nz == 1) {
@@ -849,16 +809,7 @@ void Gnufft<T1>::computeFH_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
     }
 
 #endif
-    /* 
-    //#pragma acc update device(pGridData_d[0:2*gridNumElems])
-    if (Nz == 1) {
-        normalize_fft2d<T1>(pGridData, pGridData_d, params.gridSize[0],
-            params.gridSize[1]);
-    } else {
-        normalize_fft3d<T1>(pGridData, pGridData_d, params.gridSize[0],
-            params.gridSize[1], params.gridSize[2]);
-    }
-    */
+
     if (Nz == 1) {
         fftshift2<T1>(pGridData, pGridData_d, params.gridSize[0],
             params.gridSize[1]);
@@ -887,9 +838,9 @@ void Gnufft<T1>::computeFH_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
             kernelWidth, beta, params.gridOS);
     }
 
-#pragma acc exit data delete (samples [0:n])
+#pragma acc exit data delete (dIn[0:2*n])
 #pragma acc update self(pGridData_crop_deAp [0:2 * imageNumElems])
-    free(samples);
+    //free(samples);
 }
 
 // Calculates the gridded forward fourier transform
@@ -905,24 +856,6 @@ void Gnufft<T1>::computeFd_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
 {
 
     RANGE(__PRETTY_FUNCTION__)
-    parameters<T1> params;
-    params.sync = 0;
-    params.binsize = 128;
-
-    params.useLUT = 1;
-    params.kernelWidth = kernelWidth;
-    params.gridOS = gridOS;
-    params.imageSize[0] = Nx; // gridSize is gridOS times larger than imageSize.
-    params.imageSize[1] = Ny;
-    params.imageSize[2] = Nz;
-    params.gridSize[0] = std::ceil(gridOS * (T1)Nx);
-    params.gridSize[1] = std::ceil(gridOS * (T1)Ny);
-    if (params.gridSize[0] % 2) // 3D case, gridOS is adjusted on the z dimension:
-        params.gridSize[0] += 1; // That why we need to make sure here that the xy
-    if (params.gridSize[1] % 2) // dimensions have even sizes.
-        params.gridSize[1] += 1;
-    params.gridSize[2] = (Nz == 1) ? Nz : (std::ceil(gridOS * (T1)Nz)); // 2D or 3D
-    params.numSamples = numK_per_coil;
 
     unsigned int n = params.numSamples;
 
@@ -1020,22 +953,17 @@ void Gnufft<T1>::computeFd_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
 
     // Gridding with CPU - forward
     if (Nz == 1) {
-        gridding_forward_2D(n, params, kx, ky, beta, pSamples, LUT, sizeLUT,
+        gridding_forward_2D(n, beta, pSamples, LUT, sizeLUT,
             pGridData_os);
     } else {
-        gridding_forward_3D(n, params, kx, ky, kz, beta, pSamples, LUT, sizeLUT,
+        gridding_forward_3D(n, beta, pSamples, LUT, sizeLUT,
             pGridData_os);
     }
 
     // deallocate samples
 
 #pragma acc update host(pSamples [0:2 * n])
-    /*
-	for (int ii = 0; ii < n; ii++) {
-		outR_d[ii] = pSamples[2*ii];
-		outI_d[ii] = pSamples[2*ii+1];
-	}
-*/
+
 }
 
 

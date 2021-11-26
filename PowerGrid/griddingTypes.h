@@ -41,9 +41,9 @@ template <typename T1>
 struct ReconstructionSample{
     T1 real;
     T1 imag;
-    T1 kX;
-    T1 kY;
-    T1 kZ;
+    //T1 kX;
+    //T1 kY;
+    //T1 kZ;
     //T1 sdc;
     //T1 t;
     //T1 dummy;

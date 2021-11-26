@@ -102,6 +102,8 @@ public:
     void* plan;
   #endif
 
+  parameters<T1> params;
+
   uword imageNumElems;
   uword gridNumElems;
 
@@ -124,32 +126,30 @@ public:
 
 
   // 2D adjoint gridding on CPU
-int gridding_adjoint_2D(unsigned int n, parameters<T1> params, T1 beta,
-                        ReconstructionSample<T1> *__restrict sample,
+int gridding_adjoint_2D(unsigned int n, T1 beta,
+                        const T1 *__restrict pDataIn,
                         const T1 *LUT, const uword sizeLUT,
                         T1 *__restrict gridData) const;
 
 // 3D adjoint gridding on CPU
-int gridding_adjoint_3D(unsigned int n, parameters<T1> params, T1 beta,
-                        ReconstructionSample<T1> *__restrict sample,
+int gridding_adjoint_3D(unsigned int n, T1 beta,
+                        const T1 *__restrict pDataIn,
                         const T1 *LUT, const uword sizeLUT,
                         T1 *gridData) const;
 
 // 2D forward gridding on CPU
-int gridding_forward_2D(unsigned int n, parameters<T1> params, const T1 *kx,
-                        const T1 *ky, T1 beta, T1 *__restrict pSamples,
+int gridding_forward_2D(unsigned int n,
+                        T1 beta, T1 *__restrict pSamples,
                         const T1 *LUT, const uword sizeLUT,
                         T1 *__restrict pGridData) const; 
 
 // 3D forward gridding on CPU
-int gridding_forward_3D(unsigned int n, parameters<T1> params, const T1 *kx,
-                        const T1 *ky, const T1 *kz, T1 beta,
+int gridding_forward_3D(unsigned int n, T1 beta,
                         T1 *__restrict pSamples, const T1 *LUT,
                         const uword sizeLUT, T1 *__restrict pGridData) const;
 
 // Calculates the gridded adjoint transform
-void computeFH_CPU_Grid(int numK_per_coil, const T1 *__restrict kx,
-                        const T1 *__restrict ky, const T1 *__restrict kz,
+void computeFH_CPU_Grid(int numK_per_coil,
                         const T1 *__restrict dIn,
                         int Nx, int Ny, int Nz, T1 gridOS,
                         const T1 kernelWidth, const T1 beta, const T1 *LUT,
