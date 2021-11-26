@@ -309,7 +309,7 @@ inline Col<complex<T1>> Gnufft<T1>::adjointSpatialInterp(const Col<complex<T1>> 
     samples[i].real = dataPtr[2 * i];
     samples[i].imag = dataPtr[2 * i + 1];
 
-    samples[i].sdc = (T1)1.0;
+    //samples[i].sdc = (T1)1.0;
     // samples[i].t = t[i];
   }
 

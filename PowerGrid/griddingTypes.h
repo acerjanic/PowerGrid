@@ -44,9 +44,9 @@ struct ReconstructionSample{
     T1 kX;
     T1 kY;
     T1 kZ;
-    T1 sdc;
-    T1 t;
-    T1 dummy;
+    //T1 sdc;
+    //T1 t;
+    //T1 dummy;
 };
 
 #endif

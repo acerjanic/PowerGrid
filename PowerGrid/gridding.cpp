@@ -469,7 +469,7 @@ void computeFH_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
         samples[i].real = dIn[2 * i];
         samples[i].imag = dIn[2 * i + 1];
 
-        samples[i].sdc = (T1)1.0;
+        //samples[i].sdc = (T1)1.0;
         // samples[i].t = t[i];
     }
     // grid_size in xy-axis has to be divisible-by-two:
