@@ -76,4 +76,9 @@
 #define MRI_SMOOTH_FACTOR 0.000001f
 #endif
 
+// Include the pgVectorize library
+#include "pgVectorize/pgCol.hpp"
+#include "pgVectorize/pgMat.hpp"
+#include "pgVectorize/pgSubviewCol.hpp"
+
 #endif // PGINCLUDES_H

@@ -207,7 +207,7 @@ void normalize_fft3d(T1* __restrict pDst, T1* __restrict pSrc,
 
 // Deapodizes 2d data by FT of the Kasier-Bessel kernel
 template <typename T1>
-void deapodization2d(T1* __restrict pDst, T1* __restrict pSrc, int imageX,
+void deapodization2d(T1* __restrict pDst, const T1* __restrict pSrc, int imageX,
     int imageY, T1 kernelWidth, T1 beta, T1 gridOS)
 {
 
@@ -283,7 +283,7 @@ void deapodization2d(T1* __restrict pDst, T1* __restrict pSrc, int imageX,
 
 // Deapodizes 3d data by FT of the Kasier-Bessel kernel
 template <typename T1>
-void deapodization3d(T1* __restrict pDst, T1* __restrict pSrc, int imageX,
+void deapodization3d(T1* __restrict pDst, const T1* __restrict pSrc, int imageX,
     int imageY, int imageZ, T1 kernelWidth, T1 beta,
     T1 gridOS)
 {
@@ -687,22 +687,22 @@ template void deinterleave_data3d<double>(double* __restrict pSrc,
     int imageY, int imageZ);
 
 template void deapodization2d<float>(float* __restrict pDst,
-    float* __restrict pSrc, int imageX,
+    const float* __restrict pSrc, int imageX,
     int imageY, float kernelWidth, float beta,
     float gridOS);
 
 template void deapodization2d<double>(double* __restrict pDst,
-    double* __restrict pSrc, int imageX,
+    const double* __restrict pSrc, int imageX,
     int imageY, double kernelWidth,
     double beta, double gridOS);
 
 template void deapodization3d<float>(float* __restrict pDst,
-    float* __restrict pSrc, int imageX,
+    const float* __restrict pSrc, int imageX,
     int imageY, int imageZ, float kernelWidth,
     float beta, float gridOS);
 
 template void deapodization3d<double>(double* __restrict pDst,
-    double* __restrict pSrc, int imageX,
+    const double* __restrict pSrc, int imageX,
     int imageY, int imageZ,
     double kernelWidth, double beta,
     double gridOS);

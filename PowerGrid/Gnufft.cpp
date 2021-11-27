@@ -168,6 +168,7 @@ template <typename T1> Gnufft<T1>::~Gnufft() {
 
 // Overloaded methods for forward and adjoint transform
 // Forward transform operation using gridding
+/*
 template <typename T1>
 inline Col<complex<T1>> Gnufft<T1>::
 operator*(const Col<complex<T1>> &d) const // Don't change these arguments
@@ -192,6 +193,32 @@ operator*(const Col<complex<T1>> &d) const // Don't change these arguments
   Col<CxT1> temp(reinterpret_cast<CxT1 *>(pSamples), n2, false, true);
   return temp; // Return a vector of type T1
 }
+*/
+
+template <typename T1>
+inline Col<complex<T1>> Gnufft<T1>::
+operator*(const Col<complex<T1>> &d) const // Don't change these arguments
+{
+  RANGE(__PRETTY_FUNCTION__)
+
+  //const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
+  pgCol<CxT1> testGPU(d);
+  const T1 *dataPtr = reinterpret_cast<const T1 *>(testGPU.memptr());
+  #ifdef OPENACC_GPU
+    cufftHandle *nPlan = const_cast<cufftHandle *>(&plan);
+  #else
+    void* nPlan = NULL;
+  #endif
+  computeFd_CPU_Grid(n2, kx, ky, kz, dataPtr,
+                         Nx, Ny, Nz, gridOS,
+                         kernelWidth, beta, LUT, sizeLUT,
+                         stream, nPlan, pGridData, pGridData_d, pGridData_os,
+                         pGridData_os_d, pSamples);
+
+  Col<CxT1> temp(reinterpret_cast<CxT1 *>(pSamples), n2, false, true);
+  return temp; // Return a vector of type T1
+}
+
 
 // Adjoint transform operation
 template <typename T1>
@@ -876,20 +903,23 @@ void Gnufft<T1>::computeFd_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
 
     int imageNumElems = params.imageSize[0] * params.imageSize[1] * params.imageSize[2];
 
-    memcpy(pGridData, dIn, sizeof(T1) * 2 * imageNumElems);
-#pragma acc update device(pGridData [0:2 * imageNumElems])
-
-#pragma acc parallel loop present(pSamples [0:2 * n])
+    //memcpy(pGridData, dIn, sizeof(T1) * 2 * imageNumElems);
+    //#pragma acc update device(pGridData [0:2 * imageNumElems])
+    //#pragma acc host_data use_device(pGridData) 
+    //{ 
+    //  cudaMemcpy(pGridData, dIn, sizeof(T1) * 2 * imageNumElems, cudaMemcpyDeviceToDevice); 
+    //}  
+    #pragma acc parallel loop present(pSamples [0:2 * n])
     for (int ii = 0; ii < 2 * n; ii++) {
         pSamples[ii] = (T1)0.0;
     }
 
     // deapodization
     if (Nz == 1) {
-        deapodization2d<T1>(pGridData_d, pGridData, Nx, Ny, kernelWidth, beta,
+        deapodization2d<T1>(pGridData_d, dIn, Nx, Ny, kernelWidth, beta,
             params.gridOS);
     } else {
-        deapodization3d<T1>(pGridData_d, pGridData, Nx, Ny, Nz, kernelWidth, beta,
+        deapodization3d<T1>(pGridData_d, dIn, Nx, Ny, Nz, kernelWidth, beta,
             params.gridOS);
     }
 

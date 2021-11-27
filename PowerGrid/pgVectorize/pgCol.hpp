@@ -11,6 +11,8 @@
 #ifdef _OPENACC
 #include "accel.h"
 #include "openacc.h"
+#include <cuda_runtime_api.h>
+#include <cuda.h>
 #endif
 
 // Handy template aliases to fill in gaps in C++11
@@ -54,21 +56,21 @@ public:
         set_size(length);
     }
 
-    pgCol(arma::Col<T>& cSCplx)
+    pgCol(const arma::Col<T>& cSCplx)
         : isOnGPU(false)
         , isInitialized(false)
         , mem(NULL)
         , isCopy(false)
         , n_elem(0)
     {
+        #pragma acc enter data copyin(this[0:1])
 
-#pragma acc enter data create(this[0:1])
-        set_size(cSCplx.n_elem);
+        this->set_size(cSCplx.n_elem);
         memcpy(this->mem, cSCplx.memptr(), sizeof(T) * cSCplx.n_elem);
+        #pragma acc update device(mem[0:cSCplx.n_elem])
 
-#pragma acc update device(mem [0:n_elem])
     }
-    
+/*
     template<typename T_ = T>
     pgCol(arma::Col<T_> &cSCplx,
           typename std::enable_if<std::is_same< T_, std::complex<float>>::value, std::nullptr_t>::type = nullptr)
@@ -103,6 +105,8 @@ public:
 
 #pragma acc update device(this[0:1], mem [0:n_elem])
     }
+    */
+
 
     // Copy Constructor
     pgCol<T>(const pgCol<T>& pgA)
@@ -170,6 +174,16 @@ public:
         return mem;
     }
 
+    T* memptrGPU() const
+    {
+        #pragma acc host_data use_device(mem)
+        {
+            //T *memVal = mem;
+            return mem;
+        }
+        
+    }
+
     void reset_mem()
     {
 #ifdef _OPENACC
@@ -184,24 +198,28 @@ public:
 
     void set_size(arma::uword length)
     {
-        if (isInitialized) {
-            if (isOnGPU) {
-#pragma acc exit data finalize detach(mem) delete (mem [0:n_elem])
-                isOnGPU = false;
+        #ifdef _OPENACC
+            if (acc_deviceptr(mem) != NULL) {
+                acc_delete((void*)mem, sizeof(T) * n_elem);
             }
+        #endif
+        if (mem != NULL) {
             delete[] mem;
-            mem = NULL;
         }
-
-        isInitialized = true;
+        //#pragma acc exit data finalize detach(mem) delete (mem [0:n_elem])
+        isOnGPU = false;
+    
+        mem = NULL;
+        
+        
         arma::access::rw(n_elem) = length;
-        //mem = (T*)malloc(sizeof(T) * n_elem);
         mem = new T[n_elem];
-#ifdef _OPENACC
-        isOnGPU = true;
-#endif
-#pragma acc update device(this [0:1])
-#pragma acc enter data create(mem [0:n_elem])
+        #ifdef _OPENACC
+            isOnGPU = true;
+        #endif
+        #pragma acc update device(this [0:1])
+        #pragma acc enter data create(mem [0:n_elem])
+        isInitialized = true;
     }
 
     void zeros()

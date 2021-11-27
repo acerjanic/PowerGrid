@@ -65,11 +65,11 @@ void deinterleave_data3d(T1* __restrict pSrc, T1* __restrict outR_d,
     int imageZ);
 
 template <typename T1>
-void deapodization2d(T1* __restrict pDst, T1* __restrict pSrc, int imageX,
+void deapodization2d(T1* __restrict pDst, const T1* __restrict pSrc, int imageX,
     int imageY, T1 kernelWidth, T1 beta, T1 gridOS);
 
 template <typename T1>
-void deapodization3d(T1* __restrict pDst, T1* __restrict pSrc, int imageX,
+void deapodization3d(T1* __restrict pDst, const T1* __restrict pSrc, int imageX,
     int imageY, int imageZ, T1 kernelWidth, T1 beta,
     T1 gridOS);
 
@@ -153,21 +153,21 @@ extern template void deinterleave_data3d<double>(double* __restrict pSrc,
     int imageX, int imageY,
     int imageZ);
 extern template void deapodization2d<float>(float* __restrict pDst,
-    float* __restrict pSrc, int imageX,
+    const float* __restrict pSrc, int imageX,
     int imageY, float kernelWidth,
     float beta, float gridOS);
 extern template void deapodization2d<double>(double* __restrict pDst,
-    double* __restrict pSrc,
+    const double* __restrict pSrc,
     int imageX, int imageY,
     double kernelWidth, double beta,
     double gridOS);
 extern template void deapodization3d<float>(float* __restrict pDst,
-    float* __restrict pSrc, int imageX,
+    const float* __restrict pSrc, int imageX,
     int imageY, int imageZ,
     float kernelWidth, float beta,
     float gridOS);
 extern template void deapodization3d<double>(double* __restrict pDst,
-    double* __restrict pSrc,
+    const double* __restrict pSrc,
     int imageX, int imageY, int imageZ,
     double kernelWidth, double beta,
     double gridOS);
