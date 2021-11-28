@@ -74,6 +74,9 @@ public:
   Col<CxT1> operator*(const Col<CxT1> &d) const;
   Col<CxT1> operator/(const Col<CxT1> &d) const;
 
+  pgCol<CxT1> operator*(const pgCol<CxT1> &d) const;
+  pgCol<CxT1> operator/(const pgCol<CxT1> &d) const;
+
   protected:
 
   // Handy utility function for fftw via armadillo

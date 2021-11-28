@@ -494,7 +494,7 @@ pgMat<T> operator/(const pgMat<X>& pgB) {
 }
 
 };
-
+/*
 template<typename T>
 const pgCol<std::complex<T>> sum(const pgMat<std::complex<T>> &pgA, const arma::uword dim = 0) {
     pgCol<T> sumReal = {};
@@ -586,6 +586,113 @@ const pgCol<T> sum(const pgMat<T> &pgA, const arma::uword dim = 0) {
     }
     return std::move(sumA);
 }
+*/
+
+template<typename T>
+const pgCol<std::complex<T>> sumCols(const pgMat<std::complex<T>> &pgA) {
+    pgCol<T> sumReal = {};
+    pgCol<T> sumImag = {};
+
+    sumReal.set_size(pgA.n_cols);
+    sumImag.set_size(pgA.n_cols);
+    sumReal.zeros();
+    sumReal.zeros();
+
+    #pragma acc parallel loop present(pgA, sumImag)
+    for(arma::uword jj = 0; jj < pgA.n__cols; jj++) {
+        #pragma acc loop seq
+        for(arma::uword ii = 0; ii < pgA.n_rows; ii++) {
+            sumReal.at(jj) += real(pgA.at(jj * pgA.n_rows + ii ));
+        }
+    }
+    #pragma acc parallel loop present(pgA, sumImag)
+    for(arma::uword jj = 0; jj < pgA.n_cols; jj++) {
+        #pragma acc loop seq
+        for(arma::uword ii = 0; ii < pgA.n_rows; ii++) {
+            sumReal.at(jj) += imag(pgA.at(jj * pgA.n_rows + ii ));
+        }
+    }
+    std::complex<T> J(0,1.0);
+
+    pgCol<std::complex<T>> out(sumReal.n_elem);
+    #pragma acc parallel loop present(sum, sumReal, sumImag)
+    for(arma::uword jj = 0; jj < sumReal.n_elem; jj++) {
+        out.at(jj) = std::complex<T>(sumReal.at(jj),sumImag.at(jj));
+    }
+    
+    return std::move(out);
+
+}
+
+template<typename T>
+const pgCol<std::complex<T>> sumRows(const pgMat<std::complex<T>> &pgA) {
+    pgCol<T> sumReal = {};
+    pgCol<T> sumImag = {};
+
+    sumReal.set_size(pgA.n_rows);
+    sumImag.set_size(pgA.n_rows);
+    sumReal.zeros();
+    sumReal.zeros();
+
+    #pragma acc parallel loop present(pgA, sumImag)
+    for(arma::uword jj = 0; jj < pgA.n__rows; jj++) {
+        #pragma acc loop seq
+        for(arma::uword ii = 0; ii < pgA.n_cols; ii++) {
+            sumReal.at(jj) += real(pgA.at(jj + pgA.n_rows * ii ));
+        }
+    }
+    #pragma acc parallel loop present(pgA, sumImag)
+    for(arma::uword jj = 0; jj < pgA.n_rows; jj++) {
+        #pragma acc loop seq
+        for(arma::uword ii = 0; ii < pgA.n_cols; ii++) {
+            sumReal.at(jj) += imag(pgA.at(jj + pgA.n_rows * ii ));
+        }
+    }
+
+    std::complex<T> J(0,1.0);
+
+    pgCol<std::complex<T>> out(sumReal.n_elem);
+    #pragma acc parallel loop present(sum, sumReal, sumImag)
+    for(arma::uword jj = 0; jj < sumReal.n_elem; jj++) {
+        out.at(jj) = std::complex<T>(sumReal.at(jj),sumImag.at(jj));
+    }
+    
+    return std::move(out);
+}
+
+template<typename T>
+const pgCol<T> sumCols(const pgMat<T> &pgA) {
+    pgCol<T> sumA;
+
+    sumA.set_size(pgA.n_cols);
+    sumA.zeros();
+    #pragma acc parallel loop present(pgA, sumA)
+    for(arma::uword jj = 0; jj < pgA.n_cols; jj++) {
+        #pragma acc loop seq
+        for(arma::uword ii = 0; ii < pgA.n_rows; ii++) {
+            sumA.at(jj) += pgA.at(jj * pgA.n_rows + ii );
+        }
+    }
+
+    return std::move(sumA);
+}
+
+template<typename T>
+const pgMat<T> sumRows(const pgMat<T> &pgA) {
+    pgMat<T> sumA;
+
+    sumA.set_size(pgA.n_rows);
+    sumA.zeros();
+    #pragma acc parallel loop present(pgA, sumA)
+    for(arma::uword jj = 0; jj < pgA.n_rows; jj++) {
+        #pragma acc loop seq
+        for(arma::uword ii = 0; ii < pgA.n_cols; ii++) {
+            sumA.at(jj) += pgA.at(jj + pgA.n_rows * ii );
+        }
+    }
+
+    return std::move(sumA);
+}
 
 template<typename T>
 const T accu(const pgMat<T> &pgA) {
@@ -597,6 +704,18 @@ const T accu(const pgMat<T> &pgA) {
 
     return sumA;
 }
+
+template<typename T>
+const pgMat<std::complex<T>> conj(const pgMat<std::complex<T>> pgIn) {
+    pgMat<std::complex<T>> pgA(pgIn);
+
+    #pragma acc parallel loop present(pgA, pgA.mem[0:pgA.n_elem], pgIn, pgIn.mem[0:pgIn.n_elem])
+    for(arma::uword ii = 0; ii < pgA.n_elem; ii++) {
+        pgA.at(ii) = conj(pgIn.at(ii));
+    }
+    return pgA;
+}
+
 
 template<typename T>
 const pgCol<T> vectorise(const pgMat<T> &pgA) {

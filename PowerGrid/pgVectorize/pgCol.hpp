@@ -70,6 +70,28 @@ public:
         #pragma acc update device(mem[0:cSCplx.n_elem])
 
     }
+
+    pgCol(const T* pMemory, arma::uword n_elements)
+        : isOnGPU(false)
+        , isInitialized(false)
+        , mem(NULL)
+        , isCopy(false)
+        , n_elem(0)
+    {
+        #pragma acc enter data copyin(this[0:1])
+        this->set_size(n_elements);
+        if(acc_is_present((void *)pMemory, sizeof(T) * n_elements)) {
+            #pragma acc host_data use_device(pMemory, mem) 
+            { 
+                cudaMemcpy(this->mem, pMemory, sizeof(T) * n_elements, cudaMemcpyDeviceToDevice); 
+            } 
+        } else {
+            memcpy(this->mem, pMemory, sizeof(T) * n_elements);
+            #pragma acc update device(mem[0:n_elements])
+        }
+
+
+    }
 /*
     template<typename T_ = T>
     pgCol(arma::Col<T_> &cSCplx,
@@ -157,16 +179,16 @@ public:
     ~pgCol<T>()
     {
 
-#ifdef _OPENACC
-        if (acc_deviceptr(mem) != NULL) {
-            acc_delete((void*)mem, sizeof(T) * n_elem);
-        }
-#endif
+        #ifdef _OPENACC
+            if (acc_deviceptr(mem) != NULL) {
+                acc_delete((void*)mem, sizeof(T) * n_elem);
+            }
+        #endif
         if (mem != NULL) {
             delete[] mem;
         }
 
-#pragma acc exit data delete (this[0:1])
+        #pragma acc exit data delete (this[0:1])
     }
 
     T* memptr() const
@@ -206,7 +228,7 @@ public:
         if (mem != NULL) {
             delete[] mem;
         }
-        //#pragma acc exit data finalize detach(mem) delete (mem [0:n_elem])
+        
         isOnGPU = false;
     
         mem = NULL;
@@ -224,7 +246,7 @@ public:
 
     void zeros()
     {
-#pragma acc parallel loop copyin(this [0:1]) present(mem [0:n_elem])
+        #pragma acc parallel loop copyin(this [0:1]) present(mem [0:n_elem])
         for (arma::uword ii = 0; ii < n_elem; ii++) {
             mem[ii] = T(0.0);
         }
@@ -232,7 +254,7 @@ public:
 
     void ones()
     {
-#pragma acc parallel loop copyin(this [0:1]) present(mem [0:n_elem])
+        #pragma acc parallel loop copyin(this [0:1]) present(mem [0:n_elem])
         for (arma::uword ii = 0; ii < n_elem; ii++) {
             mem[ii] = T(1.0);
         }
@@ -240,12 +262,15 @@ public:
     
     arma::Col<T> getArma()
     {
-        #pragma acc update host(mem [0:n_elem])
-        arma::Col<T> armaT(mem, n_elem, true, false);
+        //std::cout << "Memory Address of mem = " << std::hex << mem << std::dec << std::endl;
+        //std::cout << "GPU Memory Address of mem = " << std::hex << acc_deviceptr(mem) << std::dec << std::endl;
+        #pragma acc wait
+        #pragma acc update self(this->mem [0:this->n_elem])
+        arma::Col<T> armaT(this->mem, this->n_elem);
 
         return armaT;
     }
-
+/*
 template<typename T_> 
 arma::Col<T_> 
     getArma(typename std::enable_if<std::is_same<T_,std::complex<float>>::value, std::nullptr_t>::type = nullptr)
@@ -265,6 +290,7 @@ arma::Col<T_>
 
     return armaT;
 }
+*/
     // Operators for element manipulation
     // We'll assume .at() is for fast, GPU manipulation
     #pragma acc routine seq
@@ -295,7 +321,7 @@ arma::Col<T_>
 
     pgCol<T>& operator=(const pgCol<T>& d)
     {
-#pragma acc parallel loop present(mem [0:n_elem], d)
+        #pragma acc parallel loop present(mem [0:n_elem], d)
         for (arma::uword ii = 0; ii < n_elem; ii++) {
             this->mem[ii] = d.at(ii);
         }

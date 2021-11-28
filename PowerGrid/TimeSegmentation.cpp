@@ -257,6 +257,42 @@ operator*(const Col<complex<T1>>& d) const
 
     Tobj* G = this->obj;
     // output is the size of the kspace data
+
+    // loop through time segments
+    if(this->L == 1) {
+        outData = (*G * d);
+        
+        return outData;
+
+    } else {
+        tempD = Wo;
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            tempD.col(ii) %= d;
+        }
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            outData.col(ii) = (*G * tempD.col(ii));
+        }
+
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            outData.col(ii) %= AA.col(ii);
+        }
+        return sum(outData, 1);
+    }
+
+
+}
+/*
+template <typename T1, typename Tobj>
+inline pgCol<complex<T1>> TimeSegmentation<T1, Tobj>::
+operator*(const pgCol<complex<T1>>& d) const
+{
+    RANGE(__PRETTY_FUNCTION__)
+
+    Tobj* G = this->obj;
+    // output is the size of the kspace data
     //Col<complex<T1>> outData = zeros<Col<complex<T1>>>(this->n1);
     // cout << "OutData size = " << this->n1 << endl;
     //Col<complex<T1>> Wo;
@@ -302,6 +338,7 @@ operator*(const Col<complex<T1>>& d) const
 
 
 }
+*/
 template <typename T1, typename Tobj>
 inline Col<complex<T1>> TimeSegmentation<T1, Tobj>::
 operator/(const Col<complex<T1>>& d) const
@@ -336,7 +373,42 @@ operator/(const Col<complex<T1>>& d) const
         return sum(outImg, 1);
     }
 }
+/*
+template <typename T1, typename Tobj>
+inline pgCol<complex<T1>> TimeSegmentation<T1, Tobj>::
+operator/(const pgCol<complex<T1>>& d) const
+{
+    RANGE(__PRETTY_FUNCTION__)
 
+    Tobj* G = this->obj;
+    if (this->L == 1) {
+        outImg = ((*G) / d);
+        
+        return outImg;
+    } else {
+        tempAD = conj(AA);
+    // output is the size of the image
+    //Col<complex<T1>> outData = zeros<Col<complex<T1>>>(this->n2);
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            tempAD.col(ii) %= d;
+        }
+        // loop through the time segments
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+
+            // perform adjoint operation by the object and sum up the time segments
+            outImg.col(ii) = ((*G) / tempAD.col(ii));
+        }
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            outImg.col(ii) %= WoH.col(ii);
+        }
+
+        return sum(outImg, 1);
+    }
+}
+*/
 // Explicit Instantiations
 template class TimeSegmentation<float, Gnufft<float>>;
 template class TimeSegmentation<double, Gnufft<double>>;
