@@ -55,7 +55,7 @@ pgMat<T>(arma::uword nRows, arma::uword nCols ) :
 
 }
 
-pgMat<T>(arma::Mat<std::complex<T>> &cSCplx) :
+pgMat<T>(const arma::Mat<T> &cSCplx) :
     isOnGPU(false),
     isInitialized(false),
     mem(NULL),
@@ -64,7 +64,7 @@ pgMat<T>(arma::Mat<std::complex<T>> &cSCplx) :
     n_rows(0) {
         
     #pragma acc enter data create(this) 
-    set_size(cSCplx.n_elem);
+    set_size(cSCplx.n_rows, cSCplx.n_cols);
 
     for(arma::uword ii = 0; ii < n_elem; ii++) {
         mem[ii] = cSCplx(ii);
@@ -202,6 +202,16 @@ void ones() {
     }
 }
 
+void ones(arma::uword n_rows, arma::uword n_cols)
+{
+    set_size(n_rows, n_cols);
+
+    #pragma acc parallel loop copyin(this [0:1]) present(mem [0:n_elem])
+    for (arma::uword ii = 0; ii < n_elem; ii++) {
+        mem[ii] = T(1.0);
+    }
+}
+
 // Conversion from pgMat to arma::Mat
 arma::Mat<T> getArma() {
     #pragma acc update host(mem[0:n_elem])
@@ -302,6 +312,12 @@ pgMat<T>& operator=(const pgMat<T>& d) {
         this->mem[ii] = d.at(ii);
     }
     return *this;
+}
+
+pgMat<T>& operator=(const Mat<T>& d) {
+
+    pgMat<T> temp(d);
+    return temp;
 }
 
 pgMat<T>& operator=(pgMat<T>&& d) {
@@ -492,6 +508,26 @@ pgMat<T> operator/(const pgMat<X>& pgB) {
     }
     return pgC;
 }
+
+    const T min() const {
+        T minVal = 0;
+        #pragma acc parallel loop present(this[0:1], mem[0:n_elem]) reduction(min: minVal)
+        for(int ii = 0; ii < n_elem; ii++) {
+            minVal = std::min(minVal, this->mem[ii]);
+        }
+
+        return minVal;
+    }
+
+    const T max() const {
+        T maxVal = 0;
+        #pragma acc parallel loop present(this[0:1], mem[0:n_elem]) reduction(max: maxVal)
+        for(int ii = 0; ii < n_elem; ii++) {
+            maxVal = std::max(maxVal, this->mem[ii]);
+        }
+        
+        return maxVal;
+    }
 
 };
 /*

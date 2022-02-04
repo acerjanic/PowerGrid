@@ -188,13 +188,16 @@ int main(int argc, char **argv) {
     	outputImageFilePath += '/';
 	}
 
+  //Check if directory exists
+
+
   for (uword NSlice = 0; NSlice<=NSliceMax; NSlice++) {
-  
+  //for (uword NSlice = 0; NSlice<=0; NSlice++) {
     //acc_set_device_num(tid, acc_device_nvidia);
     //Col<float> FM;
     Col<float> fmSlice;
     //Col<std::complex<float>> sen;
- 	Col<std::complex<float>> senSlice;
+ 	  Col<std::complex<float>> senSlice;
     Col<float> kx(nro), ky(nro), kz(nro), tvec(nro);
     Col<std::complex<float>> data(nro * nc);
     Col<std::complex<float>> ImageTemp(Nx * Ny * Nz);

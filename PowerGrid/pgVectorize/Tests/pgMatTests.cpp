@@ -76,15 +76,15 @@ TEST_CASE("pgMat<float>: operators", "pgMat<float>") {
     SECTION( "Square Matrices: Test zeros and sum" ) {
         pgC.zeros();
         pgD.zeros();
-        REQUIRE(sum(sum(pgC)) == 0);
-        REQUIRE(sum(sum(pgD)) == 0);
+        REQUIRE(accu(pgC) == 0);
+        REQUIRE(accu(pgD) == 0);
     }
 
     SECTION( "Square Matrices: Test ones and sum()" ) {
         pgC.ones();
         pgD.ones();
-        REQUIRE(sum(sum(pgC)) == (float)(lengthA * lengthA));
-        REQUIRE(sum(sum(pgD)) == (float)(lengthB * lengthB));
+        REQUIRE(accu(pgC) == (float)(lengthA * lengthA));
+        REQUIRE(accu(pgD) == (float)(lengthB * lengthB));
     }
 
     SECTION( "Square Matrices: Test Operator+" ) {

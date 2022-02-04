@@ -3,9 +3,10 @@
 #define POWER_GRID_pgSubviewCol_hpp
 
 #include "../PGIncludes.h"
+#include "pgCol.hpp"
 
 template<typename T>
-class pgSubviewCol{
+class pgSubviewCol {
 
 private:
 
@@ -32,6 +33,7 @@ pgSubviewCol<T>(T* memptr, arma::uword n_elem, arma::uword n_rows, arma::uword u
     this->n_elemOrig = n_elem;
     this->n_rows = n_rows;
     this->uiColHeader = uiColHead;
+    #pragma acc enter data copyin(this[0:1])
 }
 
 ~pgSubviewCol<T>(){};
@@ -390,13 +392,13 @@ const std::complex<T> sum(const pgSubviewCol<std::complex<T>>& pgA)
     T sumReal = 0;
     T sumImag = 0;
 
-#pragma acc parallel loop present(pgA) present(pgA.mem[0:pgA.n_rows]) reduction(+ \
+#pragma acc parallel loop present(pgA) present(pgA.mem[0:pgA.n_elemOrig]) reduction(+ \
                                                  : sumReal)
     for (arma::uword ii = 0; ii < pgA.n_rows; ii++) {
         sumReal += real(pgA.at(ii));
     }
 
-#pragma acc parallel loop present(pgA) present(pgA.mem[0:pgA.n_rows]) reduction(+ \
+#pragma acc parallel loop present(pgA) present(pgA.mem[0:pgA.n_elemOrig]) reduction(+ \
                                                  : sumImag)
     for (arma::uword ii = 0; ii < pgA.n_rows; ii++) {
         sumImag += imag(pgA.at(ii));
@@ -410,7 +412,7 @@ const T sum(const pgSubviewCol<T>& pgA)
 {
     T sumA = 0;
 
-#pragma acc parallel loop copyin(pgA) present(pgA.mem[0:pgA.n_rows]) reduction(+ : sumA)
+#pragma acc parallel loop copyin(pgA) present(pgA.mem[0:pgA.n_elemOrig]) reduction(+ : sumA)
     for (arma::uword ii = 0; ii < pgA.n_rows; ii++) {
         sumA += pgA.at(ii);
     }

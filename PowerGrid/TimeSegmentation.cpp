@@ -76,23 +76,25 @@ TimeSegmentation<T1, Tobj>::TimeSegmentation(Tobj& G, Col<T1> map_in,
         Wo.ones(n2, 1);
         WoH.ones(n2, 1);
     } else {
-        Mat<complex<T1>> tempAA(NOneShot, L);
-        if (type == 1) { // Hanning interpolator
+        Mat<complex<T1>> tempAACPU(NOneShot, L);
+        //if (type == 1) { // Hanning interpolator
             cout << "Using Hanning window temporal interpolator" << endl;
             cout << "Field Map size = " << this->fieldMap.n_rows << endl;
+
             for (unsigned int ii = 0; ii < L; ii++) {
                 for (unsigned int jj = 0; jj < NOneShot; jj++) {
                     if ((abs(timeVec(jj) - ((ii)*tau))) <= tau) {
-                        tempAA(jj, ii) = 0.5 + 0.5 * std::cos((datum::pi) * (timeVec(jj) - ((ii)*tau)) / tau);
+                        tempAACPU(jj, ii) = 0.5 + 0.5 * std::cos((datum::pi) * (timeVec(jj) - ((ii)*tau)) / tau);
                     } else {
-                        tempAA(jj, ii) = 0.0;
+                        tempAACPU(jj, ii) = 0.0;
                     }
                 }
             }
-            AA = repmat(tempAA, Nshots, 1);
+            AA = repmat(tempAACPU, Nshots, 1);
+            
             //AA.save("AA.csv", arma::csv_ascii);
-        } else if (type == 2) { // Min-max interpolator: Exact LS interpolator
-
+        //} else if (type == 2) { // Min-max interpolator: Exact LS interpolator
+        /*
             cout << "Using exact LS minmax temporal interpolator" << endl;
 
             Mat<complex<T1>> Ltp;
@@ -154,7 +156,9 @@ TimeSegmentation<T1, Tobj>::TimeSegmentation(Tobj& G, Col<T1> map_in,
                 tempAA.row(ii) = res.t();
             }
             AA = repmat(tempAA, Nshots, 1);
-        } else if (type == 3) { // Approximate minmax estimator
+            */
+        //} else if (type == 3) { // Approximate minmax estimator
+        /*
             // Estimate histogram of field map
             auto start = std::chrono::high_resolution_clock::now();
 
@@ -208,10 +212,12 @@ TimeSegmentation<T1, Tobj>::TimeSegmentation(Tobj& G, Col<T1> map_in,
 
             std::chrono::duration<float> elapsed = finish - start;
             std::cout << "Time Segmentation Histo Elapsed time: " << elapsed.count() << " s\n";
-        }
+            */
+        //}
 
         Wo.set_size(n2, L + 1);
         WoH.set_size(n2, L + 1);
+
         for (unsigned int ii = 0; ii < L + 1; ii++) {
             Wo.col(ii) = exp(-i * (this->fieldMap) * ((ii) * this->tau + this->T_min));
             WoH.col(ii) = exp(i * (this->fieldMap) * ((ii) * this->tau + this->T_min));
@@ -260,8 +266,12 @@ operator*(const Col<complex<T1>>& d) const
 
     // loop through time segments
     if(this->L == 1) {
-        outData = (*G * d);
-        
+        const pgCol<complex<T1>> pgD(d);
+        pgCol<complex<T1>> outDataPG;
+
+        outDataPG = (*G * pgD);
+
+        outData = outDataPG.getArma();
         return outData;
 
     } else {
@@ -272,7 +282,12 @@ operator*(const Col<complex<T1>>& d) const
         }
 
         for (unsigned int ii = 0; ii < this->L; ii++) {
-            outData.col(ii) = (*G * tempD.col(ii));
+            pgCol<CxT1> tempCol(tempD.col(ii));
+            pgCol<CxT1> tempOutCol;
+
+            tempOutCol = (*G * tempCol); 
+
+            outData.col(ii) = tempOutCol.getArma();
         }
 
 
@@ -347,8 +362,11 @@ operator/(const Col<complex<T1>>& d) const
 
     Tobj* G = this->obj;
     if (this->L == 1) {
-        outImg = ((*G) / d);
+        const pgCol<complex<T1>> pgD(d);
+        pgCol<complex<T1>> outImgPG;
+        outImgPG = ((*G) / pgD);
         
+        outImg = outImgPG.getArma();
         return outImg;
     } else {
         tempAD = conj(AA);
@@ -361,9 +379,11 @@ operator/(const Col<complex<T1>>& d) const
         // loop through the time segments
 
         for (unsigned int ii = 0; ii < this->L; ii++) {
-
+            pgCol<CxT1> tempCol(tempAD.col(ii));
+            pgCol<CxT1> tempOutCol;
             // perform adjoint operation by the object and sum up the time segments
-            outImg.col(ii) = ((*G) / tempAD.col(ii));
+            tempOutCol = (*G) / tempCol;
+            outImg.col(ii) = tempOutCol.getArma();
         }
 
         for (unsigned int ii = 0; ii < this->L; ii++) {

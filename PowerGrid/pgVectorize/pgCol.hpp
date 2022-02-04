@@ -33,6 +33,7 @@ private:
 
 public:
     const arma::uword n_elem;
+    const arma::uword n_rows;
     T* mem; //Pointer to raw data
     // Constructors
 
@@ -41,7 +42,9 @@ public:
         , isInitialized(false)
         , mem(NULL)
         , isCopy(false)
-        , n_elem(0){
+        , n_elem(0)
+        , n_rows(0) 
+        {
 #pragma acc enter data copyin(this)
         }
 
@@ -51,6 +54,7 @@ public:
         , mem(NULL)
         , isCopy(false)
         , n_elem(0)
+        , n_rows(0) 
     {
 #pragma acc enter data create(this)
         set_size(length);
@@ -62,6 +66,7 @@ public:
         , mem(NULL)
         , isCopy(false)
         , n_elem(0)
+        , n_rows(0) 
     {
         #pragma acc enter data copyin(this[0:1])
 
@@ -77,6 +82,7 @@ public:
         , mem(NULL)
         , isCopy(false)
         , n_elem(0)
+        , n_rows(0) 
     {
         #pragma acc enter data copyin(this[0:1])
         this->set_size(n_elements);
@@ -137,6 +143,7 @@ public:
         , mem(NULL)
         , isCopy(true)
         , n_elem(0)
+        , n_rows(0) 
     {
 #pragma acc enter data create(this)
         set_size(pgA.n_elem);
@@ -158,6 +165,7 @@ public:
         , mem(NULL)
         , isCopy(false)
         , n_elem(0)
+        , n_rows(0) 
     {
 #pragma acc enter data create(this)
         access::rw(n_elem) = pgA.n_elem;
@@ -235,6 +243,7 @@ public:
         
         
         arma::access::rw(n_elem) = length;
+        arma::access::rw(n_rows) = length;
         mem = new T[n_elem];
         #ifdef _OPENACC
             isOnGPU = true;
@@ -254,6 +263,16 @@ public:
 
     void ones()
     {
+        #pragma acc parallel loop copyin(this [0:1]) present(mem [0:n_elem])
+        for (arma::uword ii = 0; ii < n_elem; ii++) {
+            mem[ii] = T(1.0);
+        }
+    }
+
+    void ones(arma::uword n_rows)
+    {
+        set_size(n_rows, 1);
+
         #pragma acc parallel loop copyin(this [0:1]) present(mem [0:n_elem])
         for (arma::uword ii = 0; ii < n_elem; ii++) {
             mem[ii] = T(1.0);
@@ -445,6 +464,26 @@ arma::Col<T_>
         return std::move(pgC);
     }
 
+    const T min() const {
+        T minVal = 0;
+        #pragma acc parallel loop present(this[0:1], mem[0:n_elem]) reduction(min: minVal)
+        for(int ii = 0; ii < n_elem; ii++) {
+            minVal = std::min(minVal, this->mem[ii]);
+        }
+
+        return minVal;
+    }
+
+    const T max() const {
+        T maxVal = 0;
+        #pragma acc parallel loop present(this[0:1], mem[0:n_elem]) reduction(max: maxVal)
+        for(int ii = 0; ii < n_elem; ii++) {
+            maxVal = std::max(maxVal, this->mem[ii]);
+        }
+        
+        return maxVal;
+    }
+
     //template <typename T>
     const pgCol<T> operator-(const T& B) const
     {
@@ -518,7 +557,7 @@ arma::Col<T_>
         return std::move(pgC);
     }
 
-    template <typename X>
+    tcd emplate <typename X>
     const pgCol<T> operator/(const pgCol<X>& pgB) const
     {
         pgCol<T> pgC(n_elem);
@@ -566,4 +605,11 @@ const T sum(const pgCol<T>& pgA)
 
     return sumA;
 }
+
+template <typename T1, typename T2>
+pgCol<typename T1> operator*(T2 lhval, pgCol const & rhval) {
+    
+}
+
+
 #endif //POWER_GRID_pgCol_hpp

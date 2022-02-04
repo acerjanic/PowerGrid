@@ -10,6 +10,7 @@ services:
 # mapping your project folder (.) to /home/develop/project    
     volumes:
       - "../:/root/code"
+      - "../../data:/root/data"
       
 networks:
   default:

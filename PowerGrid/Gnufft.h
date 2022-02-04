@@ -122,10 +122,10 @@ public:
   // Forward transform operation using gridding
   Col<CxT1> operator*(const Col<CxT1> &d) const;
   pgCol<CxT1> operator*(const pgCol<CxT1> &d) const;
-  
+
   // Adjoint transform operation
   Col<CxT1> operator/(const Col<CxT1> &d) const;
-
+  pgCol<CxT1> operator/(const pgCol<CxT1> &d) const;
 
   // 2D adjoint gridding on CPU
 int gridding_adjoint_2D(unsigned int n, T1 beta,

@@ -53,18 +53,18 @@ public:
   T1 tau;       // time segment length
   T1 T_min;     // minimum time in the time vector (i.e. TE for spiral out)
   Tobj *obj;
-  Col<T1> fieldMap; // Field map (in radians per second)
-  Col<T1> timeVec;  // timing vector of when each data point was collected
+  pgCol<T1> fieldMap; // Field map (in radians per second)
+  pgCol<T1> timeVec;  // timing vector of when each data point was collected
                     // relative to the echo time (in seconds)
-  Mat<CxT1> AA;     // interpolator coefficients for the different time segments
+  pgMat<CxT1> AA;     // interpolator coefficients for the different time segments
   CxT1 i = CxT1(0., 1.);
-  Mat<CxT1> Wo;
-  Mat<CxT1> WoH;
-  Col<T1> RowOnes;
-  mutable Mat<complex<T1>> outData;
-  mutable Mat<complex<T1>> outImg;
-  mutable Mat<complex<T1>> tempD;
-  mutable Mat<complex<T1>> tempAD;
+  pgMat<CxT1> Wo;
+  pgMat<CxT1> WoH;
+  pgCol<T1> RowOnes;
+  mutable pgMat<complex<T1>> outData;
+  mutable pgMat<complex<T1>> outImg;
+  mutable pgMat<complex<T1>> tempD;
+  mutable pgMat<complex<T1>> tempAD;
 
   // Class constructor
   TimeSegmentation(Tobj &G, Col<T1> map_in, Col<T1> timeVec_in, uword a,
