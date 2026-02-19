@@ -193,11 +193,12 @@ RANGE()
     // Zero sample output buffer
     for (int ii = 0; ii < 2 * (int)n2; ii++) pSamples[ii] = (T1)0.0;
 
-    // Deapodize input image into pGridData_d
+    // Deapodize input image into pGridData_d.
+    // const_cast is safe: deapodization2d/3d only reads pSrc.
     if (Nz == 1) {
-      deapodization2d<T1>(pGridData_d, dataPtr, Nx, Ny, kernelWidth, beta, gridOS);
+      deapodization2d<T1>(pGridData_d, const_cast<T1*>(dataPtr), Nx, Ny, kernelWidth, beta, gridOS);
     } else {
-      deapodization3d<T1>(pGridData_d, dataPtr, Nx, Ny, Nz, kernelWidth, beta, gridOS);
+      deapodization3d<T1>(pGridData_d, const_cast<T1*>(dataPtr), Nx, Ny, Nz, kernelWidth, beta, gridOS);
     }
 
     // Zero-pad onto oversampled grid
@@ -237,6 +238,9 @@ RANGE()
   // CPU / OpenACC path
   #ifdef OPENACC_GPU
     cufftHandle *nPlan = const_cast<cufftHandle *>(&plan);
+  #elif defined(METAL_COMPUTE)
+    CFTHandle dummyCtxFwd = nullptr;
+    CFTHandle *nPlan = &dummyCtxFwd;
   #else
     void* nPlan = NULL;
   #endif
@@ -305,6 +309,9 @@ Col<complex<T1>> Gnufft<T1>::operator/(const Col<complex<T1>> &d) const {
   // CPU / OpenACC path
   #ifdef OPENACC_GPU
   cufftHandle *nPlan = const_cast<cufftHandle *>(&plan);
+  #elif defined(METAL_COMPUTE)
+  CFTHandle dummyCtxAdj = nullptr;
+  CFTHandle *nPlan = &dummyCtxAdj;
   #else
   void *nPlan = NULL;
   #endif

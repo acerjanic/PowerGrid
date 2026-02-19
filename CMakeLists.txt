@@ -103,7 +103,8 @@ if(APPLE)
 			# if constexpr (used in Gnufft.cpp for T1==float guard) requires C++17
 			set(CMAKE_CXX_STANDARD 17)
 			add_definitions(-DMETAL_COMPUTE)
-			set(LIBS ${LIBS} ${METAL_LIBRARY} ${ACCELERATE_LIBRARY})
+			find_library(FOUNDATION_LIBRARY Foundation REQUIRED)
+			set(LIBS ${LIBS} ${METAL_LIBRARY} ${ACCELERATE_LIBRARY} ${FOUNDATION_LIBRARY})
 
 			# Compile .metal source → .air → .metallib → C byte array (xxd embed)
 			set(METAL_SRC  ${CMAKE_SOURCE_DIR}/PowerGrid/Metal/gridding_metal.metal)
@@ -111,14 +112,20 @@ if(APPLE)
 			set(METALLIB   ${CMAKE_BINARY_DIR}/PowerGrid/Metal/gridding.metallib)
 			set(METALEMBED ${CMAKE_BINARY_DIR}/PowerGrid/Metal/gridding_metallib.h)
 
+			# Pre-create the output directory at configure time so the
+			# WORKING_DIRECTORY cd in the custom command below always succeeds.
+			file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/PowerGrid/Metal)
+
 			add_custom_command(
 				OUTPUT ${METALEMBED}
-				COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/PowerGrid/Metal
-				COMMAND ${METAL_COMPILER} -sdk macosx -O3 -o ${METAL_AIR} -c ${METAL_SRC}
+				COMMAND ${METAL_COMPILER} -O3 -o ${METAL_AIR} -c ${METAL_SRC}
 				COMMAND xcrun -sdk macosx metallib -o ${METALLIB} ${METAL_AIR}
-				COMMAND xxd -i gridding.metallib
-					WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/PowerGrid/Metal
-					OUTPUT_FILE ${METALEMBED}
+				COMMAND ${CMAKE_COMMAND}
+					-DINPUT=${METALLIB}
+					-DOUTPUT=${METALEMBED}
+					-DVAR_NAME=gridding_metallib
+					-P ${CMAKE_SOURCE_DIR}/cmake/embed_binary.cmake
+				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/PowerGrid/Metal
 				DEPENDS ${METAL_SRC}
 				COMMENT "Compiling and embedding Metal shaders")
 
