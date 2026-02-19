@@ -119,10 +119,10 @@ void ifft2dAccelerate(float* d_data, uword nx, uword ny) {
 
     vDSP_fft2d_zip(setup, &split, 1, 0, log2nx, log2ny, kFFTDirection_Inverse);
 
-    // Normalize by 1/(nx*ny)
-    float scale = 1.0f / (float)(nx * ny);
-    vDSP_vsmul(re, 1, &scale, re, 1, N);
-    vDSP_vsmul(im, 1, &scale, im, 1, N);
+    // Do NOT normalize: match FFTW FFTW_BACKWARD convention, which returns the
+    // unnormalized IDFT (sum_k X[k]*e^{+2πikn/N}, without the 1/N factor).
+    // The CPU gridding path (computeFH_CPU_Grid) uses FFTW_BACKWARD and
+    // is designed around unnormalized inverse transforms.
 
     vDSP_ztoc(&split, 1, (DSPComplex*)d_data, 2, N);
     free(re);
@@ -186,10 +186,9 @@ void ifft3dAccelerate(float* d_data, uword nx, uword ny, uword nz) {
         return;
     }
 
-    // IFFT along z columns first
+    // IFFT along z columns first — unnormalized, matching FFTW_BACKWARD.
     const vDSP_Length log2nz = ilog2(nz);
     FFTSetup setup = getCache().get(log2nz, log2nz);
-    float scaleZ = 1.0f / (float)nz;
 
     float* re = (float*)malloc(nz * sizeof(float));
     float* im = (float*)malloc(nz * sizeof(float));
@@ -203,8 +202,7 @@ void ifft3dAccelerate(float* d_data, uword nx, uword ny, uword nz) {
                 im[z] = d_data[idx + 1];
             }
             vDSP_fft_zip(setup, &split, 1, log2nz, kFFTDirection_Inverse);
-            vDSP_vsmul(re, 1, &scaleZ, re, 1, nz);
-            vDSP_vsmul(im, 1, &scaleZ, im, 1, nz);
+            // No 1/nz normalization — match FFTW_BACKWARD convention.
             for (uword z = 0; z < nz; ++z) {
                 uword idx = 2 * (y + x * ny + z * nx * ny);
                 d_data[idx]     = re[z];

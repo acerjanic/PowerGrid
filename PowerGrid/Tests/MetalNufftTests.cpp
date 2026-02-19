@@ -65,13 +65,22 @@ static void fillGaussian2D(float *buf, int Nx, int Ny) {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("vDSP FFT 2D float: round-trip identity", "[fftAccelerate]") {
+    // fft2dAccelerate and ifft2dAccelerate match FFTW convention:
+    //   forward  = unnormalized DFT   (FFTW_FORWARD)
+    //   backward = unnormalized IDFT  (FFTW_BACKWARD = N * normalized IFFT)
+    // Therefore  IFFT(FFT(x)) = N * x, not x.
+    // Verify by scaling the result back by 1/N before comparison.
     const int Nx = 64, Ny = 64;
+    const float invN = 1.0f / (float)(Nx * Ny);
     std::vector<float> data(2 * Nx * Ny);
     fillGaussian2D(data.data(), Nx, Ny);
     const std::vector<float> orig = data;
 
     fft2dAccelerate(data.data(), (uword)Nx, (uword)Ny);
     ifft2dAccelerate(data.data(), (uword)Nx, (uword)Ny);
+
+    // Scale down by N to recover x
+    for (float& v : data) v *= invN;
 
     float maxVal = 0.0f, maxErr = 0.0f;
     for (size_t i = 0; i < orig.size(); i++)

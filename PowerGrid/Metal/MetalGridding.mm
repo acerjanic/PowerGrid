@@ -133,12 +133,16 @@ MetalGriddingContext* metal_gridding_create(
         return nullptr;
     }
 
-    // Load the pre-compiled metallib from the xxd-embedded byte array
+    // Load the pre-compiled metallib from the embedded byte array.
+    // dispatch_data_create (not NSData cast) is required — NSData does not
+    // conform to the OS_dispatch_data protocol that Metal expects.
     NSError* err = nil;
-    NSData* metallibData = [NSData dataWithBytes:(const void*)gridding_metallib
-                                          length:(NSUInteger)gridding_metallib_len];
-    id<MTLLibrary> library = [device newLibraryWithData:(dispatch_data_t)metallibData
-                                                  error:&err];
+    dispatch_data_t metallibDispData = dispatch_data_create(
+        (const void*)gridding_metallib,
+        (size_t)gridding_metallib_len,
+        NULL,
+        DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+    id<MTLLibrary> library = [device newLibraryWithData:metallibDispData error:&err];
     if (!library) {
         fprintf(stderr, "[MetalGridding] Failed to load metallib: %s\n",
                 [[err localizedDescription] UTF8String]);
