@@ -118,6 +118,20 @@ Col<complex<T1>> Gfft<T1>::operator*(const Col<complex<T1>> &d) const {
     }
   }
 
+#elif defined(METAL_COMPUTE) // Apple Metal path: vDSP (Accelerate) FFT
+  if (Nz == 1) {
+    fftshift2<T1>(pGridData_d, pGridData, Nx, Ny);
+    fft2dAccelerate(pGridData_d, Nx, Ny);
+    fftshift2<T1>(pGridData, pGridData_d, Nx, Ny);
+    deinterleave_data2d<T1>(pGridData, realXformedDataPtr, imagXformedDataPtr,
+                            Nx, Ny);
+  } else {
+    fftshift3<T1>(pGridData_d, pGridData, Nx, Ny, Nz);
+    fft3dAccelerate(pGridData_d, Nx, Ny, Nz);
+    fftshift3<T1>(pGridData, pGridData_d, Nx, Ny, Nz);
+    deinterleave_data3d<T1>(pGridData, realXformedDataPtr, imagXformedDataPtr,
+                            Nx, Ny, Nz);
+  }
 #else // We're on CPU
   if (Nz == 1) {
     fftshift2<T1>(pGridData_d, pGridData, Nx, Ny);
@@ -209,6 +223,20 @@ Col<complex<T1>> Gfft<T1>::operator/(const Col<complex<T1>> &d) const {
     }
   }
 
+#elif defined(METAL_COMPUTE) // Apple Metal path: vDSP (Accelerate) IFFT
+  if (Nz == 1) {
+    ifftshift2<T1>(pGridData_d, pGridData, Nx, Ny);
+    ifft2dAccelerate(pGridData_d, Nx, Ny);
+    ifftshift2<T1>(pGridData, pGridData_d, Nx, Ny);
+    deinterleave_data2d<T1>(pGridData, realXformedDataPtr, imagXformedDataPtr,
+                            Nx, Ny);
+  } else {
+    ifftshift3<T1>(pGridData_d, pGridData, Nx, Ny, Nz);
+    ifft3dAccelerate(pGridData_d, Nx, Ny, Nz);
+    ifftshift3<T1>(pGridData, pGridData_d, Nx, Ny, Nz);
+    deinterleave_data3d<T1>(pGridData, realXformedDataPtr, imagXformedDataPtr,
+                            Nx, Ny, Nz);
+  }
 #else // We're on CPU
   if (Nz == 1) {
     ifftshift2<T1>(pGridData_d, pGridData, Nx, Ny);

@@ -73,11 +73,16 @@ public:
   T1 beta; // beta factor for gridding not the same as beta in regularization!
   T1 kernelWidth; // Kaiser Bessel Kernel Support
   void *stream;
-  
+
   #ifdef OPENACC_GPU
     cufftHandle plan;
   #else
     void* plan;
+  #endif
+
+  #ifdef METAL_COMPUTE
+    /// @brief Metal gridding context; nullptr when T1 != float or Metal unavailable.
+    MetalGriddingContext* metalCtx = nullptr;
   #endif
 
   uword imageNumElems;

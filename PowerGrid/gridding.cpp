@@ -526,6 +526,15 @@ void computeFH_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
         }
     }
 
+#elif defined(METAL_COMPUTE) // Apple Metal path: use vDSP (Accelerate) for FFT
+
+    if (Nz == 1) {
+        ifft2dAccelerate(pGridData_d, params.gridSize[0], params.gridSize[1]);
+    } else {
+        ifft3dAccelerate(pGridData_d, params.gridSize[0], params.gridSize[1],
+            params.gridSize[2]);
+    }
+
 #else // We're on CPU so we'll use FFTW
 
     // Launch FFT on the CPU
@@ -665,7 +674,7 @@ void computeFd_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
     }
 
 // ifftn(gridData)
-//#ifdef _OPENACC // We're on GPU 
+//#ifdef _OPENACC // We're on GPU
 #ifdef OPENACC_GPU
     // Inside this region the device data pointer will be used
     // cout << "about to reach openacc region in forward transform" << endl;
@@ -687,6 +696,13 @@ void computeFd_CPU_Grid(int numK_per_coil, const T1* __restrict kx,
             //fft3dCPU(pGridData_os_d, params.gridSize[0], params.gridSize[1],
             //params.gridSize[2]);
         }
+    }
+#elif defined(METAL_COMPUTE) // Apple Metal path: use vDSP (Accelerate) for FFT
+    if (Nz == 1) {
+        fft2dAccelerate(pGridData_os_d, params.gridSize[0], params.gridSize[1]);
+    } else {
+        fft3dAccelerate(pGridData_os_d, params.gridSize[0], params.gridSize[1],
+            params.gridSize[2]);
     }
 #else // We're on CPU
     if (Nz == 1) {

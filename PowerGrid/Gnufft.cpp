@@ -119,6 +119,24 @@ Gnufft<T1>::Gnufft(
 #pragma acc enter data copyin(LUT[0 : sizeLUT], kx[0:n2], ky[0:n2], \
   kz[0:n2]) create(pGridData[0:2*imageNumElems], pGridData_d[0:2*imageNumElems], \
   pGridData_os[0:2*gridNumElems], pGridData_os_d[0:2*gridNumElems], pSamples[0:2*n2])
+
+#ifdef METAL_COMPUTE
+  // Create Metal gridding context for float instantiation only.
+  // For double, metalCtx remains nullptr and the CPU FFTW path is used.
+  if constexpr (std::is_same<T1, float>::value) {
+    int gNx = (int)std::ceil(gridOS * (float)Nx);
+    int gNy = (int)std::ceil(gridOS * (float)Ny);
+    if (gNx % 2) gNx++;
+    if (gNy % 2) gNy++;
+    int gNz = (Nz == 1) ? (int)Nz : (int)std::ceil(gridOS * (float)Nz);
+    metalCtx = metal_gridding_create(
+        gNx, gNy, gNz,
+        (int)Nx, (int)Ny, (int)Nz,
+        (float)gridOS, (float)kernelWidth,
+        LUT, (int)sizeLUT,
+        kx, ky, kz, (int)n2);
+  }
+#endif
 }
 
 // Class destructor to free LUT
@@ -126,6 +144,12 @@ template <typename T1> Gnufft<T1>::~Gnufft() {
   RANGE()
   #ifdef OPENACC_GPU
     cufftDestroy(plan);
+  #endif
+  #ifdef METAL_COMPUTE
+    if (metalCtx) {
+      metal_gridding_destroy(metalCtx);
+      metalCtx = nullptr;
+    }
   #endif
   #pragma acc exit data delete(pGridData[0:2*imageNumElems], \
    pGridData_d[0:2*imageNumElems], pGridData_os[0:2*gridNumElems], \
@@ -157,8 +181,60 @@ RANGE()
 
   const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
 
-  // T2 gridOS = 2.0;
-  // cout << "About to call the forward gridding routine." << endl;
+#ifdef METAL_COMPUTE
+  if (metalCtx != nullptr) {
+    // Metal GPU path: vDSP FFT + Metal scatter/gather gridding (float only)
+    int gNx = (int)std::ceil(gridOS * (T1)Nx);
+    int gNy = (int)std::ceil(gridOS * (T1)Ny);
+    if (gNx % 2) gNx++;
+    if (gNy % 2) gNy++;
+    int gNz = (Nz == 1) ? (int)Nz : (int)std::ceil(gridOS * (T1)Nz);
+
+    // Zero sample output buffer
+    for (int ii = 0; ii < 2 * (int)n2; ii++) pSamples[ii] = (T1)0.0;
+
+    // Deapodize input image into pGridData_d
+    if (Nz == 1) {
+      deapodization2d<T1>(pGridData_d, dataPtr, Nx, Ny, kernelWidth, beta, gridOS);
+    } else {
+      deapodization3d<T1>(pGridData_d, dataPtr, Nx, Ny, Nz, kernelWidth, beta, gridOS);
+    }
+
+    // Zero-pad onto oversampled grid
+    if (Nz == 1) {
+      zero_pad2d<T1>(pGridData_os, pGridData_d, Nx, Ny, gridOS);
+    } else {
+      zero_pad3d<T1>(pGridData_os, pGridData_d, Nx, Ny, Nz, gridOS);
+    }
+
+    // fftshift → FFT (vDSP) → ifftshift
+    if (Nz == 1) {
+      fftshift2<T1>(pGridData_os_d, pGridData_os, gNx, gNy);
+      fft2dAccelerate(reinterpret_cast<float*>(pGridData_os_d), gNx, gNy);
+      ifftshift2<T1>(pGridData_os, pGridData_os_d, gNx, gNy);
+    } else {
+      fftshift3<T1>(pGridData_os_d, pGridData_os, gNx, gNy, gNz);
+      fft3dAccelerate(reinterpret_cast<float*>(pGridData_os_d), gNx, gNy, gNz);
+      ifftshift3<T1>(pGridData_os, pGridData_os_d, gNx, gNy, gNz);
+    }
+
+    // Metal GPU forward gridding: gather from oversampled grid into k-space samples
+    if (Nz == 1) {
+      metal_gridding_forward_2D(metalCtx,
+                                reinterpret_cast<const float*>(pGridData_os),
+                                reinterpret_cast<float*>(pSamples));
+    } else {
+      metal_gridding_forward_3D(metalCtx,
+                                reinterpret_cast<const float*>(pGridData_os),
+                                reinterpret_cast<float*>(pSamples));
+    }
+
+    Col<CxT1> temp(reinterpret_cast<CxT1 *>(pSamples), n2, false, true);
+    return temp;
+  }
+#endif
+
+  // CPU / OpenACC path
   #ifdef OPENACC_GPU
     cufftHandle *nPlan = const_cast<cufftHandle *>(&plan);
   #else
@@ -184,17 +260,49 @@ Col<complex<T1>> Gnufft<T1>::operator/(const Col<complex<T1>> &d) const {
 
   uword dataLength = this->n2;
 
-  //Col<T1> realData = real(d).eval();
-  //Col<T1> imagData = imag(d).eval();
-
   const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
 
-  // Process data here, like calling a brute force transform, dft...
-  // I assume you create the pointers to the arrays where the transformed data
-  // will be stored
-  // realXformedDataPtr and imagXformedDataPtr and they are of type float*
+#ifdef METAL_COMPUTE
+  if (metalCtx != nullptr) {
+    // Metal GPU path: Metal scatter gridding + vDSP IFFT (float only)
+    int gNx = (int)std::ceil(gridOS * (T1)Nx);
+    int gNy = (int)std::ceil(gridOS * (T1)Ny);
+    if (gNx % 2) gNx++;
+    if (gNy % 2) gNy++;
+    int gNz = (Nz == 1) ? (int)Nz : (int)std::ceil(gridOS * (T1)Nz);
 
-  // T2 gridOS = 2.0;
+    // Metal GPU adjoint gridding: scatter k-space data onto oversampled grid
+    if (Nz == 1) {
+      metal_gridding_adjoint_2D(metalCtx,
+                                reinterpret_cast<const float*>(dataPtr),
+                                reinterpret_cast<float*>(pGridData_os));
+    } else {
+      metal_gridding_adjoint_3D(metalCtx,
+                                reinterpret_cast<const float*>(dataPtr),
+                                reinterpret_cast<float*>(pGridData_os));
+    }
+
+    // ifftshift → IFFT (vDSP) → fftshift → crop → deapodize
+    if (Nz == 1) {
+      ifftshift2<T1>(pGridData_os_d, pGridData_os, gNx, gNy);
+      ifft2dAccelerate(reinterpret_cast<float*>(pGridData_os_d), gNx, gNy);
+      fftshift2<T1>(pGridData_os, pGridData_os_d, gNx, gNy);
+      crop_center_region2d<T1>(pGridData_d, pGridData_os, Nx, Ny, gNx, gNy);
+      deapodization2d<T1>(pGridData, pGridData_d, Nx, Ny, kernelWidth, beta, gridOS);
+    } else {
+      ifftshift3<T1>(pGridData_os_d, pGridData_os, gNx, gNy, gNz);
+      ifft3dAccelerate(reinterpret_cast<float*>(pGridData_os_d), gNx, gNy, gNz);
+      fftshift3<T1>(pGridData_os, pGridData_os_d, gNx, gNy, gNz);
+      crop_center_region3d<T1>(pGridData_d, pGridData_os, Nx, Ny, Nz, gNx, gNy, gNz);
+      deapodization3d<T1>(pGridData, pGridData_d, Nx, Ny, Nz, kernelWidth, beta, gridOS);
+    }
+
+    Col<CxT1> temp(reinterpret_cast<CxT1 *>(pGridData), n1, false, true);
+    return temp;
+  }
+#endif
+
+  // CPU / OpenACC path
   #ifdef OPENACC_GPU
   cufftHandle *nPlan = const_cast<cufftHandle *>(&plan);
   #else
@@ -205,7 +313,7 @@ Col<complex<T1>> Gnufft<T1>::operator/(const Col<complex<T1>> &d) const {
                          kernelWidth,
                          beta, LUT, sizeLUT, stream, nPlan, pGridData,
                          pGridData_d, pGridData_os, pGridData_os_d);
-  
+
   Col<CxT1> temp(reinterpret_cast<CxT1 *>(pGridData), n1, false, true);
   return temp; // Return a vector of type T1
 }

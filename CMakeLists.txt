@@ -92,6 +92,43 @@ message(STATUS "Libraries to be linked in: ${LIBS}")
 
 if(APPLE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -flto")
+
+	# ---------------------------------------------------------------------------
+	# Apple Metal GPU compute (Apple Silicon / MTLGPUFamilyApple6+)
+	# ---------------------------------------------------------------------------
+	option(METAL_COMPUTE "Enable Apple Metal GPU compute (Apple Silicon only)" ON)
+	if(METAL_COMPUTE)
+		include(FindMetal)
+		if(METAL_FOUND)
+			# if constexpr (used in Gnufft.cpp for T1==float guard) requires C++17
+			set(CMAKE_CXX_STANDARD 17)
+			add_definitions(-DMETAL_COMPUTE)
+			set(LIBS ${LIBS} ${METAL_LIBRARY} ${ACCELERATE_LIBRARY})
+
+			# Compile .metal source → .air → .metallib → C byte array (xxd embed)
+			set(METAL_SRC  ${CMAKE_SOURCE_DIR}/PowerGrid/Metal/gridding_metal.metal)
+			set(METAL_AIR  ${CMAKE_BINARY_DIR}/PowerGrid/Metal/gridding.air)
+			set(METALLIB   ${CMAKE_BINARY_DIR}/PowerGrid/Metal/gridding.metallib)
+			set(METALEMBED ${CMAKE_BINARY_DIR}/PowerGrid/Metal/gridding_metallib.h)
+
+			add_custom_command(
+				OUTPUT ${METALEMBED}
+				COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/PowerGrid/Metal
+				COMMAND ${METAL_COMPILER} -sdk macosx -O3 -o ${METAL_AIR} -c ${METAL_SRC}
+				COMMAND xcrun -sdk macosx metallib -o ${METALLIB} ${METAL_AIR}
+				COMMAND xxd -i gridding.metallib
+					WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/PowerGrid/Metal
+					OUTPUT_FILE ${METALEMBED}
+				DEPENDS ${METAL_SRC}
+				COMMENT "Compiling and embedding Metal shaders")
+
+			add_custom_target(MetalShaders ALL DEPENDS ${METALEMBED})
+			include_directories(${CMAKE_BINARY_DIR}/PowerGrid/Metal)
+		else()
+			message(WARNING "METAL_COMPUTE=ON but Metal toolchain not found; disabling Metal compute.")
+			set(METAL_COMPUTE OFF)
+		endif()
+	endif()
 else()
 	if(CMAKE_COMPILER_IS_GNUCXX)
 
