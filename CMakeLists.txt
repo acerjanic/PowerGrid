@@ -165,4 +165,35 @@ add_subdirectory(PowerGrid)
 
 add_subdirectory(apps)
 
+# ---------------------------------------------------------------------------
+# Metal unit test executable (built only when METAL_COMPUTE is ON)
+# ---------------------------------------------------------------------------
+if(METAL_COMPUTE AND METAL_FOUND)
+    set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/Support/Catch)
+    add_executable(metal_tests
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/main.cpp
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/MetalNufftTests.cpp)
+    target_include_directories(metal_tests PRIVATE
+        ${CATCH_INCLUDE_DIR}
+        ${CMAKE_SOURCE_DIR}/PowerGrid
+        ${CMAKE_SOURCE_DIR}/Support/ArmaExtensions)
+    target_link_libraries(metal_tests PGCommon ${LIBS})
+    # Disable LTO for test binary: some linked libs (FFTW SIMD) use inline
+    # assembly patterns that LTO's back-end doesn't handle on Apple clang.
+    target_compile_options(metal_tests PRIVATE -fno-lto)
+    target_link_options(metal_tests PRIVATE -fno-lto)
+    add_dependencies(metal_tests MetalShaders)
+
+    # Metal throughput benchmark (standalone main, no Catch)
+    add_executable(metal_bench
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/MetalBenchmarks.cpp)
+    target_include_directories(metal_bench PRIVATE
+        ${CMAKE_SOURCE_DIR}/PowerGrid
+        ${CMAKE_SOURCE_DIR}/Support/ArmaExtensions)
+    target_link_libraries(metal_bench PGCommon ${LIBS})
+    target_compile_options(metal_bench PRIVATE -fno-lto)
+    target_link_options(metal_bench PRIVATE -fno-lto)
+    add_dependencies(metal_bench MetalShaders)
+endif()
+
 
