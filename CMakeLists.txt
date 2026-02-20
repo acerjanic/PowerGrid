@@ -91,7 +91,7 @@ endif(MPISupport)
 message(STATUS "Libraries to be linked in: ${LIBS}")
 
 if(APPLE)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -flto")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fno-math-errno -fno-trapping-math -flto")
 
 	# ---------------------------------------------------------------------------
 	# Apple Metal GPU compute (Apple Silicon / MTLGPUFamilyApple6+)
@@ -198,7 +198,10 @@ if(METAL_COMPUTE AND METAL_FOUND)
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgComplexTests.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgColTests.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgColCplxTests.cpp
-        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgMatTests.cpp)
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgMatTests.cpp
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgPhase2Tests.cpp
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/SyntheticReconTests.cpp
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/ISMRMRDWriteTests.cpp)
     target_include_directories(metal_tests PRIVATE
         ${CATCH_INCLUDE_DIR}
         ${CMAKE_SOURCE_DIR}/PowerGrid
@@ -222,4 +225,18 @@ if(METAL_COMPUTE AND METAL_FOUND)
     add_dependencies(metal_bench MetalShaders)
 endif()
 
+# ---------------------------------------------------------------------------
+# ISMRMRD integration tests (non-Apple builds, e.g. Docker/Linux)
+# ---------------------------------------------------------------------------
+if(NOT APPLE)
+    set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/Support/Catch)
+    add_executable(ismrmrd_tests
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/main.cpp
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/ISMRMRDWriteTests.cpp)
+    target_include_directories(ismrmrd_tests PRIVATE
+        ${CATCH_INCLUDE_DIR}
+        ${CMAKE_SOURCE_DIR}/PowerGrid
+        ${CMAKE_SOURCE_DIR}/Support/ArmaExtensions)
+    target_link_libraries(ismrmrd_tests PGCommon ${LIBS})
+endif()
 

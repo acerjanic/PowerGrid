@@ -35,6 +35,12 @@ Developed by:
 #include "Gdft.h"
 #include "Gnufft.h"
 #include "PGIncludes.h"
+
+#ifdef METAL_COMPUTE
+#include "pgCol.hpp"
+#include "pgMat.hpp"
+#endif
+
 using namespace std;
 
 template <typename T1, typename Tobj> class TimeSegmentation {
@@ -65,6 +71,17 @@ public:
   mutable Mat<complex<T1>> outImg;
   mutable Mat<complex<T1>> tempD;
   mutable Mat<complex<T1>> tempAD;
+
+#ifdef METAL_COMPUTE
+  // pgMat copies of time-segmentation matrices for Metal GPU dispatch (float only).
+  pgMat<pgComplex<T1>> AA_pg;
+  pgMat<pgComplex<T1>> Wo_pg;
+  pgMat<pgComplex<T1>> WoH_pg;
+  mutable pgMat<pgComplex<T1>> outData_pg;
+  mutable pgMat<pgComplex<T1>> outImg_pg;
+  mutable pgMat<pgComplex<T1>> tempD_pg;
+  mutable pgMat<pgComplex<T1>> tempAD_pg;
+#endif
 
   // Class constructor
   TimeSegmentation(Tobj &G, Col<T1> map_in, Col<T1> timeVec_in, uword a,

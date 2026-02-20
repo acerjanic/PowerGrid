@@ -6,6 +6,7 @@
 #include <cmath>
 #include <sstream>
 #include <complex>
+#include <type_traits>
 
 template<typename T>
 class pgComplex {
@@ -15,6 +16,8 @@ private:
     T __im_;
 
 public:
+    typedef T value_type; ///< Scalar type (float or double)
+
     pgComplex(const T& real = T(), const T& imag = T() )
         : __re_(real),
           __im_(imag) 
@@ -279,7 +282,8 @@ T real(const pgComplex<T> &pgA){
 
 template<typename T>
 inline
-T real(const T &A){
+typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+real(const T &A){
     return A;
 }
 
@@ -291,7 +295,8 @@ T imag(const pgComplex<T> &pgA){
 
 template<typename T>
 inline
-T imag(const T &A){
+typename std::enable_if<std::is_arithmetic<T>::value, T>::type
+imag(const T &A){
     return 0;
 }
 

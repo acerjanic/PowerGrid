@@ -6,6 +6,8 @@
 #include "PGIncludes.h"
 #include "pgComplex.hpp"
 #include <type_traits>
+#include <cstdint>
+#include <cstring>
 
 #ifdef _OPENACC
 #include "openacc.h"
@@ -26,12 +28,36 @@ T *mem; //Pointer to raw data
 bool isInitialized;
 bool isOnGPU;
 bool isCopy;
+bool isView_; ///< True when wrapping external memory (non-owning)
 // Number of elements in array
 //arma::uword n_elem;
+
+/// Tag type for the private view constructor.
+struct view_tag {};
+
+/// Private view constructor: wraps external memory without allocating.
+/// The caller is responsible for ensuring the memory outlives this pgCol.
+pgCol(T* extMem, arma::uword length, view_tag) :
+    isOnGPU(false),
+    isInitialized(true),
+    mem(extMem),
+    isCopy(false),
+    isView_(true),
+    n_elem(length) {}
 
 public:
 
 const arma::uword n_elem;
+
+/// Create a non-owning view that wraps external memory.
+/// The returned pgCol does NOT free the memory on destruction.
+/// Write operations (e.g., operator%=) modify the external memory in-place.
+static pgCol<T> view(T* extMem, arma::uword length) {
+    return pgCol<T>(extMem, length, view_tag{});
+}
+
+/// Returns true if this pgCol is a non-owning view.
+bool is_view() const { return isView_; }
 
 // Constructors
 
@@ -40,6 +66,7 @@ pgCol<T>() :
     isInitialized(false),
     mem(NULL),
     isCopy(false),
+    isView_(false),
     n_elem(0) {
         #ifdef _OPENACC
         #pragma acc enter data copyin(this)
@@ -52,6 +79,7 @@ pgCol<T>(arma::uword length) :
     isInitialized(false),
     mem(NULL),
     isCopy(false),
+    isView_(false),
     n_elem(0) {
     #ifdef _OPENACC
     #pragma acc enter data create(this)
@@ -65,13 +93,13 @@ template <typename U = T,
           typename std::enable_if<!std::is_same<U, pgComplex<float>>::value &&
                                   !std::is_same<U, pgComplex<double>>::value,
                                   int>::type = 0>
-pgCol(arma::Col<T> &cSCplx) :
+pgCol(const arma::Col<T> &cSCplx) :
     isOnGPU(false),
     isInitialized(false),
     mem(NULL),
     isCopy(false),
+    isView_(false),
     n_elem(0) {
-    std::cout << "Entering pgCol<T> copy from Armadillo constructor" << std::endl;
 
     #ifdef _OPENACC
     #pragma acc enter data create(this)
@@ -89,19 +117,19 @@ pgCol(arma::Col<T> &cSCplx) :
 template <typename U = T,
           typename std::enable_if<std::is_same<U, pgComplex<float>>::value,
                                   int>::type = 0>
-pgCol(arma::Col<std::complex<float>> &cSCplx) :
+pgCol(const arma::Col<std::complex<float>> &cSCplx) :
     isOnGPU(false),
     isInitialized(false),
     mem(NULL),
     isCopy(false),
+    isView_(false),
     n_elem(0) {
-    std::cout << "Entering pgCol<T> copy from Armadillo cplx constructor" << std::endl;
 
     #ifdef _OPENACC
     #pragma acc enter data create(this)
     #endif
     set_size(cSCplx.n_elem);
-    memcpy(this->mem, reinterpret_cast<float *>(cSCplx.memptr()), sizeof(T) * cSCplx.n_elem);
+    memcpy(this->mem, reinterpret_cast<const float *>(cSCplx.memptr()), sizeof(T) * cSCplx.n_elem);
 
     #ifdef _OPENACC
     #pragma acc update device(mem[0:n_elem])
@@ -113,19 +141,19 @@ pgCol(arma::Col<std::complex<float>> &cSCplx) :
 template <typename U = T,
           typename std::enable_if<std::is_same<U, pgComplex<double>>::value,
                                   int>::type = 0>
-pgCol(arma::Col<std::complex<double>> &cSCplx) :
+pgCol(const arma::Col<std::complex<double>> &cSCplx) :
     isOnGPU(false),
     isInitialized(false),
     mem(NULL),
     isCopy(false),
+    isView_(false),
     n_elem(0) {
-    std::cout << "Entering pgCol<T> copy from Armadillo cplx constructor" << std::endl;
 
     #ifdef _OPENACC
     #pragma acc enter data create(this)
     #endif
     set_size(cSCplx.n_elem);
-    memcpy(this->mem, reinterpret_cast<double *>(cSCplx.memptr()), sizeof(T) * cSCplx.n_elem);
+    memcpy(this->mem, reinterpret_cast<const double *>(cSCplx.memptr()), sizeof(T) * cSCplx.n_elem);
 
     #ifdef _OPENACC
     #pragma acc update device(mem[0:n_elem])
@@ -135,12 +163,13 @@ pgCol(arma::Col<std::complex<double>> &cSCplx) :
 
 
 
-// Copy Constructor
+// Copy Constructor — always produces an owning pgCol (deep copy), even from views.
 pgCol<T>(const pgCol<T>& pgA) :
     isOnGPU(false),
     isInitialized(false),
     mem(NULL),
     isCopy(true),
+    isView_(false),
     n_elem(0) {
     #ifdef _OPENACC
     #pragma acc enter data create(this)
@@ -160,12 +189,13 @@ pgCol<T>(const pgCol<T>& pgA) :
 
 }
 
-// Move Constructor
+// Move Constructor — transfers ownership (or view status) from source.
 pgCol<T>(pgCol<T>&& pgA) :
     isOnGPU(false),
     isInitialized(false),
     mem(NULL),
     isCopy(false),
+    isView_(pgA.isView_),
     n_elem(0) {
     #ifdef _OPENACC
     #pragma acc enter data create(this)
@@ -191,16 +221,21 @@ pgCol<T>(pgCol<T>&& pgA) :
 
 
 
-// Default Destructor
+// Destructor — views do NOT free memory (non-owning).
 ~pgCol<T>() {
-
-    #ifdef _OPENACC
-        if( acc_deviceptr(mem) != NULL) {
-            acc_delete((void *)mem, sizeof(T) * n_elem);
+    if (!isView_) {
+        #ifdef _OPENACC
+            if( acc_deviceptr(mem) != NULL) {
+                acc_delete((void *)mem, sizeof(T) * n_elem);
+            }
+        #endif
+        if (mem != NULL) {
+        #ifdef METAL_COMPUTE
+            std::free(mem);
+        #else
+            delete[] mem;
+        #endif
         }
-    #endif
-    if (mem != NULL) {
-        delete[] mem;
     }
 
     #ifdef _OPENACC
@@ -214,11 +249,14 @@ T* memptr() const {
 }
 
 void reset_mem() {
-    #ifdef _OPENACC
-        acc_detach((void **) &mem);
-    #endif
+    if (!isView_) {
+        #ifdef _OPENACC
+            acc_detach((void **) &mem);
+        #endif
+    }
     mem = NULL;
     isInitialized = false;
+    isView_ = false;
     access::rw(n_elem) = 0;
     isOnGPU = false;
     #ifdef _OPENACC
@@ -229,20 +267,37 @@ void reset_mem() {
 
 void set_size(arma::uword length) {
     if (isInitialized) {
-        if (isOnGPU) {
-            #ifdef _OPENACC
-            #pragma acc exit data finalize detach(mem) delete(mem[0:n_elem])
-            #endif
-            isOnGPU  = false;
+        if (isView_) {
+            // Break the view — don't free external memory
+            mem = NULL;
+            isView_ = false;
+        } else {
+            if (isOnGPU) {
+                #ifdef _OPENACC
+                #pragma acc exit data finalize detach(mem) delete(mem[0:n_elem])
+                #endif
+                isOnGPU  = false;
+            }
+        #ifdef METAL_COMPUTE
+            std::free(mem);
+        #else
+            delete[] mem;
+        #endif
+            mem = NULL;
         }
-        delete[] mem;
-        mem = NULL;
     }
 
     isInitialized = true;
     arma::access::rw(n_elem) = length;
-    //mem = (T*)malloc(sizeof(T) * n_elem);
+#ifdef METAL_COMPUTE
+    // Page-aligned allocation enables newBufferWithBytesNoCopy (zero-copy GPU).
+    // Apple Silicon page size = 16384.
+    size_t allocBytes = ((sizeof(T) * n_elem + 16383) / 16384) * 16384;
+    if (allocBytes == 0) allocBytes = 16384;
+    mem = static_cast<T*>(std::aligned_alloc(16384, allocBytes));
+#else
     mem = new T[n_elem];
+#endif
     #ifdef _OPENACC
         isOnGPU = true;
     #endif
@@ -311,6 +366,66 @@ arma::Col<std::complex<float>> getArma() {
     return armaT;
 }
 
+/// Return a non-owning view of elements [first..last] (inclusive).
+/// The view must not outlive this pgCol (or the underlying memory if this is itself a view).
+pgCol<T> subvec(arma::uword first, arma::uword last) {
+    return pgCol<T>::view(&mem[first], last - first + 1);
+}
+pgCol<T> subvec(arma::uword first, arma::uword last) const {
+    return pgCol<T>::view(const_cast<T*>(&mem[first]), last - first + 1);
+}
+
+/// Bit-level NaN detection that works even under -ffast-math / -Ofast.
+/// IEEE 754: NaN has all exponent bits set and non-zero mantissa.
+static inline bool pg_isnan_float(float x) {
+    uint32_t bits;
+    memcpy(&bits, &x, sizeof(bits));
+    return (bits & 0x7F800000u) == 0x7F800000u && (bits & 0x007FFFFFu) != 0;
+}
+static inline bool pg_isnan_double(double x) {
+    uint64_t bits;
+    memcpy(&bits, &x, sizeof(bits));
+    return (bits & 0x7FF0000000000000ull) == 0x7FF0000000000000ull
+        && (bits & 0x000FFFFFFFFFFFFFull) != 0;
+}
+
+/// Check if any element is NaN. Works for float, double, and pgComplex types.
+template <typename U = T,
+          typename std::enable_if<std::is_same<U, float>::value, int>::type = 0>
+bool has_nan() const {
+    for (arma::uword ii = 0; ii < n_elem; ii++) {
+        if (pg_isnan_float(mem[ii])) return true;
+    }
+    return false;
+}
+
+template <typename U = T,
+          typename std::enable_if<std::is_same<U, double>::value, int>::type = 0>
+bool has_nan() const {
+    for (arma::uword ii = 0; ii < n_elem; ii++) {
+        if (pg_isnan_double(mem[ii])) return true;
+    }
+    return false;
+}
+
+template <typename U = T,
+          typename std::enable_if<std::is_same<U, pgComplex<float>>::value, int>::type = 0>
+bool has_nan() const {
+    for (arma::uword ii = 0; ii < n_elem; ii++) {
+        if (pg_isnan_float(mem[ii].real()) || pg_isnan_float(mem[ii].imag())) return true;
+    }
+    return false;
+}
+
+template <typename U = T,
+          typename std::enable_if<std::is_same<U, pgComplex<double>>::value, int>::type = 0>
+bool has_nan() const {
+    for (arma::uword ii = 0; ii < n_elem; ii++) {
+        if (pg_isnan_double(mem[ii].real()) || pg_isnan_double(mem[ii].imag())) return true;
+    }
+    return false;
+}
+
 // Operators for element manipulation
 // We'll assume .at() is for fast, GPU manipulation
 inline
@@ -336,6 +451,9 @@ const T operator()(const arma::uword d) const {
 }
 
 pgCol<T>& operator=(const pgCol<T>& d) {
+    if (n_elem != d.n_elem) {
+        set_size(d.n_elem);
+    }
     #ifdef _OPENACC
     #pragma acc parallel loop present(mem[0:n_elem],d)
     #endif
@@ -347,18 +465,20 @@ pgCol<T>& operator=(const pgCol<T>& d) {
 
 pgCol<T>& operator=(pgCol<T>&& d) {
     //size_t bytes = sizeof(T) * d.n_elem;
-    if (isInitialized) {
+    if (isInitialized && !isView_) {
         #ifdef _OPENACC
         #pragma acc exit data delete(mem[0:n_elem])
         #endif
+    #ifdef METAL_COMPUTE
+        std::free(mem);
+    #else
         delete[] mem;
-        access::rw(n_elem) = 0;
-        isInitialized = false;
-        isOnGPU = false;
+    #endif
     }
     access::rw(n_elem) = d.n_elem;
     isInitialized = true;
     isOnGPU = true;
+    isView_ = d.isView_;
     mem = d.memptr();
     #ifdef _OPENACC
     #pragma acc update device(this)
@@ -604,11 +724,12 @@ const pgCol<T> operator-(const pgCol<X>& pgB) const {
     }
     return std::move(pgC);
 }
-template<typename X>
+template<typename X,
+         typename std::enable_if<std::is_same<T, X>::value, int>::type = 0>
 const pgCol<T> operator%(const pgCol<X>& pgB) const {
     pgCol<T> pgC(n_elem);
     #ifdef METAL_COMPUTE
-    if constexpr (pg_metal::is_metal_type<T>::value && std::is_same<T, X>::value) {
+    if constexpr (pg_metal::is_metal_type<T>::value) {
         if (pg_metal::try_metal_mul(mem, pgB.memptr(), pgC.memptr(), n_elem))
             return std::move(pgC);
     }
@@ -780,6 +901,24 @@ pgCol<T> imag(const pgCol<pgComplex<T>>& A) {
     pgCol<T> out(A.n_elem);
     for (arma::uword ii = 0; ii < A.n_elem; ii++) {
         out.at(ii) = A.at(ii).imag();
+    }
+    return out;
+}
+
+/// Real-weight element-wise multiply with complex vector: C[i] = W[i] * X[i].
+/// W is real (pgCol<T>), X is complex (pgCol<pgComplex<T>>).
+/// Metal dispatch via rvec_cmul for float.
+template<typename T>
+pgCol<pgComplex<T>> operator%(const pgCol<T>& W, const pgCol<pgComplex<T>>& X) {
+    pgCol<pgComplex<T>> out(W.n_elem);
+    #ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T, float>::value) {
+        if (pg_metal::try_metal_rvec_cmul(W.memptr(), X.memptr(), out.memptr(), W.n_elem))
+            return out;
+    }
+    #endif
+    for (arma::uword ii = 0; ii < W.n_elem; ii++) {
+        out.at(ii) = pgComplex<T>(W.at(ii), T(0)) * X.at(ii);
     }
     return out;
 }

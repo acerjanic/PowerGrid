@@ -31,6 +31,11 @@
 #include "Gnufft.h"
 #include "TimeSegmentation.h"
 
+#ifdef METAL_COMPUTE
+#include "pgCol.hpp"
+#include "pgMat.hpp"
+#endif
+
 using namespace arma;
 //using namespace PowerGrid;
 
@@ -70,6 +75,13 @@ CxT1 i = CxT1(0., 1.);
 uword type = 1;   // 2 for min max time seg and 1 for Hanning
 uword L = 20;
 Gdft<T1> **AObj = NULL;
+
+#ifdef METAL_COMPUTE
+// pgMat copies of sensitivity/phase maps for Metal GPU dispatch (float only).
+pgMat<pgComplex<T1>> SMap_pg;
+pgMat<pgComplex<T1>> conjSMap_pg;
+pgMat<pgComplex<T1>> expiPMap_pg;
+#endif
 	//TimeSegmentation <T1, Gnufft<T1>> **AObj = NULL;
 
 // Class constructor

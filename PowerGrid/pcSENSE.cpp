@@ -97,6 +97,14 @@ pcSENSE<T1>::pcSENSE(Col<T1> kx, Col<T1> ky, Col<T1> kz, uword nx, uword ny,
         //Precompute some things used in the forward and adjoint operations
         expiPMap = conj(exp(-i * PMap));
         conjSMap = conj(SMap);
+
+#ifdef METAL_COMPUTE
+        if constexpr (std::is_same<T1, float>::value) {
+            SMap_pg = pgMat<pgComplex<T1>>(SMap);
+            conjSMap_pg = pgMat<pgComplex<T1>>(conjSMap);
+            expiPMap_pg = pgMat<pgComplex<T1>>(expiPMap);
+        }
+#endif
 }
 
 // Overloaded operators go here
@@ -107,22 +115,42 @@ pcSENSE<T1>::pcSENSE(Col<T1> kx, Col<T1> ky, Col<T1> kz, uword nx, uword ny,
 template <typename T1>
 Col<complex<T1> > pcSENSE<T1>::operator*(const Col<complex<T1> > &d) const {
         RANGE("pcSENSE::operator*")
-        Mat<complex<T1> > outData = zeros<Mat<complex<T1> > >(Nd, Ns * Nc);
-        //Mat<complex<T1> > expiPMap = exp(-i * PMap);
-        //Mat<T1> temp2;
-        // Coil loop. Each coil exists for each shot, so we need to work with these.
-        for (unsigned int ii = 0; ii < Nc; ii++) {
 
-                // Shot loop. Each shot has its own kspace trajectory
+#ifdef METAL_COMPUTE
+        if constexpr (std::is_same<T1, float>::value) {
+            // Metal path: pgCol/pgMat with GPU-dispatched element-wise ops
+            pgCol<pgComplex<T1>> d_pg(d);
+            pgMat<pgComplex<T1>> outData_pg(Nd, Ns * Nc);
+
+            for (unsigned int ii = 0; ii < Nc; ii++) {
+                for (unsigned int jj = 0; jj < Ns; jj++) {
+                    // Compute weight = SMap(:,ii) .* expiPMap(:,jj)
+                    pgCol<pgComplex<T1>> weight = SMap_pg.col_copy(ii);
+                    weight %= expiPMap_pg.col(jj);
+
+                    // weighted = d .* weight
+                    pgCol<pgComplex<T1>> weighted(d_pg);
+                    weighted %= weight;
+
+                    // Forward transform (arma boundary)
+                    Col<complex<T1>> result = (*AObj[jj]) * weighted.getArma();
+                    outData_pg.set_col(jj + ii * Ns, pgCol<pgComplex<T1>>(result));
+                }
+            }
+
+            pgCol<pgComplex<T1>> outVec = vectorise(outData_pg);
+            return outVec.getArma();
+        }
+#endif
+
+        // Armadillo path (double, or non-Metal builds)
+        Mat<complex<T1> > outData = zeros<Mat<complex<T1> > >(Nd, Ns * Nc);
+        for (unsigned int ii = 0; ii < Nc; ii++) {
                 for (unsigned int jj = 0; jj < Ns; jj++) {
                         outData.col(jj + ii * Ns) =
                                 (*AObj[jj]) * (d % (SMap.col(ii) % expiPMap.col(jj)));
-                        //std::cout << "Processed shot # " << jj << " coil # " << ii << std::endl;
                 }
-                // delete AObj;
-                // delete G;
         }
-        // equivalent to returning col(output) in MATLAB with IRT
         return vectorise(outData);
 }
 
@@ -131,24 +159,47 @@ Col<complex<T1> > pcSENSE<T1>::operator*(const Col<complex<T1> > &d) const {
 template <typename T1>
 Col<complex<T1> > pcSENSE<T1>::operator/(const Col<complex<T1> > &d) const {
         RANGE("pcSENSE::operator/");
-        Mat<complex<T1> > inData = reshape(d, Nd, Ns * Nc);
-        //Mat<complex<T1> > expiPMap = conj(exp(-i * PMap));
-        //Mat<complex<T1> > conjSMap = conj(SMap);
-        Col<complex<T1> > outData = zeros<Col<complex<T1> > >(Ni);
-        // Coil Loop - for each shot we have a full set of coil data.
-        for (unsigned int ii = 0; ii < Nc; ii++) {
-        
-                // Shot Loop. Each shot has it's own k-space trajectory
+
+#ifdef METAL_COMPUTE
+        if constexpr (std::is_same<T1, float>::value) {
+            // Metal path: pgCol/pgMat with GPU-dispatched element-wise ops
+            // Reshape input data into (Nd x Ns*Nc) matrix
+            pgCol<pgComplex<T1>> d_pg(d);
+            pgMat<pgComplex<T1>> inData_pg(d_pg, Nd, Ns * Nc);
+
+            pgCol<pgComplex<T1>> outData_pg(Ni);
+            outData_pg.zeros();
+
+            for (unsigned int ii = 0; ii < Nc; ii++) {
                 for (unsigned int jj = 0; jj < Ns; jj++) {
-                        //outData += conj(SMap.col(ii) % exp(-i * (PMap.col(jj)))) %
-                        //           ((*AObj[jj]) / inData.col(jj + ii * Ns));
+                    // Compute weight = conj(SMap(:,ii)) .* expiPMap(:,jj)
+                    pgCol<pgComplex<T1>> weight = conjSMap_pg.col_copy(ii);
+                    weight %= expiPMap_pg.col(jj);
+
+                    // Adjoint transform (arma boundary)
+                    pgCol<pgComplex<T1>> seg = inData_pg.col_copy(jj + ii * Ns);
+                    Col<complex<T1>> adjResult = (*AObj[jj]) / seg.getArma();
+                    pgCol<pgComplex<T1>> adjResult_pg(adjResult);
+
+                    // Weight by sensitivity × phase and accumulate
+                    adjResult_pg %= weight;
+                    outData_pg += adjResult_pg;
+                }
+            }
+
+            return outData_pg.getArma();
+        }
+#endif
+
+        // Armadillo path (double, or non-Metal builds)
+        Mat<complex<T1> > inData = reshape(d, Nd, Ns * Nc);
+        Col<complex<T1> > outData = zeros<Col<complex<T1> > >(Ni);
+        for (unsigned int ii = 0; ii < Nc; ii++) {
+                for (unsigned int jj = 0; jj < Ns; jj++) {
                         outData += (conjSMap.col(ii) % expiPMap.col(jj)) %
                                    ((*AObj[jj]) / inData.col(jj + ii * Ns));
-                        //std::cout << "Processed shot # " << jj << " coil # " << ii << std::endl;
                 }
         }
-        
-        // equivalent to returning col(output) in MATLAB with IRT
         return vectorise(outData);
 }
 

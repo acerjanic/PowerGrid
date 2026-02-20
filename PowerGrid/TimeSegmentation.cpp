@@ -29,6 +29,28 @@
 //
 //
 
+// Safe scalar min/max that work correctly under -ffast-math.
+// Armadillo's vectorized min()/max() can return garbage when compiled with
+// -Ofast/-ffast-math due to auto-vectorized SIMD reductions.
+namespace {
+template<typename T>
+T safe_min(const arma::Col<T>& v) {
+    T m = v(0);
+    for (arma::uword i = 1; i < v.n_elem; i++) {
+        if (v(i) < m) m = v(i);
+    }
+    return m;
+}
+template<typename T>
+T safe_max(const arma::Col<T>& v) {
+    T m = v(0);
+    for (arma::uword i = 1; i < v.n_elem; i++) {
+        if (v(i) > m) m = v(i);
+    }
+    return m;
+}
+} // anonymous namespace
+
 // We are using two template types at the moment. One for the type of data to be
 // processed (ie Col<cx_double>) and one for the type of G object (ie
 // Gfft<Col<cx_double>>
@@ -63,8 +85,8 @@ TimeSegmentation<T1, Tobj>::TimeSegmentation(Tobj& G, Col<T1> map_in,
 
     AA.set_size(n1, L + 1); // time segments weights
     timeVec = timeVec_in;
-    T_min = timeVec.min();
-    T1 rangt = timeVec.max() - T_min;
+    T_min = safe_min(timeVec);
+    T1 rangt = safe_max(timeVec) - T_min;
     tau = (rangt + datum::eps) / L;
     timeVec = timeVec - T_min;
 
@@ -217,6 +239,18 @@ TimeSegmentation<T1, Tobj>::TimeSegmentation(Tobj& G, Col<T1> map_in,
             WoH.col(ii) = exp(i * (this->fieldMap) * ((ii) * this->tau + this->T_min));
         }
     }
+
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        AA_pg = pgMat<pgComplex<T1>>(AA);
+        Wo_pg = pgMat<pgComplex<T1>>(Wo);
+        WoH_pg = pgMat<pgComplex<T1>>(WoH);
+        outData_pg = pgMat<pgComplex<T1>>(n1, L);
+        outImg_pg = pgMat<pgComplex<T1>>(n2, L);
+        tempD_pg = pgMat<pgComplex<T1>>(n2, L);
+        tempAD_pg = pgMat<pgComplex<T1>>(n1, L);
+    }
+#endif
     //cout << "Exiting class constructor." << endl;
 }
 
@@ -256,13 +290,38 @@ operator*(const Col<complex<T1>>& d) const
     RANGE(__FUNCTION__)
 
     Tobj* G = this->obj;
-    // output is the size of the kspace data
-    //Col<complex<T1>> outData = zeros<Col<complex<T1>>>(this->n1);
-    // cout << "OutData size = " << this->n1 << endl;
-    //Col<complex<T1>> Wo;
-    //Col<complex<T1>> temp;
-    //uvec dataMaskTrimmed;
-    // loop through time segments
+
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        // Metal path: pgCol/pgMat with GPU-dispatched element-wise ops
+        pgCol<pgComplex<T1>> d_pg(d);
+
+        // Copy Wo columns into tempD and weight by d
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            // Copy Wo column ii into tempD, then multiply by d
+            pgCol<pgComplex<T1>> col_copy = Wo_pg.col_copy(ii);
+            col_copy %= d_pg;
+            tempD_pg.set_col(ii, col_copy);
+        }
+
+        // Forward NUFFT per segment
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            pgCol<pgComplex<T1>> seg = tempD_pg.col_copy(ii);
+            Col<complex<T1>> result = (*G) * seg.getArma();
+            outData_pg.set_col(ii, pgCol<pgComplex<T1>>(result));
+        }
+
+        // Weight by interpolation coefficients
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            outData_pg.col(ii) %= AA_pg.col(ii);
+        }
+
+        pgCol<pgComplex<T1>> sumVec = sum(outData_pg, 1);
+        return sumVec.getArma();
+    }
+#endif
+
+    // Armadillo path (double, or non-Metal builds)
     tempD = Wo;
 
     for (unsigned int ii = 0; ii < this->L; ii++) {
@@ -270,23 +329,8 @@ operator*(const Col<complex<T1>>& d) const
     }
 
     for (unsigned int ii = 0; ii < this->L; ii++) {
-        // cout << "Entering time segmentation loop" << endl;
-        // apply a phase to each time segment
-        //Wo = exp(-i * (this->fieldMap) * ((ii) * this->tau + this->T_min));
-
-        // perform multiplication by the object and sum up the time segments
-        //temp = (this->Wo.col(ii)) % d;
         outData.col(ii) = (*G * tempD.col(ii));
-
-        // dataMaskTrimmed = find(abs(this->AA.col(ii)) > 0);
-        // std::cout << "Length dataMaskTrimmed = " << dataMaskTrimmed.n_rows <<
-        // std::endl;
-
-        // outData +=
-        //    (this->AA.col(ii)) % ((*G).trimmedForwardOp(Wo % d,
-        //    this->AA.col(ii)));
     }
-
 
     for (unsigned int ii = 0; ii < this->L; ii++) {
         outData.col(ii) %= AA.col(ii);
@@ -302,18 +346,45 @@ operator/(const Col<complex<T1>>& d) const
     RANGE(__FUNCTION__)
 
     Tobj* G = this->obj;
+
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        // Metal path: pgCol/pgMat with GPU-dispatched element-wise ops
+        pgCol<pgComplex<T1>> d_pg(d);
+
+        // Conjugate AA and weight by data
+        pgMat<pgComplex<T1>> conjAA_pg = conj(AA_pg);
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            pgCol<pgComplex<T1>> col_copy = conjAA_pg.col_copy(ii);
+            col_copy %= d_pg;
+            tempAD_pg.set_col(ii, col_copy);
+        }
+
+        // Adjoint NUFFT per segment
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            pgCol<pgComplex<T1>> seg = tempAD_pg.col_copy(ii);
+            Col<complex<T1>> result = (*G) / seg.getArma();
+            outImg_pg.set_col(ii, pgCol<pgComplex<T1>>(result));
+        }
+
+        // Weight by conjugate field map
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            outImg_pg.col(ii) %= WoH_pg.col(ii);
+        }
+
+        pgCol<pgComplex<T1>> sumVec = sum(outImg_pg, 1);
+        return sumVec.getArma();
+    }
+#endif
+
+    // Armadillo path (double, or non-Metal builds)
     tempAD = conj(AA);
-// output is the size of the image
-//Col<complex<T1>> outData = zeros<Col<complex<T1>>>(this->n2);
 
     for (unsigned int ii = 0; ii < this->L; ii++) {
         tempAD.col(ii) %= d;
     }
-    // loop through the time segments
 
     for (unsigned int ii = 0; ii < this->L; ii++) {
-
-        // perform adjoint operation by the object and sum up the time segments
         outImg.col(ii) = ((*G) / tempAD.col(ii));
     }
 

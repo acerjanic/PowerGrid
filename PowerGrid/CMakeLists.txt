@@ -35,6 +35,7 @@ if(METAL_COMPUTE)
 endif()
 
 add_library(PGCommon SHARED ${PG_FILES})
+target_include_directories(PGCommon PUBLIC ${PROJECT_SOURCE_DIR}/PowerGrid)
 if(METAL_COMPUTE AND TARGET MetalShaders)
 	add_dependencies(PGCommon MetalShaders)
 endif()

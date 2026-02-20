@@ -32,6 +32,11 @@ Developed by:
 #include "PGIncludes.h"
 #include "TimeSegmentation.h"
 
+#ifdef METAL_COMPUTE
+#include "pgCol.hpp"
+#include "pgMat.hpp"
+#endif
+
 using namespace std;
 using namespace arma;
 
@@ -53,12 +58,20 @@ public:
   Tobj *G_obj;
   Mat<CxT1> SMap; // dimensions Image size b (n1 by number of coils (nc)
   Mat<CxT1> conjSMap; // dimensions Image size b (n1 by number of coils (nc)
-  
+
   mutable Mat<CxT1> outData;
   mutable Mat<CxT1> outImg;
   mutable Mat<CxT1> coilWeightData;
   mutable Mat<CxT1> coilWeightImg;
   mutable Mat<CxT1> coilImages;
+
+#ifdef METAL_COMPUTE
+  // pgMat copies of sensitivity maps for Metal GPU dispatch (float only).
+  pgMat<pgComplex<T1>> SMap_pg;
+  pgMat<pgComplex<T1>> conjSMap_pg;
+  mutable pgMat<pgComplex<T1>> outData_pg;
+  mutable pgMat<pgComplex<T1>> outImg_pg;
+#endif
 
   // Class constructor
   SENSE(Tobj &G, Col<CxT1> SENSEmap, uword a, uword b, uword c);

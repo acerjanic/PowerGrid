@@ -17,13 +17,18 @@ target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 set(TEST_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/pgComplexTests.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/pgColTests.cpp  
+    ${CMAKE_CURRENT_SOURCE_DIR}/pgColTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/pgColCplxTests.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/pgMatTests.cpp   
+    ${CMAKE_CURRENT_SOURCE_DIR}/pgMatTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/pgPhase2Tests.cpp
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -acc -ta=tesla -fast")
+# Only add PGI/NVHPC-specific flags when using nvc++ or pgc++
+if(CMAKE_CXX_COMPILER_ID MATCHES "PGI|NVHPC")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -acc -ta=tesla -fast")
+endif()
 
 # Make test executable
 add_executable(tests ${TEST_SOURCES})
+target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(tests Catch)

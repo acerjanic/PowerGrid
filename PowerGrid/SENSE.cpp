@@ -41,6 +41,15 @@ SENSE<T1, Tobj>::SENSE(Tobj& G, Col<complex<T1>> SENSEmap, uword a, uword b,
     conjSMap = conj(SMap);
     outData.set_size(n1, nc);
     outImg.set_size(n2, nc);
+
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        SMap_pg = pgMat<pgComplex<T1>>(SMap);
+        conjSMap_pg = pgMat<pgComplex<T1>>(conjSMap);
+        outData_pg = pgMat<pgComplex<T1>>(n1, nc);
+        outImg_pg = pgMat<pgComplex<T1>>(n2, nc);
+    }
+#endif
 }
 
 // Overloaded operators go here
@@ -52,10 +61,29 @@ template <typename T1, typename Tobj>
 Col<complex<T1>> SENSE<T1, Tobj>::operator*(const Col<complex<T1>>& d) const
 {
     RANGE("SENSE::operator*")
-    //Mat<complex<T1>> outData = zeros<Mat<complex<T1>>>(this->n1, this->nc);
-    // Col<complex<T1>> temp;
-    // In SENSE we store coil data using the columns of the data matrix, and we
-    // weight the data by the coil sensitivies from the SENSE map
+
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        // Metal path: pgCol/pgMat with GPU-dispatched element-wise ops
+        pgCol<pgComplex<T1>> d_pg(d);
+
+        for (unsigned int ii = 0; ii < this->nc; ii++) {
+            // Element-wise multiply: weighted = d .* SMap(:,ii)
+            // SMap_pg.col(ii) returns a view — Metal cvec_mul dispatches here
+            pgCol<pgComplex<T1>> weighted(d_pg);
+            weighted %= SMap_pg.col(ii);
+
+            // Gnufft forward: stays in arma at the boundary
+            Col<complex<T1>> result = (*this->G_obj) * weighted.getArma();
+            outData_pg.set_col(ii, pgCol<pgComplex<T1>>(result));
+        }
+
+        pgCol<pgComplex<T1>> outVec = vectorise(outData_pg);
+        return outVec.getArma();
+    }
+#endif
+
+    // Armadillo path (double, or non-Metal builds)
     outImg = this->SMap;
 #pragma omp parallel for schedule(dynamic) shared(outData, d, SMap)
     for (unsigned int ii = 0; ii < this->nc; ii++) {
@@ -66,7 +94,6 @@ Col<complex<T1>> SENSE<T1, Tobj>::operator*(const Col<complex<T1>>& d) const
         outData.unsafe_col(ii) = (*this->G_obj) * outImg.unsafe_col(ii);
     }
 
-    // equivalent to returning col(output) in MATLAB with IRT
     return vectorise(outData);
 }
 
@@ -76,13 +103,35 @@ template <typename T1, typename Tobj>
 Col<complex<T1>> SENSE<T1, Tobj>::operator/(const Col<complex<T1>>& d) const
 {
     RANGE("SENSE::operator/")
-    //Mat<complex<T1>> inData = reshape(d, this->n1, this->nc);
 
-    //Col<complex<T1>> outData = zeros<Col<complex<T1>>>(this->n2);
-    // Mat <complex<T1>> coilImages(n2,nc);
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        // Metal path: pgCol/pgMat with GPU-dispatched element-wise ops
+        pgCol<pgComplex<T1>> d_pg(d);
 
+        for (unsigned int ii = 0; ii < this->nc; ii++) {
+            // Extract coil's k-space data slice (view, no copy)
+            pgCol<pgComplex<T1>> dSlice = d_pg.subvec(ii * n1, (ii + 1) * n1 - 1);
+
+            // Gnufft adjoint: stays in arma at the boundary
+            Col<complex<T1>> adjResult = (*this->G_obj) / dSlice.getArma();
+            outImg_pg.set_col(ii, pgCol<pgComplex<T1>>(adjResult));
+        }
+
+        // Weight by conjugate SENSE map: outImg(:,ii) .*= conj(SMap(:,ii))
+        // Metal cvec_mul dispatches via the view's operator%=
+        for (unsigned int ii = 0; ii < this->nc; ii++) {
+            outImg_pg.col(ii) %= conjSMap_pg.col(ii);
+        }
+
+        // Sum across coils (row-wise sum, dim=1)
+        pgCol<pgComplex<T1>> sumVec = sum(outImg_pg, 1);
+        return sumVec.getArma();
+    }
+#endif
+
+    // Armadillo path (double, or non-Metal builds)
     for (unsigned int ii = 0; ii < this->nc; ii++) {
-        // coilImages.col(ii) = (*this->G_obj)/inData.col(ii);
         outImg.unsafe_col(ii) = (*this->G_obj) / d.subvec((ii)*n1, ((ii + 1) * n1) - 1);
     }
 
@@ -90,9 +139,7 @@ Col<complex<T1>> SENSE<T1, Tobj>::operator/(const Col<complex<T1>>& d) const
     for (unsigned int ii = 0; ii < this->nc; ii++) {
         outImg.unsafe_col(ii) %= this->conjSMap.unsafe_col(ii);
     }
-    // outData = sum(conj(SMap)%coilImages,2);
 
-    // equivalent to returning col(output) in MATLAB with IRT
     return sum(outImg, 1);
 }
 

@@ -80,7 +80,47 @@ pgMat<T>(arma::Mat<std::complex<T>> &cSCplx) :
 
 }
 
+/// Reshape constructor: create an nRows × nCols matrix from a pgCol's data (copies).
+pgMat<T>(const pgCol<T>& col, arma::uword nRows, arma::uword nCols) :
+    isOnGPU(false),
+    isInitialized(false),
+    mem(NULL),
+    n_elem(0),
+    n_cols(0),
+    n_rows(0) {
+    #ifdef _OPENACC
+    #pragma acc enter data create(this)
+    #endif
+    set_size(nCols, nRows);
+    memcpy(mem, col.memptr(), sizeof(T) * n_elem);
+    #ifdef _OPENACC
+    #pragma acc update device(mem[0:n_elem])
+    #endif
+}
 
+/// Construct pgMat from arma::Mat<complex<T>> for pgComplex<T>.
+/// Covers the common case of converting Armadillo complex matrix to pgMat.
+template<typename U = T,
+         typename std::enable_if<std::is_same<U, pgComplex<float>>::value ||
+                                 std::is_same<U, pgComplex<double>>::value,
+                                 int>::type = 0>
+pgMat(const arma::Mat<std::complex<typename U::value_type>>& armaMat) :
+    isOnGPU(false),
+    isInitialized(false),
+    mem(NULL),
+    n_elem(0),
+    n_cols(0),
+    n_rows(0) {
+    #ifdef _OPENACC
+    #pragma acc enter data create(this)
+    #endif
+    set_size(armaMat.n_cols, armaMat.n_rows);
+    // pgComplex<T> and std::complex<T> have identical memory layout (interleaved re/im)
+    memcpy(mem, armaMat.memptr(), sizeof(T) * n_elem);
+    #ifdef _OPENACC
+    #pragma acc update device(mem[0:n_elem])
+    #endif
+}
 
 
 // Copy Constructor
@@ -154,7 +194,11 @@ pgMat<T>(pgMat<T>&& pgA) :
         }
     #endif
     if (mem != NULL) {
+    #ifdef METAL_COMPUTE
+        std::free(mem);
+    #else
         delete[] mem;
+    #endif
     }
 
     #ifdef _OPENACC
@@ -191,7 +235,11 @@ void set_size(arma::uword nCols, arma::uword nRows) {
             #endif
             isOnGPU  = false;
         }
+    #ifdef METAL_COMPUTE
+        std::free(mem);
+    #else
         delete[] mem;
+    #endif
         mem = NULL;
     }
 
@@ -200,7 +248,13 @@ void set_size(arma::uword nCols, arma::uword nRows) {
     arma::access::rw(n_rows) = nRows;
     arma::access::rw(n_elem) = nCols * nRows;
 
+#ifdef METAL_COMPUTE
+    size_t allocBytes = ((sizeof(T) * n_elem + 16383) / 16384) * 16384;
+    if (allocBytes == 0) allocBytes = 16384;
+    mem = static_cast<T*>(std::aligned_alloc(16384, allocBytes));
+#else
     mem = new T[n_elem];
+#endif
     #ifdef _OPENACC
         isOnGPU = true;
     #endif
@@ -239,11 +293,23 @@ arma::Mat<T> getArma() {
     return armaT;
 }
 
-// Return a column for use
+/// Return a non-owning view into column colIndx.
+/// The returned pgCol wraps the matrix's memory directly — writes through
+/// the view modify the matrix (e.g., mat.col(ii) %= d).
+/// The view must not outlive the matrix.
 pgCol<T> col(const arma::uword colIndx) {
+    return pgCol<T>::view(&mem[n_rows * colIndx], n_rows);
+}
 
+/// Const version of column view.
+pgCol<T> col(const arma::uword colIndx) const {
+    return pgCol<T>::view(const_cast<T*>(&mem[n_rows * colIndx]), n_rows);
+}
+
+/// Deep-copy a column (returns an owning pgCol).
+/// Use this when you need the column to outlive the matrix.
+pgCol<T> col_copy(const arma::uword colIndx) const {
     pgCol<T> pgC(n_rows);
-
     #ifdef _OPENACC
     #pragma acc parallel loop present(pgC, mem[0:n_elem])
     #endif
@@ -251,6 +317,11 @@ pgCol<T> col(const arma::uword colIndx) {
         pgC.at(ii) = mem[n_rows*colIndx + ii];
     }
     return std::move(pgC);
+}
+
+/// Write a pgCol into column colIndx (memcpy).
+void set_col(arma::uword colIndx, const pgCol<T>& src) {
+    memcpy(&mem[n_rows * colIndx], src.memptr(), sizeof(T) * n_rows);
 }
 
 // Operators for element manipulation
@@ -315,7 +386,11 @@ pgMat<T>& operator=(pgMat<T>&& d) {
         #ifdef _OPENACC
         #pragma acc exit data delete(mem[0:n_elem])
         #endif
+    #ifdef METAL_COMPUTE
+        std::free(mem);
+    #else
         delete[] mem;
+    #endif
         access::rw(n_elem) = 0;
         access::rw(n_cols) = 0;
         access::rw(n_rows) = 0;
@@ -660,6 +735,16 @@ const pgCol<T> vectorise(const pgMat<T> &pgA) {
         vectA.at(ii) = pgA.at(ii);
     }
     return std::move(vectA);
+}
+
+/// Element-wise complex conjugate of a pgMat.
+template<typename T>
+pgMat<pgComplex<T>> conj(const pgMat<pgComplex<T>>& pgA) {
+    pgMat<pgComplex<T>> out(pgA.n_rows, pgA.n_cols);
+    for (arma::uword ii = 0; ii < pgA.n_elem; ii++) {
+        out.at(ii) = conj(pgA.at(ii));
+    }
+    return out;
 }
 
 #endif // POWER_GRID_pgMat_hpp
