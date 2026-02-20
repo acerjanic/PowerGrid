@@ -280,7 +280,7 @@ T real(const pgComplex<T> &pgA){
 template<typename T>
 inline
 T real(const T &A){
-    return T;
+    return A;
 }
 
 template<typename T>

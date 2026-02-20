@@ -35,10 +35,18 @@ Developed by:
 #include "Gnufft.h"
 #include "Metal/fftAccelerate.h"
 #include "fftCPU.h"
+#include "pgCol.hpp"
+#include "pgComplex.hpp"
 
 using namespace arma;
 using Clock = std::chrono::high_resolution_clock;
 using Ms    = std::chrono::duration<double, std::milli>;
+
+// Prevent compiler from optimizing away a computed result.
+template<typename T>
+static void doNotOptimize(const T& val) {
+    asm volatile("" : : "r,m"(&val) : "memory");
+}
 
 // ---------------------------------------------------------------------------
 // Timing helper: warm up, then collect nruns samples and return the median.
@@ -161,6 +169,105 @@ int main()
                    (unsigned)nS, tAdjM, tAdjC,
                    (tAdjM > 0.0) ? tAdjC / tAdjM : 0.0);
         }
+        printf("\n");
+    }
+
+    // -----------------------------------------------------------------------
+    // Part 3: pgCol vector algebra — Metal GPU vs CPU scalar loops.
+    //
+    // Tests key operations from the PCG solver and per-coil pipelines.
+    // For each operation, the Metal threshold is 4096 elements, so we
+    // test sizes above that where Metal dispatch is active.
+    // -----------------------------------------------------------------------
+    printf("[ pgCol vector algebra — Metal GPU vs CPU ]\n");
+    printf("  %-10s  %-24s  %10s  %10s  %8s\n",
+           "N", "Operation", "Metal (ms)", "CPU (ms)", "Speedup");
+
+    // Helper: disable Metal temporarily by using double (which always falls
+    // through to CPU) and compare against float (which uses Metal).
+    // We'll time the pgCol operators directly.
+
+    for (uword N : {8192u, 65536u, 262144u, 1048576u}) {
+        // ----- Real element-wise: float add -----
+        {
+            pgCol<float> Af(N), Bf(N);
+            for (uword i = 0; i < N; i++) {
+                Af.at(i) = (float)(i % 1000) * 0.001f;
+                Bf.at(i) = (float)((i + 500) % 1000) * 0.001f;
+            }
+            // Metal path (float, N >= 4096)
+            double tMetal = median_ms([&]{ auto r = Af + Bf; doNotOptimize(r); }, 3, 15);
+            // CPU path (double)
+            pgCol<double> Ad(N), Bd(N);
+            for (uword i = 0; i < N; i++) {
+                Ad.at(i) = (double)Af.at(i);
+                Bd.at(i) = (double)Bf.at(i);
+            }
+            double tCPU = median_ms([&]{ auto r = Ad + Bd; doNotOptimize(r); }, 3, 15);
+            printf("  %-10lu  %-24s  %10.3f  %10.3f  %7.2fx\n",
+                   (unsigned long)N, "real add (float vs dbl)",
+                   tMetal, tCPU, (tMetal > 0.0) ? tCPU / tMetal : 0.0);
+        }
+
+        // ----- Complex element-wise multiply (Hadamard) -----
+        {
+            pgCol<pgComplex<float>> Af(N), Bf(N);
+            for (uword i = 0; i < N; i++) {
+                float re = (float)(i % 1000) * 0.001f - 0.5f;
+                float im = (float)((i + 333) % 1000) * 0.001f - 0.5f;
+                Af.at(i) = pgComplex<float>(re, im);
+                Bf.at(i) = pgComplex<float>(im, re);
+            }
+            double tMetal = median_ms([&]{ auto r = Af % Bf; doNotOptimize(r); }, 3, 15);
+            // CPU via double complex
+            pgCol<pgComplex<double>> Ad(N), Bd(N);
+            for (uword i = 0; i < N; i++) {
+                Ad.at(i) = pgComplex<double>(Af.at(i).real(), Af.at(i).imag());
+                Bd.at(i) = pgComplex<double>(Bf.at(i).real(), Bf.at(i).imag());
+            }
+            double tCPU = median_ms([&]{ auto r = Ad % Bd; doNotOptimize(r); }, 3, 15);
+            printf("  %-10lu  %-24s  %10.3f  %10.3f  %7.2fx\n",
+                   (unsigned long)N, "cplx mul (float vs dbl)",
+                   tMetal, tCPU, (tMetal > 0.0) ? tCPU / tMetal : 0.0);
+        }
+
+        // ----- Complex sum (reduction) -----
+        {
+            pgCol<float> Af(N);
+            for (uword i = 0; i < N; i++) {
+                Af.at(i) = (float)(i % 1000) * 0.001f - 0.5f;
+            }
+            double tMetal = median_ms([&]{ float r = sum(Af); doNotOptimize(r); }, 3, 15);
+            pgCol<double> Ad(N);
+            for (uword i = 0; i < N; i++) Ad.at(i) = (double)Af.at(i);
+            double tCPU = median_ms([&]{ double r = sum(Ad); doNotOptimize(r); }, 3, 15);
+            printf("  %-10lu  %-24s  %10.3f  %10.3f  %7.2fx\n",
+                   (unsigned long)N, "real sum (float vs dbl)",
+                   tMetal, tCPU, (tMetal > 0.0) ? tCPU / tMetal : 0.0);
+        }
+
+        // ----- cdot (complex dot product) -----
+        {
+            pgCol<pgComplex<float>> Af(N), Bf(N);
+            for (uword i = 0; i < N; i++) {
+                float re = (float)(i % 1000) * 0.001f - 0.5f;
+                float im = (float)((i + 333) % 1000) * 0.001f - 0.5f;
+                Af.at(i) = pgComplex<float>(re, im);
+                Bf.at(i) = pgComplex<float>(im, re);
+            }
+            double tMetal = median_ms([&]{ auto r = cdot(Af, Bf); doNotOptimize(r); }, 3, 15);
+            // CPU reference: compute cdot manually for double
+            pgCol<pgComplex<double>> Ad(N), Bd(N);
+            for (uword i = 0; i < N; i++) {
+                Ad.at(i) = pgComplex<double>(Af.at(i).real(), Af.at(i).imag());
+                Bd.at(i) = pgComplex<double>(Bf.at(i).real(), Bf.at(i).imag());
+            }
+            double tCPU = median_ms([&]{ auto r = cdot(Ad, Bd); doNotOptimize(r); }, 3, 15);
+            printf("  %-10lu  %-24s  %10.3f  %10.3f  %7.2fx\n",
+                   (unsigned long)N, "cdot (float vs dbl)",
+                   tMetal, tCPU, (tMetal > 0.0) ? tCPU / tMetal : 0.0);
+        }
+
         printf("\n");
     }
 

@@ -26,15 +26,20 @@ set(PG_FILES
 if(METAL_COMPUTE)
 	list(APPEND PG_FILES
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalGridding.mm
+		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalVectorOps.mm
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/fftAccelerate.cpp)
 	set_source_files_properties(
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalGridding.mm
+		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalVectorOps.mm
 		PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 endif()
 
 add_library(PGCommon SHARED ${PG_FILES})
 if(METAL_COMPUTE AND TARGET MetalShaders)
 	add_dependencies(PGCommon MetalShaders)
+endif()
+if(METAL_COMPUTE AND TARGET MetalVecOpsShaders)
+	add_dependencies(PGCommon MetalVecOpsShaders)
 endif()
 target_link_libraries(PGCommon ${LIBS})
 set_target_properties(PGCommon PROPERTIES LINK_DEPENDS_NO_SHARED true)

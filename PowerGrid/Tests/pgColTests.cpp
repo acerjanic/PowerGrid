@@ -1,10 +1,13 @@
 #include "catch.hpp"
 
+#ifdef _OPENACC
+#include "accel.h"
+#endif
+
 #include "../PGIncludes.h"
 #include "../pgCol.hpp"
 #include <cmath>
 #include <iostream>
-#include "accel.h"
 
 TEST_CASE("pgCol<float>: operators", "[pgCol<float>]") {
 

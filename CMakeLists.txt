@@ -131,6 +131,27 @@ if(APPLE)
 
 			add_custom_target(MetalShaders ALL DEPENDS ${METALEMBED})
 			include_directories(${CMAKE_BINARY_DIR}/PowerGrid/Metal)
+
+			# Vector ops Metal shaders (separate metallib)
+			set(VECOPS_SRC    ${CMAKE_SOURCE_DIR}/PowerGrid/Metal/vectorops_metal.metal)
+			set(VECOPS_AIR    ${CMAKE_BINARY_DIR}/PowerGrid/Metal/vectorops.air)
+			set(VECOPS_LIB    ${CMAKE_BINARY_DIR}/PowerGrid/Metal/vectorops.metallib)
+			set(VECOPS_EMBED  ${CMAKE_BINARY_DIR}/PowerGrid/Metal/vectorops_metallib.h)
+
+			add_custom_command(
+				OUTPUT ${VECOPS_EMBED}
+				COMMAND ${METAL_COMPILER} -O3 -o ${VECOPS_AIR} -c ${VECOPS_SRC}
+				COMMAND xcrun -sdk macosx metallib -o ${VECOPS_LIB} ${VECOPS_AIR}
+				COMMAND ${CMAKE_COMMAND}
+					-DINPUT=${VECOPS_LIB}
+					-DOUTPUT=${VECOPS_EMBED}
+					-DVAR_NAME=vectorops_metallib
+					-P ${CMAKE_SOURCE_DIR}/cmake/embed_binary.cmake
+				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/PowerGrid/Metal
+				DEPENDS ${VECOPS_SRC}
+				COMMENT "Compiling and embedding Metal vector ops shaders")
+
+			add_custom_target(MetalVecOpsShaders ALL DEPENDS ${VECOPS_EMBED})
 		else()
 			message(WARNING "METAL_COMPUTE=ON but Metal toolchain not found; disabling Metal compute.")
 			set(METAL_COMPUTE OFF)
@@ -172,7 +193,12 @@ if(METAL_COMPUTE AND METAL_FOUND)
     set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/Support/Catch)
     add_executable(metal_tests
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/main.cpp
-        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/MetalNufftTests.cpp)
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/MetalNufftTests.cpp
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/MetalVectorOpsTests.cpp
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgComplexTests.cpp
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgColTests.cpp
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgColCplxTests.cpp
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgMatTests.cpp)
     target_include_directories(metal_tests PRIVATE
         ${CATCH_INCLUDE_DIR}
         ${CMAKE_SOURCE_DIR}/PowerGrid
