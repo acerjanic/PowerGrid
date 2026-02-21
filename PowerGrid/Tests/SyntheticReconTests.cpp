@@ -481,3 +481,164 @@ TEST_CASE("SENSE adjointness with spiral trajectory", "[SENSE_synthetic][adjoint
     std::cout << "SENSE+spiral adjointness: relErr = " << relErr << std::endl;
     REQUIRE(relErr < (T1)1e-3);
 }
+
+// ---------------------------------------------------------------------------
+// Benchmark: SENSE reconstruction at 256x256
+// ---------------------------------------------------------------------------
+TEST_CASE("SENSE recon 256x256 benchmark", "[bench256][SENSE_bench]") {
+    typedef float T1;
+    typedef std::complex<T1> CxT1;
+
+    const uword Nx = 256;
+    const uword Ny = 256;
+    const uword Ni = Nx * Ny;
+    const uword Nc = 8;
+    const uword nSpokes = 256;
+    const uword nReadout = 256;
+    const uword Nd = nSpokes * nReadout;
+    const uword niter = 10;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+
+    // Generate phantom
+    Col<CxT1> phantom = sheppLogan2D<T1>(Nx, Ny);
+
+    // Generate trajectory
+    Col<T1> kx, ky, kz;
+    radialTrajectory2D<T1>(nSpokes, nReadout, Nx, kx, ky, kz);
+
+    // Image space coordinates
+    Col<T1> ix, iy, iz;
+    gnufftImageCoords2D<T1>(Nx, Ny, ix, iy, iz);
+
+    // Create Gnufft
+    Gnufft<T1> G(Nd, (T1)2.0, Nx, Ny, 1, kx, ky, kz, ix, iy, iz);
+
+    // Coil maps
+    Col<CxT1> SENSEmap = syntheticCoils2D<T1>(Nx, Ny, Nc);
+
+    // SENSE operator
+    SENSE<T1, Gnufft<T1>> S(G, SENSEmap, Nd, Ni, Nc);
+
+    auto t_setup = std::chrono::high_resolution_clock::now();
+
+    // Generate noiseless data: y = S * phantom
+    Col<CxT1> y = S * phantom;
+
+    // Uniform weights
+    Col<T1> W = ones<Col<T1>>(Nd * Nc);
+
+    // Regularizer
+    QuadPenalty<T1> R(Nx, Ny, 1, (T1)1e-3, 2);
+
+    // Initial estimate: zero
+    Col<CxT1> x0 = zeros<Col<CxT1>>(Ni);
+
+    auto t_recon_start = std::chrono::high_resolution_clock::now();
+
+    // Reconstruct
+    Col<CxT1> xhat = solve_pwls_pcg<T1>(x0, S, W, y, R, niter);
+
+    auto t_recon_end = std::chrono::high_resolution_clock::now();
+
+    REQUIRE(xhat.n_elem == Ni);
+    REQUIRE(!xhat.has_nan());
+
+    T1 err = nrmse<T1>(xhat, phantom);
+
+    double setup_ms = std::chrono::duration<double, std::milli>(t_setup - t0).count();
+    double recon_ms = std::chrono::duration<double, std::milli>(t_recon_end - t_recon_start).count();
+    double total_ms = std::chrono::duration<double, std::milli>(t_recon_end - t0).count();
+
+    std::cout << "SENSE 256x256 (8 coils, 256 spokes, 10 iters):" << std::endl;
+    std::cout << "  Setup:  " << setup_ms << " ms" << std::endl;
+    std::cout << "  Recon:  " << recon_ms << " ms" << std::endl;
+    std::cout << "  Total:  " << total_ms << " ms" << std::endl;
+    std::cout << "  NRMSE:  " << err << std::endl;
+
+    REQUIRE(err < (T1)0.50);
+}
+
+// ---------------------------------------------------------------------------
+// Benchmark: SENSE + TimeSegmentation reconstruction at 256x256
+// ---------------------------------------------------------------------------
+TEST_CASE("SENSE+TimeSeg recon 256x256 benchmark", "[bench256][TimeSeg_bench]") {
+    typedef float T1;
+    typedef std::complex<T1> CxT1;
+
+    const uword Nx = 256;
+    const uword Ny = 256;
+    const uword Ni = Nx * Ny;
+    const uword Nc = 8;
+    const uword nSpokes = 256;
+    const uword nReadout = 256;
+    const uword Nd = nSpokes * nReadout;
+    const uword L = 4;
+    const uword niter = 10;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+
+    // Generate phantom
+    Col<CxT1> phantom = sheppLogan2D<T1>(Nx, Ny);
+
+    // Trajectory
+    Col<T1> kx, ky, kz;
+    radialTrajectory2D<T1>(nSpokes, nReadout, Nx, kx, ky, kz);
+
+    // Image coordinates
+    Col<T1> ix, iy, iz;
+    gnufftImageCoords2D<T1>(Nx, Ny, ix, iy, iz);
+
+    // Gnufft
+    Gnufft<T1> G(Nd, (T1)2.0, Nx, Ny, 1, kx, ky, kz, ix, iy, iz);
+
+    // Field map: ±50 Hz quadratic, convert to radians/sec
+    Col<T1> fmapHz = syntheticFieldMap2D<T1>(Nx, Ny, (T1)50.0);
+    Col<T1> fmapRad = fmapHz * (T1)(2.0 * M_PI);
+
+    // Timing vector
+    Col<T1> tvec = linearTimingVector<T1>(Nd, (T1)0.01);
+
+    // TimeSegmentation operator
+    TimeSegmentation<T1, Gnufft<T1>> TS(G, fmapRad, tvec, Nd, Ni, L, 1, 1);
+
+    // Coil maps
+    Col<CxT1> SENSEmap = syntheticCoils2D<T1>(Nx, Ny, Nc);
+
+    // SENSE with TimeSegmentation
+    SENSE<T1, TimeSegmentation<T1, Gnufft<T1>>> S(TS, SENSEmap, Nd, Ni, Nc);
+
+    auto t_setup = std::chrono::high_resolution_clock::now();
+
+    // Generate data
+    Col<CxT1> y = S * phantom;
+
+    // Weights and regularizer
+    Col<T1> W = ones<Col<T1>>(Nd * Nc);
+    QuadPenalty<T1> R(Nx, Ny, 1, (T1)1e-3, 2);
+    Col<CxT1> x0 = zeros<Col<CxT1>>(Ni);
+
+    auto t_recon_start = std::chrono::high_resolution_clock::now();
+
+    // Reconstruct
+    Col<CxT1> xhat = solve_pwls_pcg<T1>(x0, S, W, y, R, niter);
+
+    auto t_recon_end = std::chrono::high_resolution_clock::now();
+
+    REQUIRE(xhat.n_elem == Ni);
+    REQUIRE(!xhat.has_nan());
+
+    T1 err = nrmse<T1>(xhat, phantom);
+
+    double setup_ms = std::chrono::duration<double, std::milli>(t_setup - t0).count();
+    double recon_ms = std::chrono::duration<double, std::milli>(t_recon_end - t_recon_start).count();
+    double total_ms = std::chrono::duration<double, std::milli>(t_recon_end - t0).count();
+
+    std::cout << "SENSE+TimeSeg 256x256 (8 coils, L=4, 256 spokes, 10 iters):" << std::endl;
+    std::cout << "  Setup:  " << setup_ms << " ms" << std::endl;
+    std::cout << "  Recon:  " << recon_ms << " ms" << std::endl;
+    std::cout << "  Total:  " << total_ms << " ms" << std::endl;
+    std::cout << "  NRMSE:  " << err << std::endl;
+
+    REQUIRE(err < (T1)0.50);
+}

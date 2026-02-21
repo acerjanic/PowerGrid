@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.17) #CMake version 3.2 required to properly sup
 ## Flags and settings that change the compiler (i.e. from default to C++11 or C++14)
 ## need to be set BEFORE calling project command (which does introspection and sets
 ## variables about the behavior of the compiler).
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
 project("PowerGrid" CXX)
 
@@ -239,4 +239,15 @@ if(NOT APPLE)
         ${CMAKE_SOURCE_DIR}/Support/ArmaExtensions)
     target_link_libraries(ismrmrd_tests PGCommon ${LIBS})
 endif()
+
+# CPU-only synthetic recon tests (all platforms)
+set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/Support/Catch)
+add_executable(cpu_tests
+    ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/main.cpp
+    ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/SyntheticReconTests.cpp)
+target_include_directories(cpu_tests PRIVATE
+    ${CATCH_INCLUDE_DIR}
+    ${CMAKE_SOURCE_DIR}/PowerGrid
+    ${CMAKE_SOURCE_DIR}/Support/ArmaExtensions)
+target_link_libraries(cpu_tests PGCommon ${LIBS})
 
