@@ -33,12 +33,12 @@ Developed by:
 #include <cstdlib>
 #include <vector>
 
-#include "PGIncludes.h"
-#include "Gnufft.h"
+#include "Core/PGIncludes.h"
+#include "Operators/Gnufft.h"
 #include "Metal/fftAccelerate.h"
-#include "fftCPU.h"
-#include "pgCol.hpp"
-#include "pgComplex.hpp"
+#include "FFT/fftCPU.h"
+#include "Core/pgCol.hpp"
+#include "Core/pgComplex.hpp"
 
 #include <Accelerate/Accelerate.h>
 #include "AccelerateDispatch.hpp"

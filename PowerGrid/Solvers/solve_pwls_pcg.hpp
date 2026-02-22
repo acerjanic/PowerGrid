@@ -31,7 +31,7 @@ Developed by:
 #include <chrono>
 
 #ifdef METAL_COMPUTE
-#include "pgCol.hpp"
+#include "Core/pgCol.hpp"
 #endif
 
 using namespace arma;

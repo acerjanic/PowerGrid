@@ -27,7 +27,7 @@ Developed by:
 #ifndef PowerGrid_Robject_h
 #define PowerGrid_Robject_h
 
-#include "PGIncludes.h"
+#include "Core/PGIncludes.h"
 
 using namespace arma;
 using namespace std;

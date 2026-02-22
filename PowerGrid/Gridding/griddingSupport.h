@@ -31,7 +31,7 @@
 #include "openacc.h"
 #endif
 
-#include "PGIncludes.h"
+#include "Core/PGIncludes.h"
 
 using namespace std; // where to put?
 

@@ -27,9 +27,9 @@ Developed by:
 #ifndef PowerGrid_LRobj_h
 #define PowerGrid_LRobj_h
 
-#include "../PowerGrid/PGIncludes.h"
-#include "../PowerGrid/pcSENSE.h"
-#include "../PowerGrid/pcSenseTimeSeg.h"
+#include "../PowerGrid/Core/PGIncludes.h"
+#include "../PowerGrid/Operators/pcSENSE.h"
+#include "../PowerGrid/Operators/pcSenseTimeSeg.h"
 
 using namespace arma;
 using namespace std;

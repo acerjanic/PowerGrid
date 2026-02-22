@@ -1,9 +1,9 @@
 
-#include "../../PGIncludes.h"
+#include "../../Core/PGIncludes.h"
 
-#include "../../pgCol.hpp"
-#include "../../pgMat.hpp"
-#include "../../pgComplex.hpp"
+#include "../../Core/pgCol.hpp"
+#include "../../Core/pgMat.hpp"
+#include "../../Core/pgComplex.hpp"
 
 #ifdef _OPENACC
 #include "openacc.h"

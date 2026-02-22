@@ -29,7 +29,7 @@ Developed by:
 #define MIN_HEADER_SIZE 348
 #define NII_HEADER_SIZE 352
 
-#include "PowerGrid.h"
+#include "Core/PowerGrid.h"
 
 using namespace arma;
 

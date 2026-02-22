@@ -11,7 +11,7 @@ Developed by:
 
 /*****************************************************************************
 
-    File Name   [ftCpuWithGrads.h]
+    File Name   [ftCpu.h]
 
     Synopsis    [The CPU and OpenACC annotated version of the discrete Fourier
                 transform and inverse discrete Fourier transform.]
@@ -29,13 +29,13 @@ Developed by:
 
  *****************************************************************************/
 
-#ifndef FTWithGrads_CPU_H
-#define FTWithGrads_CPU_H
+#ifndef FT_CPU_H
+#define FT_CPU_H
 
 /*---------------------------------------------------------------------------*/
 /*  Included library headers                                                 */
 /*---------------------------------------------------------------------------*/
-#include "PGIncludes.h"
+#include "Core/PGIncludes.h"
 /*---------------------------------------------------------------------------*/
 /*  Namespace declared - begin                                               */
 /*---------------------------------------------------------------------------*/
@@ -95,7 +95,7 @@ iftCpu(T1 *idata_r, T1 *idata_i,
 /*                                                                           */
 /*===========================================================================*/
 
-template <typename T1> T1 sincPG(T1 x);
+template <typename T1> T1 sinc_cpu(T1 x);
 
 /*===========================================================================*/
 /*                                                                           */
@@ -105,29 +105,23 @@ template <typename T1> T1 sincPG(T1 x);
 /*                                                                           */
 /*===========================================================================*/
 template <typename T1>
-void ftCpuWithGrads(T1 *kdata_r, T1 *kdata_i, const T1 *idata_r, const T1 *idata_i,
+void ftCpu(T1 *kdata_r, T1 *kdata_i, const T1 *idata_r, const T1 *idata_i,
            const T1 *kx, const T1 *ky, const T1 *kz, const T1 *ix, const T1 *iy,
-           const T1 *iz, const T1 *FM, const T1 *Gx, const T1 *Gy, const T1 *Gz,
-           const T1 *t, const int num_k,
-           const int num_i, const int num_x, const int num_y, const int num_z);
+           const T1 *iz, const T1 *FM, const T1 *t, const int num_k,
+           const int num_i);
 
 // Explicit Instantiations
-extern template void ftCpuWithGrads<float>(float *, float *, const float *,
+extern template void ftCpu<float>(float *, float *, const float *,
                                   const float *, const float *, const float *,
                                   const float *, const float *, const float *,
                                   const float *, const float *, const float *,
-                                  const float *, const float *, const float *,
-                                  const int, const int, const int, const int,
-                                  const int);
-extern template void ftCpuWithGrads<double>(double *, double *, const double *,
+                                  const int, const int);
+extern template void ftCpu<double>(double *, double *, const double *,
                                    const double *, const double *,
                                    const double *, const double *,
                                    const double *, const double *,
                                    const double *, const double *,
-                                   const double *, 
-                                   const double *, const double *,
-                                   const double *, const int, const int,
-                                   const int, const int, const int);
+                                   const double *, const int, const int);
 /*===========================================================================*/
 /*                                                                           */
 /*  Synopsis    [CPU kernel of the Inverse Fourier Transformation (IFT).] */
@@ -136,30 +130,23 @@ extern template void ftCpuWithGrads<double>(double *, double *, const double *,
 /*                                                                           */
 /*===========================================================================*/
 template <typename T1>
-void iftCpuWithGrads(T1 *idata_r, T1 *idata_i, const T1 *kdata_r, const T1 *kdata_i,
+void iftCpu(T1 *idata_r, T1 *idata_i, const T1 *kdata_r, const T1 *kdata_i,
             const T1 *kx, const T1 *ky, const T1 *kz, const T1 *ix,
-            const T1 *iy, const T1 *iz, const T1 *FM, const T1 *Gx, 
-            const T1 *Gy, const T1 *Gz, const T1 *t,
-            const int num_k, const int num_i, const int num_x, const int num_y,
-            const int num_z);
+            const T1 *iy, const T1 *iz, const T1 *FM, const T1 *t,
+            const int num_k, const int num_i);
 
 // Explicit Instantiations
-extern template void iftCpuWithGrads<float>(float *, float *, const float *,
+extern template void iftCpu<float>(float *, float *, const float *,
                                    const float *, const float *, const float *,
                                    const float *, const float *, const float *,
                                    const float *, const float *, const float *,
-                                   const float *, const float *, const float *,
-                                   const int, const int, const int, const int,
-                                   const int);
-extern template void iftCpuWithGrads<double>(double *, double *, const double *,
+                                   const int, const int);
+extern template void iftCpu<double>(double *, double *, const double *,
                                     const double *, const double *,
                                     const double *, const double *,
                                     const double *, const double *,
                                     const double *, const double *,
-                                    const double *,
-                                    const double *, const double *,
-                                    const double *, const int, const int,
-                                    const int, const int, const int);
+                                    const double *, const int, const int);
 /*---------------------------------------------------------------------------*/
 /*  Namespace declared - end                                                 */
 /*---------------------------------------------------------------------------*/
@@ -167,4 +154,4 @@ extern template void iftCpuWithGrads<double>(double *, double *, const double *,
 //}
 //}
 
-#endif // FTWithGrads_CPU_H
+#endif // FT_CPU_H

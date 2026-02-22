@@ -31,10 +31,10 @@ Developed by:
 #ifndef PowerGrid_Gnufft_h
 #define PowerGrid_Gnufft_h
 
-#include "PGIncludes.h"
-#include "gridding.h"
-#include "pgCol.hpp"
-#include "pgComplex.hpp"
+#include "Core/PGIncludes.h"
+#include "Gridding/gridding.h"
+#include "Core/pgCol.hpp"
+#include "Core/pgComplex.hpp"
 
 using namespace arma;
 using namespace std;

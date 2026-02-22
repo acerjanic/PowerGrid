@@ -22,7 +22,7 @@ Developed by:
     Date        [4/19/2016]
 
  *****************************************************************************/
-#include "SENSE.h"
+#include "Operators/SENSE.h"
 
 using namespace arma;
 

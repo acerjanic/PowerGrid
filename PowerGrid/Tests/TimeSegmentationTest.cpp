@@ -23,7 +23,7 @@
     Date        [4/19/2016]
 
 *****************************************************************************/
-#include "TimeSegmentation.h"
+#include "Gridding/TimeSegmentation.h"
 #include <chrono>  // for high_resolution_clock
 // This using field correction by time segmentation
 // The data is corrected to time 0 with reference to the time vector passed

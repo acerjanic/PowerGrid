@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 MRFIL. All rights reserved.
 //
 
-#include "../PowerGrid.h"
+#include "../PowerGrid/Core/PowerGrid.h"
 namespace mpi = boost::mpi;
 
 using namespace arma; //Armdillo stuff is in the arma namespace

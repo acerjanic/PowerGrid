@@ -27,12 +27,12 @@
 #define PowerGrid_mpipcSENSE_hpp
 
 #include "../../Support/ArmaExtensions/arma_extensions.h"
-#include "../PowerGrid/PGIncludes.h"
-#include "../PowerGrid/Gdft.h"
+#include "../PowerGrid/Core/PGIncludes.h"
+#include "../PowerGrid/Operators/Gdft.h"
 #include <boost/mpi.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/environment.hpp>
-#include "../PowerGrid/PowerGrid.h"
+#include "../PowerGrid/Core/PowerGrid.h"
 
 using namespace arma;
 

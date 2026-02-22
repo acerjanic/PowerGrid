@@ -26,7 +26,7 @@ Developed by:
 #ifndef POWERGRID_PROCESSISMRMRD_HPP
 #define POWERGRID_PROCESSISMRMRD_HPP
 
-#include "PowerGrid.h"
+#include "Core/PowerGrid.h"
 
 using namespace arma;
 typedef std::tuple<std::size_t,std::size_t,std::size_t> D3tuple;

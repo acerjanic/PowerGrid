@@ -27,12 +27,12 @@ Developed by:
 
 //Project headers.
 
-#include "../PowerGrid/PowerGrid.h"
-#include "../PowerGrid/processIsmrmrd.hpp"
-#include "../PowerGrid/processNIFTI.hpp"
+#include "../PowerGrid/Core/PowerGrid.h"
+#include "../PowerGrid/IO/processIsmrmrd.hpp"
+#include "../PowerGrid/IO/processNIFTI.hpp"
 #include <boost/program_options.hpp>
 #include <chrono>
-#include "../PowerGrid/directRecon.h"
+#include "../PowerGrid/IO/directRecon.h"
 
 namespace po = boost::program_options;
 

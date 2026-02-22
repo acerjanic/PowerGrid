@@ -27,13 +27,13 @@
 #ifndef POWERGRID_RECONSOLVE_H
 #define POWERGRID_RECONSOLVE_H
 
-#include "PGIncludes.h"
-#include "Gdft.h"
-#include "GdftR2.h"
-#include "Gnufft.h"
-#include "SENSE.h"
-#include "pcSENSE.h"
-#include "TimeSegmentation.h"
+#include "Core/PGIncludes.h"
+#include "Operators/Gdft.h"
+#include "Operators/GdftR2.h"
+#include "Operators/Gnufft.h"
+#include "Operators/SENSE.h"
+#include "Operators/pcSENSE.h"
+#include "Gridding/TimeSegmentation.h"
 #include "QuadPenalty.h"
 #include "TVPenalty.h"
 #include "solve_pwls_pcg.hpp"

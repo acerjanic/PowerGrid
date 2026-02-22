@@ -15,17 +15,17 @@ Developed by:
 
 #include "catch.hpp"
 
-#include "../PGIncludes.h"
-#include "../Gdft.h"
-#include "../GdftR2.h"
-#include "../pcSENSE.h"
-#include "../QuadPenalty.h"
-#include "../solve_pwls_pcg.hpp"
+#include "../Core/PGIncludes.h"
+#include "../Operators/Gdft.h"
+#include "../Operators/GdftR2.h"
+#include "../Operators/pcSENSE.h"
+#include "../Solvers/QuadPenalty.h"
+#include "../Solvers/solve_pwls_pcg.hpp"
 
-#include "SyntheticPhantom.hpp"
-#include "SyntheticCoils.hpp"
-#include "SyntheticTrajectory.hpp"
-#include "SyntheticFieldMap.hpp"
+#include "Helpers/SyntheticPhantom.hpp"
+#include "Helpers/SyntheticCoils.hpp"
+#include "Helpers/SyntheticTrajectory.hpp"
+#include "Helpers/SyntheticFieldMap.hpp"
 
 using namespace arma;
 

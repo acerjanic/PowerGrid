@@ -29,10 +29,10 @@ Developed by:
 #ifndef PowerGrid_GdftR2_h
 #define PowerGrid_GdftR2_h
 
-#include "PGIncludes.h"
-#include "ftCpuWithGrads.h"
-#include "pgCol.hpp"
-#include "pgComplex.hpp"
+#include "Core/PGIncludes.h"
+#include "FFT/ftCpuWithGrads.h"
+#include "Core/pgCol.hpp"
+#include "Core/pgComplex.hpp"
 
 using namespace arma;
 using namespace std;

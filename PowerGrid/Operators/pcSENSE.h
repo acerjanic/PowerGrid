@@ -26,13 +26,13 @@
 #ifndef PowerGrid_pcSENSE_hpp
 #define PowerGrid_pcSENSE_hpp
 
-#include "PGIncludes.h"
+#include "Core/PGIncludes.h"
 #include "Gdft.h"
 #include "Gnufft.h"
-#include "TimeSegmentation.h"
+#include "Gridding/TimeSegmentation.h"
 
-#include "pgCol.hpp"
-#include "pgMat.hpp"
+#include "Core/pgCol.hpp"
+#include "Core/pgMat.hpp"
 
 using namespace arma;
 //using namespace PowerGrid;

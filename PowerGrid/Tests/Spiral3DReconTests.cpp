@@ -15,18 +15,18 @@ Developed by:
 
 #include "catch.hpp"
 
-#include "../PGIncludes.h"
-#include "../Gdft.h"
-#include "../Gnufft.h"
-#include "../pcSENSE.h"
-#include "../pcSenseTimeSeg.h"
-#include "../QuadPenalty.h"
-#include "../solve_pwls_pcg.hpp"
+#include "../Core/PGIncludes.h"
+#include "../Operators/Gdft.h"
+#include "../Operators/Gnufft.h"
+#include "../Operators/pcSENSE.h"
+#include "../Operators/pcSenseTimeSeg.h"
+#include "../Solvers/QuadPenalty.h"
+#include "../Solvers/solve_pwls_pcg.hpp"
 
-#include "SyntheticPhantom3D.hpp"
-#include "SyntheticCoils3D.hpp"
-#include "SyntheticFieldMap3D.hpp"
-#include "SyntheticTrajectory3D.hpp"
+#include "Helpers/SyntheticPhantom3D.hpp"
+#include "Helpers/SyntheticCoils3D.hpp"
+#include "Helpers/SyntheticFieldMap3D.hpp"
+#include "Helpers/SyntheticTrajectory3D.hpp"
 
 // Minimal NIfTI writer (avoids PowerGrid.h → ISMRMRD dependency)
 #include "../../Support/nifti1.h"

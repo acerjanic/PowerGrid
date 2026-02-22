@@ -25,8 +25,8 @@ Developed by:
 
  *****************************************************************************/
 
-#include "../PowerGrid/PowerGrid.h"
-#include "../PowerGrid/processIsmrmrd.hpp"
+#include "../PowerGrid/Core/PowerGrid.h"
+#include "../PowerGrid/IO/processIsmrmrd.hpp"
 #include <boost/program_options.hpp>
 #include <sstream>
 #include <chrono>

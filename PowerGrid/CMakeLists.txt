@@ -1,26 +1,30 @@
 #Define files to be compiled
 set(PG_FILES
-	${PROJECT_SOURCE_DIR}/PowerGrid/Robject.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/QuadPenalty.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/TVPenalty.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/fftCPU.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/fftGPU.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/ftCpu.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/ftCpuWithGrads.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/Gdft.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/GdftR2.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/Gfft.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/TimeSegmentation.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/griddingSupport.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/gridding.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/Gnufft.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/SENSE.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/pcSENSE.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/pcSenseTimeSeg.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/reconSolve.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/acqTracking.cpp
-	#${PROJECT_SOURCE_DIR}/PowerGrid/acqTracking.h
-	${PROJECT_SOURCE_DIR}/PowerGrid/directRecon.cpp
+	# Solvers
+	${PROJECT_SOURCE_DIR}/PowerGrid/Solvers/Robject.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/Solvers/QuadPenalty.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/Solvers/TVPenalty.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/Solvers/reconSolve.cpp
+	# FFT
+	${PROJECT_SOURCE_DIR}/PowerGrid/FFT/fftCPU.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/FFT/fftGPU.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/FFT/ftCpu.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/FFT/ftCpuWithGrads.cpp
+	# Operators
+	${PROJECT_SOURCE_DIR}/PowerGrid/Operators/Gdft.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/Operators/GdftR2.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/Operators/Gfft.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/Operators/Gnufft.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/Operators/SENSE.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/Operators/pcSENSE.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/Operators/pcSenseTimeSeg.cpp
+	# Gridding
+	${PROJECT_SOURCE_DIR}/PowerGrid/Gridding/TimeSegmentation.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/Gridding/griddingSupport.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/Gridding/gridding.cpp
+	# IO
+	${PROJECT_SOURCE_DIR}/PowerGrid/IO/acqTracking.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/IO/directRecon.cpp
 )
 
 if(METAL_COMPUTE)

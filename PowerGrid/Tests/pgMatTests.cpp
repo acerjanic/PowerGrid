@@ -4,8 +4,8 @@
 #include "accel.h"
 #endif
 
-#include "../PGIncludes.h"
-#include "../pgMat.hpp"
+#include "../Core/PGIncludes.h"
+#include "../Core/pgMat.hpp"
 #include <cmath>
 #include <iostream>
 

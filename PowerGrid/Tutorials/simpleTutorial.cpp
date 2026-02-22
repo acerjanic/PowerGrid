@@ -27,9 +27,9 @@ Developed by:
  *****************************************************************************/
 
 // //Project headers.
-#include "PowerGrid.h"
-#include "processIsmrmrd.hpp"
-#include "processNIFTI.hpp"
+#include "Core/PowerGrid.h"
+#include "IO/processIsmrmrd.hpp"
+#include "IO/processNIFTI.hpp"
 #include <boost/program_options.hpp>
 #include <chrono>
 namespace po = boost::program_options;

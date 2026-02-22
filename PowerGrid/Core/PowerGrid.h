@@ -34,28 +34,28 @@
 #include "ismrmrd/xml.h"
 #include "ismrmrd/dataset.h"
 #include "ismrmrd/version.h"
-#include "acqTracking.h"
+#include "IO/acqTracking.h"
 //namespace PowerGrid {
-#include "Robject.h"
-#include "TVPenalty.h"
+#include "Solvers/Robject.h"
+#include "Solvers/TVPenalty.h"
 
-#include "Gdft.h"
-#include "Gfft.h"
-#include "Gnufft.h"
+#include "Operators/Gdft.h"
+#include "Operators/Gfft.h"
+#include "Operators/Gnufft.h"
 
-#include "pcSENSE.h"
-#include "pcSenseTimeSeg.h"
-#include "solve_pwls_pcg.hpp"
+#include "Operators/pcSENSE.h"
+#include "Operators/pcSenseTimeSeg.h"
+#include "Solvers/solve_pwls_pcg.hpp"
 
-#include "SENSE.h"
-#include "TimeSegmentation.h"
-#include "fftGPU.h"
-#include "fftshift.hpp"
-#include "ftCpu.h"
-#include "gridding.h"
-#include "griddingSupport.h"
+#include "Operators/SENSE.h"
+#include "Gridding/TimeSegmentation.h"
+#include "FFT/fftGPU.h"
+#include "IO/fftshift.hpp"
+#include "FFT/ftCpu.h"
+#include "Gridding/gridding.h"
+#include "Gridding/griddingSupport.h"
 
-#include "reconSolve.h"
+#include "Solvers/reconSolve.h"
 
 #ifdef PowerGridMPI
 

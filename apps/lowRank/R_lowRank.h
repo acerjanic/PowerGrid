@@ -27,9 +27,9 @@ Developed by:
 #ifndef PowerGrid_R_lowRank_h
 #define PowerGrid_R_lowRank_h
 
-#include "../PowerGrid/PGIncludes.h"
-#include "../PowerGrid/QuadPenalty.h"
-#include "../PowerGrid/TVPenalty.h"
+#include "../PowerGrid/Core/PGIncludes.h"
+#include "../PowerGrid/Solvers/QuadPenalty.h"
+#include "../PowerGrid/Solvers/TVPenalty.h"
 
 using namespace arma;
 using namespace std;

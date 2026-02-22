@@ -31,20 +31,20 @@ Developed by:
 
 #ifdef OPENACC_GPU // GPU Version
 #include "cufft.h"
-#include "fftGPU.h"
-#include "gridding.h"
+#include "FFT/fftGPU.h"
+#include "Gridding/gridding.h"
 #include "openacc.h"
 #elif OPENACC_MP
-#include "fftGPU.h"
-#include "gridding.h"
+#include "FFT/fftGPU.h"
+#include "Gridding/gridding.h"
 #include "openacc.h"
 #elif defined(METAL_COMPUTE) // Apple Metal path: vDSP FFT
 #include "Metal/fftAccelerate.h"
-#include "fftCPU.h"    // fallback for non-pow2 sizes
-#include "gridding.h"
+#include "FFT/fftCPU.h"    // fallback for non-pow2 sizes
+#include "Gridding/gridding.h"
 #else // CPU Version
-#include "fftCPU.h"
-#include "gridding.h"
+#include "FFT/fftCPU.h"
+#include "Gridding/gridding.h"
 #endif
 
 // We want to operate on many types of variables (assume of type Col<type>)

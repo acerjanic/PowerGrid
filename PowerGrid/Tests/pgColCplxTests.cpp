@@ -5,9 +5,9 @@
 #include "accel.h"
 #endif
 
-#include "../PGIncludes.h"
-#include "../pgCol.hpp"
-#include "../pgComplex.hpp"
+#include "../Core/PGIncludes.h"
+#include "../Core/pgCol.hpp"
+#include "../Core/pgComplex.hpp"
 #include <cmath>
 #include <iostream>
 

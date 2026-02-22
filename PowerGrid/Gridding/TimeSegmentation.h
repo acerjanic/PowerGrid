@@ -32,11 +32,11 @@ Developed by:
 #ifndef PowerGrid_TimeSegmentation_h
 #define PowerGrid_TimeSegmentation_h
 
-#include "Gdft.h"
-#include "Gnufft.h"
-#include "PGIncludes.h"
-#include "pgCol.hpp"
-#include "pgMat.hpp"
+#include "Operators/Gdft.h"
+#include "Operators/Gnufft.h"
+#include "Core/PGIncludes.h"
+#include "Core/pgCol.hpp"
+#include "Core/pgMat.hpp"
 
 using namespace std;
 

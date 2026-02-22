@@ -29,10 +29,10 @@ Developed by:
 #include "Gdft.h"
 #include "GdftR2.h"
 #include "Gnufft.h"
-#include "PGIncludes.h"
-#include "TimeSegmentation.h"
-#include "pgCol.hpp"
-#include "pgMat.hpp"
+#include "Core/PGIncludes.h"
+#include "Gridding/TimeSegmentation.h"
+#include "Core/pgCol.hpp"
+#include "Core/pgMat.hpp"
 
 using namespace std;
 using namespace arma;

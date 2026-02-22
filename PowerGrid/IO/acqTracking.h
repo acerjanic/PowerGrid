@@ -5,7 +5,7 @@
 #ifndef POWERGRID_ACQTRACKING_H
 #define POWERGRID_ACQTRACKING_H
 
-#include "PowerGrid.h"
+#include "Core/PowerGrid.h"
 
 class acqTracking {
 

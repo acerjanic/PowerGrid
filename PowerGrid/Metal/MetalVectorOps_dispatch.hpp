@@ -23,7 +23,7 @@ Developed by:
 #ifdef METAL_COMPUTE
 
 #include "Metal/MetalVectorOps.h"
-#include "pgComplex.hpp"
+#include "Core/pgComplex.hpp"
 #include <type_traits>
 
 namespace pg_metal {

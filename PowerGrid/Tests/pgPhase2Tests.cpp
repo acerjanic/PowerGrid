@@ -15,9 +15,9 @@ Developed by:
 
 #include "catch.hpp"
 
-#include "../PGIncludes.h"
-#include "../pgCol.hpp"
-#include "../pgMat.hpp"
+#include "../Core/PGIncludes.h"
+#include "../Core/pgCol.hpp"
+#include "../Core/pgMat.hpp"
 #include <cmath>
 #include <cstdint>
 #include <cstring>

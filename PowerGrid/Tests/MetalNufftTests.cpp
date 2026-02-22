@@ -31,11 +31,11 @@ Developed by:
 
 #ifdef METAL_COMPUTE
 
-#include "../PGIncludes.h"
+#include "../Core/PGIncludes.h"
 #include "../Metal/fftAccelerate.h"
 #include "../Metal/MetalGridding.h"
-#include "../Gnufft.h"
-#include "../griddingSupport.h"
+#include "../Operators/Gnufft.h"
+#include "../Gridding/griddingSupport.h"
 
 #include <cmath>
 #include <vector>

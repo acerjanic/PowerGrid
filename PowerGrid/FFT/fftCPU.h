@@ -28,7 +28,7 @@ Developed by:
 #ifndef PowerGrid_fftCPU_hpp
 #define PowerGrid_fftCPU_hpp
 
-#include "PGIncludes.h"
+#include "Core/PGIncludes.h"
 
 #include "fftw3.h"
 

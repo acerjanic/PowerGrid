@@ -32,29 +32,29 @@ Developed by:
 
 #ifdef OPENACC_GPU // GPU Version
     #include "cufft.h"
-    #include "fftGPU.h"
-    #include "fftCPU.h"
+    #include "FFT/fftGPU.h"
+    #include "FFT/fftCPU.h"
     #include "griddingSupport.h"
-    #include "griddingTypes.h"
+    #include "Core/griddingTypes.h"
     #include "openacc.h"
     #define CFTHandle cufftHandle
 #elif _OPENACC
-    #include "fftCPU.h"
+    #include "FFT/fftCPU.h"
     #include "griddingSupport.h"
-    #include "griddingTypes.h"
+    #include "Core/griddingTypes.h"
     #define CFTHandle void
     #include "openacc.h"
 #elif defined(METAL_COMPUTE) // Apple Metal path
     #include "Metal/MetalGridding.h"
     #include "Metal/fftAccelerate.h"
-    #include "fftCPU.h"        // fallback for non-pow2 and double
+    #include "FFT/fftCPU.h"        // fallback for non-pow2 and double
     #include "griddingSupport.h"
-    #include "griddingTypes.h"
+    #include "Core/griddingTypes.h"
     #define CFTHandle MetalGriddingContext*
 #else // CPU version
-    #include "fftCPU.h"
+    #include "FFT/fftCPU.h"
     #include "griddingSupport.h"
-    #include "griddingTypes.h"
+    #include "Core/griddingTypes.h"
     #define CFTHandle void
 #endif
 

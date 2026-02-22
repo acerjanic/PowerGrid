@@ -40,6 +40,19 @@ data/*
 
 # Directories
 build/
+build_*/
+
+# Generated documentation
+docs/
+
+# Performance profiling traces
+profiles/
+
+# Claude Code project settings
+.claude/
+
+# Nested test build directory
+PowerGrid/Tests/build/
 
 /.idea/*
 /cmake-*/

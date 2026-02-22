@@ -15,14 +15,14 @@ Developed by:
 
 #include "catch.hpp"
 
-#include "../PowerGrid.h"
-#include "../processIsmrmrd.hpp"
-#include "../reconSolve.h"
+#include "../Core/PowerGrid.h"
+#include "../IO/processIsmrmrd.hpp"
+#include "../Solvers/reconSolve.h"
 
-#include "SyntheticPhantom.hpp"
-#include "SyntheticCoils.hpp"
-#include "SyntheticTrajectory.hpp"
-#include "SyntheticFieldMap.hpp"
+#include "Helpers/SyntheticPhantom.hpp"
+#include "Helpers/SyntheticCoils.hpp"
+#include "Helpers/SyntheticTrajectory.hpp"
+#include "Helpers/SyntheticFieldMap.hpp"
 
 #include <chrono>
 #include <sstream>

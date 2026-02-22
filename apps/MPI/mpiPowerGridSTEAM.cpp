@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 MRFIL. All rights reserved.
 //
 
-#include "../PowerGrid.h"
+#include "../PowerGrid/Core/PowerGrid.h"
 #include "../../Support/CeempleMatio.h"
 
 

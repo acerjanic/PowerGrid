@@ -24,8 +24,8 @@ Developed by:
  *****************************************************************************/
 
 #include "reconSolve.h"
-#include "pcSENSE.h"
-#include "pcSenseTimeSeg.h"
+#include "Operators/pcSENSE.h"
+#include "Operators/pcSenseTimeSeg.h"
 
 template <typename T1>
 void initImageSpaceCoords(Col<T1> &ix, Col<T1> &iy, Col<T1> &iz, uword Nx,
