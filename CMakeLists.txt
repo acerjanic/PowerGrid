@@ -200,7 +200,8 @@ if(METAL_COMPUTE AND METAL_FOUND)
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgPhase2Tests.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/SyntheticReconTests.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/GdftBenchmarks.cpp
-        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/ISMRMRDWriteTests.cpp)
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/ISMRMRDWriteTests.cpp
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/Spiral3DReconTests.cpp)
     target_include_directories(metal_tests PRIVATE
         ${CATCH_INCLUDE_DIR}
         ${CMAKE_SOURCE_DIR}/PowerGrid
@@ -244,7 +245,8 @@ set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/Support/Catch)
 add_executable(cpu_tests
     ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/main.cpp
     ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/SyntheticReconTests.cpp
-    ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/GdftBenchmarks.cpp)
+    ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/GdftBenchmarks.cpp
+    ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/Spiral3DReconTests.cpp)
 target_include_directories(cpu_tests PRIVATE
     ${CATCH_INCLUDE_DIR}
     ${CMAKE_SOURCE_DIR}/PowerGrid

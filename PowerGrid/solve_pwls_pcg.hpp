@@ -145,13 +145,13 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
         T1 denom_re = dAWAd_re + std::real(pdenom);
         T1 denom_im = std::imag(pdenom);
 
-        if (std::abs(denom_re) < 1e-20 || std::abs(denom_re) > 1e25) {
+        if (std::abs(denom_re) < 1e-20 || std::isinf(denom_re) || std::isnan(denom_re)) {
           T1 n = norm(ngrad_pg);
           if (n == 0) {
             cout << " Found exact solution" << endl;
             return x_pg.getArma();
           } else {
-            cout << "inf denom" << endl;
+            cout << "inf denom (denom_re=" << denom_re << ")" << endl;
             return x_pg.getArma();
           }
         }
@@ -261,12 +261,12 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       if( denom != denom)
         cout << "Warning: denom has NaN in solve_pwls_pcg" << endl;
 
-      if (std::abs(denom) < 1e-20 || std::abs(denom) > 1e25) {
+      if (std::abs(denom) < 1e-20 || std::isinf(std::abs(denom)) || std::isnan(std::abs(denom))) {
         if (norm(ngrad, 2) == 0) {
           cout << " Found exact solution" << endl;
           return x;
         } else {
-          cout << "inf denom" << endl;
+          cout << "inf denom (denom=" << denom << ")" << endl;
           return x;
         }
       }
