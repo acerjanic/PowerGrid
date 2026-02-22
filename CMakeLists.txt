@@ -104,7 +104,7 @@ if(APPLE)
 			set(CMAKE_CXX_STANDARD 17)
 			add_definitions(-DMETAL_COMPUTE -DACCELERATE_NEW_LAPACK)
 			find_library(FOUNDATION_LIBRARY Foundation REQUIRED)
-			set(LIBS ${LIBS} ${METAL_LIBRARY} ${ACCELERATE_LIBRARY} ${FOUNDATION_LIBRARY})
+			set(LIBS ${LIBS} ${METAL_LIBRARY} ${ACCELERATE_LIBRARY} ${FOUNDATION_LIBRARY} ${MPS_GRAPH_LIBRARY})
 
 			# Compile .metal source → .air → .metallib → C byte array (xxd embed)
 			set(METAL_SRC  ${CMAKE_SOURCE_DIR}/PowerGrid/Metal/gridding_metal.metal)
@@ -148,7 +148,26 @@ if(APPLE)
 				DEPENDS ${DFT_METAL_SRC}
 				COMMENT "Compiling and embedding Metal DFT shaders")
 
-			add_custom_target(MetalShaders ALL DEPENDS ${METALEMBED} ${DFT_METALEMBED})
+			# NUFFT support shader (deapodize, zero_pad, circshift, crop_center)
+			set(SUPPORT_METAL_SRC  ${CMAKE_SOURCE_DIR}/PowerGrid/Metal/nufft_support_metal.metal)
+			set(SUPPORT_METAL_AIR  ${CMAKE_BINARY_DIR}/PowerGrid/Metal/nufft_support.air)
+			set(SUPPORT_METALLIB   ${CMAKE_BINARY_DIR}/PowerGrid/Metal/nufft_support.metallib)
+			set(SUPPORT_METALEMBED ${CMAKE_BINARY_DIR}/PowerGrid/Metal/nufft_support_metallib.h)
+
+			add_custom_command(
+				OUTPUT ${SUPPORT_METALEMBED}
+				COMMAND ${METAL_COMPILER} -O3 -o ${SUPPORT_METAL_AIR} -c ${SUPPORT_METAL_SRC}
+				COMMAND xcrun -sdk macosx metallib -o ${SUPPORT_METALLIB} ${SUPPORT_METAL_AIR}
+				COMMAND ${CMAKE_COMMAND}
+					-DINPUT=${SUPPORT_METALLIB}
+					-DOUTPUT=${SUPPORT_METALEMBED}
+					-DVAR_NAME=nufft_support_metallib
+					-P ${CMAKE_SOURCE_DIR}/cmake/embed_binary.cmake
+				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/PowerGrid/Metal
+				DEPENDS ${SUPPORT_METAL_SRC}
+				COMMENT "Compiling and embedding Metal NUFFT support shaders")
+
+			add_custom_target(MetalShaders ALL DEPENDS ${METALEMBED} ${DFT_METALEMBED} ${SUPPORT_METALEMBED})
 			include_directories(${CMAKE_BINARY_DIR}/PowerGrid/Metal)
 
 		else()

@@ -18,12 +18,14 @@ execute_process(
 
 find_library(METAL_LIBRARY Metal)
 find_library(ACCELERATE_LIBRARY Accelerate)
+find_library(MPS_GRAPH_LIBRARY MetalPerformanceShadersGraph)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Metal
     DEFAULT_MSG
     METAL_COMPILER
     METAL_LIBRARY
-    ACCELERATE_LIBRARY)
+    ACCELERATE_LIBRARY
+    MPS_GRAPH_LIBRARY)
 
-mark_as_advanced(METAL_COMPILER METAL_LIBRARY ACCELERATE_LIBRARY)
+mark_as_advanced(METAL_COMPILER METAL_LIBRARY ACCELERATE_LIBRARY MPS_GRAPH_LIBRARY)

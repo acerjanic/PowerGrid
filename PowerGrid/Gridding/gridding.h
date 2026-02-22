@@ -46,6 +46,7 @@ Developed by:
     #include "openacc.h"
 #elif defined(METAL_COMPUTE) // Apple Metal path
     #include "Metal/MetalGridding.h"
+    #include "Metal/MetalNufftPipeline.h"
     #include "Metal/fftAccelerate.h"
     #include "FFT/fftCPU.h"        // fallback for non-pow2 and double
     #include "griddingSupport.h"

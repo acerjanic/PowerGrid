@@ -121,20 +121,31 @@ Gnufft<T1>::Gnufft(
   pGridData_os[0:2*gridNumElems], pGridData_os_d[0:2*gridNumElems], pSamples[0:2*n2])
 
 #ifdef METAL_COMPUTE
-  // Create Metal gridding context for float instantiation only.
-  // For double, metalCtx remains nullptr and the CPU FFTW path is used.
+  // Create Metal contexts for float instantiation only.
   if constexpr (std::is_same<T1, float>::value) {
     int gNx = (int)std::ceil(gridOS * (float)Nx);
     int gNy = (int)std::ceil(gridOS * (float)Ny);
     if (gNx % 2) gNx++;
     if (gNy % 2) gNy++;
     int gNz = (Nz == 1) ? (int)Nz : (int)std::ceil(gridOS * (float)Nz);
-    metalCtx = metal_gridding_create(
+
+    // Try full GPU pipeline first (requires macOS 14+ for MPSGraph FFT)
+    pipelineCtx = metal_nufft_pipeline_create(
         gNx, gNy, gNz,
         (int)Nx, (int)Ny, (int)Nz,
-        (float)gridOS, (float)kernelWidth,
+        (float)gridOS, (float)kernelWidth, (float)beta,
         LUT, (int)sizeLUT,
         kx, ky, kz, (int)n2);
+
+    // Fall back to gridding-only Metal context if pipeline not available
+    if (!pipelineCtx) {
+      metalCtx = metal_gridding_create(
+          gNx, gNy, gNz,
+          (int)Nx, (int)Ny, (int)Nz,
+          (float)gridOS, (float)kernelWidth,
+          LUT, (int)sizeLUT,
+          kx, ky, kz, (int)n2);
+    }
   }
 #endif
 }
@@ -146,6 +157,10 @@ template <typename T1> Gnufft<T1>::~Gnufft() {
     cufftDestroy(plan);
   #endif
   #ifdef METAL_COMPUTE
+    if (pipelineCtx) {
+      metal_nufft_pipeline_destroy(pipelineCtx);
+      pipelineCtx = nullptr;
+    }
     if (metalCtx) {
       metal_gridding_destroy(metalCtx);
       metalCtx = nullptr;
@@ -271,6 +286,14 @@ RANGE()
   const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
 
 #ifdef METAL_COMPUTE
+  if (pipelineCtx != nullptr) {
+    // Full GPU pipeline: single call does deapodize+zeropad+fftshift+FFT+ifftshift+gridding
+    metal_nufft_forward(pipelineCtx,
+                        reinterpret_cast<const float*>(dataPtr),
+                        reinterpret_cast<float*>(pSamples));
+    Col<CxT1> temp(reinterpret_cast<CxT1 *>(pSamples), n2, false, true);
+    return temp;
+  }
   if (metalCtx != nullptr) {
     metalForwardImpl(dataPtr);
     Col<CxT1> temp(reinterpret_cast<CxT1 *>(pSamples), n2, false, true);
@@ -310,6 +333,14 @@ Col<complex<T1>> Gnufft<T1>::operator/(const Col<complex<T1>> &d) const {
   const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
 
 #ifdef METAL_COMPUTE
+  if (pipelineCtx != nullptr) {
+    // Full GPU pipeline: single call does gridding+ifftshift+IFFT+fftshift+crop+deapodize
+    metal_nufft_adjoint(pipelineCtx,
+                        reinterpret_cast<const float*>(dataPtr),
+                        reinterpret_cast<float*>(pGridData));
+    Col<CxT1> temp(reinterpret_cast<CxT1 *>(pGridData), n1, false, true);
+    return temp;
+  }
   if (metalCtx != nullptr) {
     metalAdjointImpl(dataPtr);
     Col<CxT1> temp(reinterpret_cast<CxT1 *>(pGridData), n1, false, true);
@@ -468,6 +499,15 @@ pgCol<pgComplex<T1>> Gnufft<T1>::
 operator*(const pgCol<pgComplex<T1>> &d) const {
 #ifdef METAL_COMPUTE
   if constexpr (std::is_same<T1, float>::value) {
+    if (pipelineCtx != nullptr) {
+      const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
+      metal_nufft_forward(pipelineCtx,
+                          reinterpret_cast<const float*>(dataPtr),
+                          reinterpret_cast<float*>(pSamples));
+      pgCol<pgComplex<T1>> result(n2);
+      std::memcpy(result.memptr(), pSamples, 2 * n2 * sizeof(T1));
+      return result;
+    }
     if (metalCtx != nullptr) {
       const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
       metalForwardImpl(dataPtr);
@@ -488,6 +528,15 @@ pgCol<pgComplex<T1>> Gnufft<T1>::
 operator/(const pgCol<pgComplex<T1>> &d) const {
 #ifdef METAL_COMPUTE
   if constexpr (std::is_same<T1, float>::value) {
+    if (pipelineCtx != nullptr) {
+      const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
+      metal_nufft_adjoint(pipelineCtx,
+                          reinterpret_cast<const float*>(dataPtr),
+                          reinterpret_cast<float*>(pGridData));
+      pgCol<pgComplex<T1>> result(n1);
+      std::memcpy(result.memptr(), pGridData, 2 * n1 * sizeof(T1));
+      return result;
+    }
     if (metalCtx != nullptr) {
       const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
       metalAdjointImpl(dataPtr);

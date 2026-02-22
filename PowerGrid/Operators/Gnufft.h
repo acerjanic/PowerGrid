@@ -83,8 +83,10 @@ public:
   #endif
 
   #ifdef METAL_COMPUTE
-    /// @brief Metal gridding context; nullptr when T1 != float or Metal unavailable.
+    /// @brief Metal gridding context (legacy); nullptr when T1 != float or Metal unavailable.
     MetalGriddingContext* metalCtx = nullptr;
+    /// @brief Full GPU NUFFT pipeline context (macOS 14+); nullptr if unavailable.
+    MetalNufftPipelineContext* pipelineCtx = nullptr;
   #endif
 
   uword imageNumElems;
