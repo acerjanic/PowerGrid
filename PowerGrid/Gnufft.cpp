@@ -171,19 +171,11 @@ template <typename T1> Gnufft<T1>::~Gnufft() {
   }
 }
 
-// Overloaded methods for forward and adjoint transform
-// Forward transform operation using gridding
-template <typename T1>
-Col<complex<T1>> Gnufft<T1>::
-operator*(const Col<complex<T1>> &d) const // Don't change these arguments
-{
-RANGE()
-
-  const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
-
 #ifdef METAL_COMPUTE
-  if (metalCtx != nullptr) {
-    // Metal GPU path: vDSP FFT + Metal scatter/gather gridding (float only)
+// Metal forward pipeline: deapodize → zero-pad → FFT → gridding.
+// Writes result to pSamples (n2 complex elements).
+template <typename T1>
+void Gnufft<T1>::metalForwardImpl(const T1* dataPtr) const {
     int gNx = (int)std::ceil(gridOS * (T1)Nx);
     int gNy = (int)std::ceil(gridOS * (T1)Ny);
     if (gNx % 2) gNx++;
@@ -194,7 +186,6 @@ RANGE()
     for (int ii = 0; ii < 2 * (int)n2; ii++) pSamples[ii] = (T1)0.0;
 
     // Deapodize input image into pGridData_d.
-    // const_cast is safe: deapodization2d/3d only reads pSrc.
     if (Nz == 1) {
       deapodization2d<T1>(pGridData_d, const_cast<T1*>(dataPtr), Nx, Ny, kernelWidth, beta, gridOS);
     } else {
@@ -229,7 +220,59 @@ RANGE()
                                 reinterpret_cast<const float*>(pGridData_os),
                                 reinterpret_cast<float*>(pSamples));
     }
+}
 
+// Metal adjoint pipeline: gridding → IFFT → crop → deapodize.
+// Writes result to pGridData (n1 complex elements).
+template <typename T1>
+void Gnufft<T1>::metalAdjointImpl(const T1* dataPtr) const {
+    int gNx = (int)std::ceil(gridOS * (T1)Nx);
+    int gNy = (int)std::ceil(gridOS * (T1)Ny);
+    if (gNx % 2) gNx++;
+    if (gNy % 2) gNy++;
+    int gNz = (Nz == 1) ? (int)Nz : (int)std::ceil(gridOS * (T1)Nz);
+
+    // Metal GPU adjoint gridding: scatter k-space data onto oversampled grid
+    if (Nz == 1) {
+      metal_gridding_adjoint_2D(metalCtx,
+                                reinterpret_cast<const float*>(dataPtr),
+                                reinterpret_cast<float*>(pGridData_os));
+    } else {
+      metal_gridding_adjoint_3D(metalCtx,
+                                reinterpret_cast<const float*>(dataPtr),
+                                reinterpret_cast<float*>(pGridData_os));
+    }
+
+    // ifftshift → IFFT (vDSP) → fftshift → crop → deapodize
+    if (Nz == 1) {
+      ifftshift2<T1>(pGridData_os_d, pGridData_os, gNx, gNy);
+      ifft2dAccelerate(reinterpret_cast<float*>(pGridData_os_d), gNx, gNy);
+      fftshift2<T1>(pGridData_os, pGridData_os_d, gNx, gNy);
+      crop_center_region2d<T1>(pGridData_d, pGridData_os, Nx, Ny, gNx, gNy);
+      deapodization2d<T1>(pGridData, pGridData_d, Nx, Ny, kernelWidth, beta, gridOS);
+    } else {
+      ifftshift3<T1>(pGridData_os_d, pGridData_os, gNx, gNy, gNz);
+      ifft3dAccelerate(reinterpret_cast<float*>(pGridData_os_d), gNx, gNy, gNz);
+      fftshift3<T1>(pGridData_os, pGridData_os_d, gNx, gNy, gNz);
+      crop_center_region3d<T1>(pGridData_d, pGridData_os, Nx, Ny, Nz, gNx, gNy, gNz);
+      deapodization3d<T1>(pGridData, pGridData_d, Nx, Ny, Nz, kernelWidth, beta, gridOS);
+    }
+}
+#endif
+
+// Overloaded methods for forward and adjoint transform
+// Forward transform operation using gridding
+template <typename T1>
+Col<complex<T1>> Gnufft<T1>::
+operator*(const Col<complex<T1>> &d) const // Don't change these arguments
+{
+RANGE()
+
+  const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
+
+#ifdef METAL_COMPUTE
+  if (metalCtx != nullptr) {
+    metalForwardImpl(dataPtr);
     Col<CxT1> temp(reinterpret_cast<CxT1 *>(pSamples), n2, false, true);
     return temp;
   }
@@ -268,39 +311,7 @@ Col<complex<T1>> Gnufft<T1>::operator/(const Col<complex<T1>> &d) const {
 
 #ifdef METAL_COMPUTE
   if (metalCtx != nullptr) {
-    // Metal GPU path: Metal scatter gridding + vDSP IFFT (float only)
-    int gNx = (int)std::ceil(gridOS * (T1)Nx);
-    int gNy = (int)std::ceil(gridOS * (T1)Ny);
-    if (gNx % 2) gNx++;
-    if (gNy % 2) gNy++;
-    int gNz = (Nz == 1) ? (int)Nz : (int)std::ceil(gridOS * (T1)Nz);
-
-    // Metal GPU adjoint gridding: scatter k-space data onto oversampled grid
-    if (Nz == 1) {
-      metal_gridding_adjoint_2D(metalCtx,
-                                reinterpret_cast<const float*>(dataPtr),
-                                reinterpret_cast<float*>(pGridData_os));
-    } else {
-      metal_gridding_adjoint_3D(metalCtx,
-                                reinterpret_cast<const float*>(dataPtr),
-                                reinterpret_cast<float*>(pGridData_os));
-    }
-
-    // ifftshift → IFFT (vDSP) → fftshift → crop → deapodize
-    if (Nz == 1) {
-      ifftshift2<T1>(pGridData_os_d, pGridData_os, gNx, gNy);
-      ifft2dAccelerate(reinterpret_cast<float*>(pGridData_os_d), gNx, gNy);
-      fftshift2<T1>(pGridData_os, pGridData_os_d, gNx, gNy);
-      crop_center_region2d<T1>(pGridData_d, pGridData_os, Nx, Ny, gNx, gNy);
-      deapodization2d<T1>(pGridData, pGridData_d, Nx, Ny, kernelWidth, beta, gridOS);
-    } else {
-      ifftshift3<T1>(pGridData_os_d, pGridData_os, gNx, gNy, gNz);
-      ifft3dAccelerate(reinterpret_cast<float*>(pGridData_os_d), gNx, gNy, gNz);
-      fftshift3<T1>(pGridData_os, pGridData_os_d, gNx, gNy, gNz);
-      crop_center_region3d<T1>(pGridData_d, pGridData_os, Nx, Ny, Nz, gNx, gNy, gNz);
-      deapodization3d<T1>(pGridData, pGridData_d, Nx, Ny, Nz, kernelWidth, beta, gridOS);
-    }
-
+    metalAdjointImpl(dataPtr);
     Col<CxT1> temp(reinterpret_cast<CxT1 *>(pGridData), n1, false, true);
     return temp;
   }
@@ -449,6 +460,46 @@ Col<complex<T1>> Gnufft<T1>::adjointSpatialInterp(const Col<complex<T1>> &d) con
   #pragma acc update host(pGridData_os[0:2*gridNumElems])
   Col<CxT1> temp(reinterpret_cast<CxT1 *>(pGridData_os), gridNumElems, false, true);
   return temp; // Return a vector of type T1
+}
+
+// pgCol forward: image → k-space
+template <typename T1>
+pgCol<pgComplex<T1>> Gnufft<T1>::
+operator*(const pgCol<pgComplex<T1>> &d) const {
+#ifdef METAL_COMPUTE
+  if constexpr (std::is_same<T1, float>::value) {
+    if (metalCtx != nullptr) {
+      const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
+      metalForwardImpl(dataPtr);
+      pgCol<pgComplex<T1>> result(n2);
+      std::memcpy(result.memptr(), pSamples, 2 * n2 * sizeof(T1));
+      return result;
+    }
+  }
+#endif
+  // Fallback: convert to arma, call arma operator, convert back
+  Col<CxT1> armaResult = this->operator*(d.getArma());
+  return pgCol<pgComplex<T1>>(armaResult);
+}
+
+// pgCol adjoint: k-space → image
+template <typename T1>
+pgCol<pgComplex<T1>> Gnufft<T1>::
+operator/(const pgCol<pgComplex<T1>> &d) const {
+#ifdef METAL_COMPUTE
+  if constexpr (std::is_same<T1, float>::value) {
+    if (metalCtx != nullptr) {
+      const T1 *dataPtr = reinterpret_cast<const T1 *>(d.memptr());
+      metalAdjointImpl(dataPtr);
+      pgCol<pgComplex<T1>> result(n1);
+      std::memcpy(result.memptr(), pGridData, 2 * n1 * sizeof(T1));
+      return result;
+    }
+  }
+#endif
+  // Fallback: convert to arma, call arma operator, convert back
+  Col<CxT1> armaResult = this->operator/(d.getArma());
+  return pgCol<pgComplex<T1>>(armaResult);
 }
 
 // Explicit Instantiation

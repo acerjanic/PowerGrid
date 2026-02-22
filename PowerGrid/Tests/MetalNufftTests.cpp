@@ -303,4 +303,67 @@ TEST_CASE("Gnufft<float> Metal: adjoint consistency <Ax,y> = <x,A'y>",
     REQUIRE(relErr < 5e-3f);   // 0.5% tolerance for float NUFFT
 }
 
+TEST_CASE("Gnufft<float> pgCol overload matches arma overload",
+          "[Gnufft][Metal]") {
+    const uword Nx = 32, Ny = 32;
+    const uword nSamples = 64;
+    const float gridOS = 2.0f;
+
+    Col<float> kx(nSamples), ky(nSamples), kz(nSamples);
+    kz.zeros();
+    for (uword i = 0; i < nSamples; i++) {
+        float angle = (float)i / (float)nSamples * (float)MRI_PI;
+        float r     = (float)(i % (Nx / 2));
+        kx(i) = r * std::cos(angle);
+        ky(i) = r * std::sin(angle);
+    }
+
+    Col<float> ix(Nx * Ny), iy(Nx * Ny), iz(Nx * Ny);
+    iz.zeros();
+    for (uword row = 0; row < Ny; row++)
+        for (uword col = 0; col < Nx; col++) {
+            ix(col + row * Nx) = (float)col / (float)Nx - 0.5f;
+            iy(col + row * Nx) = (float)row / (float)Ny - 0.5f;
+        }
+
+    Gnufft<float> G(nSamples, gridOS, Nx, Ny, 1, kx, ky, kz, ix, iy, iz);
+
+    // Build arma test vector and matching pgCol
+    Col<cx_float> x_arma(Nx * Ny);
+    for (uword i = 0; i < Nx * Ny; i++)
+        x_arma(i) = cx_float(std::cos((float)i * 0.1f), std::sin((float)i * 0.07f));
+    pgCol<pgComplex<float>> x_pg(x_arma);
+
+    Col<cx_float> y_arma(nSamples);
+    for (uword i = 0; i < nSamples; i++)
+        y_arma(i) = cx_float(std::cos((float)i * 0.13f), std::sin((float)i * 0.17f));
+    pgCol<pgComplex<float>> y_pg(y_arma);
+
+    // Forward: arma vs pgCol
+    Col<cx_float> fwd_arma = G * x_arma;
+    pgCol<pgComplex<float>> fwd_pg = G * x_pg;
+
+    REQUIRE(fwd_arma.n_elem == fwd_pg.n_elem);
+    float maxFwdErr = 0;
+    for (uword i = 0; i < fwd_arma.n_elem; i++) {
+        float err = std::abs(fwd_arma(i) - cx_float(fwd_pg.at(i).real(), fwd_pg.at(i).imag()));
+        if (err > maxFwdErr) maxFwdErr = err;
+    }
+    INFO("Forward max abs error = " << maxFwdErr);
+    REQUIRE(maxFwdErr < 1e-5f);
+
+    // Adjoint: arma vs pgCol
+    Col<cx_float> adj_arma = G / y_arma;
+    pgCol<pgComplex<float>> adj_pg = G / y_pg;
+
+    REQUIRE(adj_arma.n_elem == adj_pg.n_elem);
+    float maxAdjErr = 0;
+    for (uword i = 0; i < adj_arma.n_elem; i++) {
+        float err = std::abs(adj_arma(i) - cx_float(adj_pg.at(i).real(), adj_pg.at(i).imag()));
+        if (err > maxAdjErr) maxAdjErr = err;
+    }
+    INFO("Adjoint max abs error = " << maxAdjErr);
+    REQUIRE(maxAdjErr < 1e-5f);
+}
+
 #endif // METAL_COMPUTE

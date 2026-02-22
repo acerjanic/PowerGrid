@@ -31,11 +31,8 @@ Developed by:
 #include "Gnufft.h"
 #include "PGIncludes.h"
 #include "TimeSegmentation.h"
-
-#ifdef METAL_COMPUTE
 #include "pgCol.hpp"
 #include "pgMat.hpp"
-#endif
 
 using namespace std;
 using namespace arma;
@@ -86,6 +83,10 @@ public:
   // For the adjoint operation, we have to weight the adjoint transform of the
   // coil data by the SENSE map.
   Col<CxT1> operator/(const Col<CxT1> &d) const;
+
+  // pgCol overloads — avoid arma conversion overhead
+  pgCol<pgComplex<T1>> operator*(const pgCol<pgComplex<T1>> &d) const;
+  pgCol<pgComplex<T1>> operator/(const pgCol<pgComplex<T1>> &d) const;
 };
 
 // Explicit Instantiations

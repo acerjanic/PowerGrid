@@ -33,6 +33,8 @@ Developed by:
 
 #include "PGIncludes.h"
 #include "gridding.h"
+#include "pgCol.hpp"
+#include "pgComplex.hpp"
 
 using namespace arma;
 using namespace std;
@@ -104,6 +106,23 @@ public:
   Col<CxT1> operator*(const Col<CxT1> &d) const;
   // Adjoint transform operation
   Col<CxT1> operator/(const Col<CxT1> &d) const;
+
+  // pgCol overloads — avoid arma conversion overhead
+  pgCol<pgComplex<T1>> operator*(const pgCol<pgComplex<T1>> &d) const;
+  pgCol<pgComplex<T1>> operator/(const pgCol<pgComplex<T1>> &d) const;
+
+private:
+#ifdef METAL_COMPUTE
+  /// Metal forward pipeline: deapodize → zero-pad → FFT → gridding.
+  /// Writes result to pSamples (n2 complex elements).
+  void metalForwardImpl(const T1* dataPtr) const;
+
+  /// Metal adjoint pipeline: gridding → IFFT → crop → deapodize.
+  /// Writes result to pGridData (n1 complex elements).
+  void metalAdjointImpl(const T1* dataPtr) const;
+#endif
+
+public:
 
   Col<CxT1> forwardSpatialInterp(const Col<CxT1> &d) const;
   // Adjoint transform operation

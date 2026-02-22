@@ -27,6 +27,10 @@ Developed by:
  *****************************************************************************/
 #include "Gdft.h"
 
+#ifdef METAL_COMPUTE
+#include "Metal/MetalDFT.h"
+#endif
+
 using namespace arma;
 
 template <typename T1>
@@ -35,7 +39,7 @@ Gdft<T1>::Gdft(
     const Col<T1> &i1, const Col<T1> &i2, const Col<T1> &i3, const Col<T1> &f1,
     const Col<T1> &t1) // Change these arguments as you need to setup the object
 {
-  
+
   n1 = a;
   n2 = b;
   kx = k1;
@@ -46,54 +50,67 @@ Gdft<T1>::Gdft(
   iz = i3;
   FM = f1;
   t = t1;
+
+#ifdef METAL_COMPUTE
+  if constexpr (std::is_same<T1, float>::value) {
+    metalCtx = metal_dft_create(
+        kx.memptr(), ky.memptr(), kz.memptr(),
+        ix.memptr(), iy.memptr(), iz.memptr(),
+        FM.memptr(), t.memptr(),
+        (unsigned int)n1, (unsigned int)n2);
+  }
+#endif
 }
+
+#ifdef METAL_COMPUTE
+template <typename T1>
+Gdft<T1>::~Gdft() {
+  if constexpr (std::is_same<T1, float>::value) {
+    if (metalCtx) {
+      metal_dft_destroy(static_cast<MetalDFTContext*>(metalCtx));
+      metalCtx = nullptr;
+    }
+  }
+}
+#endif
 // Overloaded methods for forward and adjoint transform
 // Forward transform operation
 template <typename T1>
 Col<complex<T1>> Gdft<T1>::operator*(const Col<complex<T1>> &d) const {
   RANGE()
-  // This is just specifying size assuming things are the same size, change as
-  // necessary
   Col<T1> realData = real(d);
   Col<T1> imagData = imag(d);
-  // Now we grab the data out of armadillo with the memptr() function
-  // This returns a pointer of the type of the elements of the
-  // array/vector/matrix/cube (3d matrix)
-  // Armadillo uses column major like MATLAB and Fortran, but different from
-  // 2D C++ arrays which are row major.
-  T1 *realDataPtr = realData.memptr();
-  T1 *imagDataPtr = imagData.memptr();
 
   Col<T1> realXformedData;
   Col<T1> imagXformedData;
   realXformedData.zeros(this->n1);
   imagXformedData.zeros(this->n1);
 
-  T1 *realXformedDataPtr = realXformedData.memptr();
-  T1 *imagXformedDataPtr = imagXformedData.memptr();
-  // Process data here, like calling a brute force transform, dft...
-  // I assume you create the pointers to the arrays where the transformed data
-  // will be stored
-  // realXformedDataPtr and imagXformedDataPtr and they are of type float*
-  ftCpu<T1>(realXformedDataPtr, imagXformedDataPtr, realDataPtr, imagDataPtr,
+#ifdef METAL_COMPUTE
+  if constexpr (std::is_same<T1, float>::value) {
+    if (metalCtx) {
+      metal_dft_forward(static_cast<MetalDFTContext*>(metalCtx),
+          realData.memptr(), imagData.memptr(),
+          realXformedData.memptr(), imagXformedData.memptr());
+
+      Col<complex<T1>> XformedData(this->n1);
+      XformedData.set_real(realXformedData);
+      XformedData.set_imag(imagXformedData);
+      return XformedData.eval();
+    }
+  }
+#endif
+
+  ftCpu<T1>(realXformedData.memptr(), imagXformedData.memptr(),
+            realData.memptr(), imagData.memptr(),
             kx.memptr(), ky.memptr(), kz.memptr(), ix.memptr(), iy.memptr(),
             iz.memptr(), FM.memptr(), t.memptr(), this->n1, this->n2);
-
-  // To return data, we need to put our data back into Armadillo objects
-  // We are telling the object how long it is because it will copy the data
-  // back into managed memory
-  // realXformedData(realXformedDataPtr, dataLength);
-  // imagXformedData(imagXformedDataPtr, dataLength);
-
-  // We can free the realDataXformPtr and imagDataXformPtr at this point and
-  // Armadillo will manage armadillo object memory as things change size or go
-  // out of scope and need to be destroyed
 
   Col<complex<T1>> XformedData(this->n1);
   XformedData.set_real(realXformedData);
   XformedData.set_imag(imagXformedData);
 
-  return XformedData.eval(); // Return a vector of type T1
+  return XformedData.eval();
 }
 
 // Adjoint transform operation
@@ -103,37 +120,114 @@ Col<complex<T1>> Gdft<T1>::operator/(const Col<complex<T1>> &d) const {
   Col<T1> realData = real(d);
   Col<T1> imagData = imag(d);
 
-  T1 *realDataPtr = realData.memptr();
-  T1 *imagDataPtr = imagData.memptr();
-
   Col<T1> realXformedData;
   Col<T1> imagXformedData;
   realXformedData.zeros(this->n2);
   imagXformedData.zeros(this->n2);
 
-  T1 *realXformedDataPtr = realXformedData.memptr();
-  T1 *imagXformedDataPtr = imagXformedData.memptr();
-  // Process data here, like calling a brute force transform, dft...
-  // I assume you create the pointers to the arrays where the transformed data
-  // will be stored
-  // realXformedDataPtr and imagXformedDataPtr and they are of type float*
-  iftCpu<T1>(realXformedDataPtr, imagXformedDataPtr, realDataPtr, imagDataPtr,
+#ifdef METAL_COMPUTE
+  if constexpr (std::is_same<T1, float>::value) {
+    if (metalCtx) {
+      metal_dft_adjoint(static_cast<MetalDFTContext*>(metalCtx),
+          realData.memptr(), imagData.memptr(),
+          realXformedData.memptr(), imagXformedData.memptr());
+
+      Col<complex<T1>> XformedData(this->n2);
+      XformedData.set_real(realXformedData);
+      XformedData.set_imag(imagXformedData);
+      return XformedData.eval();
+    }
+  }
+#endif
+
+  iftCpu<T1>(realXformedData.memptr(), imagXformedData.memptr(),
+             realData.memptr(), imagData.memptr(),
              kx.memptr(), ky.memptr(), kz.memptr(), ix.memptr(), iy.memptr(),
              iz.memptr(), FM.memptr(), t.memptr(), this->n1, this->n2);
-
-  // realXformedData(realXformedDataPtr, dataLength);
-  // imagXformedData(imagXformedDataPtr, dataLength);
-
-  // We can free the realDataXformPtr and imagDataXformPtr at this point and
-  // Armadillo will manage armadillo object memory as things change size or go
-  // out of scope and need to be destroyed
 
   Col<complex<T1>> XformedData(this->n2);
   XformedData.set_real(realXformedData);
   XformedData.set_imag(imagXformedData);
 
-  return XformedData.eval(); // Return a vector of type T1
+  return XformedData.eval();
 }
+// pgCol overloads — Metal GPU for float, arma fallback for double
+template <typename T1>
+pgCol<pgComplex<T1>> Gdft<T1>::
+operator*(const pgCol<pgComplex<T1>>& d) const
+{
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        if (metalCtx) {
+            // Deinterleave pgCol (interleaved re,im) into split real/imag
+            Col<T1> realData(n2), imagData(n2);
+            const T1* src = reinterpret_cast<const T1*>(d.memptr());
+            T1* rp = realData.memptr();
+            T1* ip = imagData.memptr();
+            for (uword j = 0; j < n2; j++) {
+                rp[j] = src[2*j];
+                ip[j] = src[2*j+1];
+            }
+
+            Col<T1> realOut(n1), imagOut(n1);
+            metal_dft_forward(static_cast<MetalDFTContext*>(metalCtx),
+                rp, ip, realOut.memptr(), imagOut.memptr());
+
+            // Re-interleave into pgCol
+            pgCol<pgComplex<T1>> result(n1);
+            T1* dst = reinterpret_cast<T1*>(result.memptr());
+            const T1* ro = realOut.memptr();
+            const T1* io = imagOut.memptr();
+            for (uword j = 0; j < n1; j++) {
+                dst[2*j]   = ro[j];
+                dst[2*j+1] = io[j];
+            }
+            return result;
+        }
+    }
+#endif
+    Col<CxT1> armaResult = this->operator*(d.getArma());
+    return pgCol<pgComplex<T1>>(armaResult);
+}
+
+template <typename T1>
+pgCol<pgComplex<T1>> Gdft<T1>::
+operator/(const pgCol<pgComplex<T1>>& d) const
+{
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        if (metalCtx) {
+            // Deinterleave pgCol into split real/imag
+            Col<T1> realData(n1), imagData(n1);
+            const T1* src = reinterpret_cast<const T1*>(d.memptr());
+            T1* rp = realData.memptr();
+            T1* ip = imagData.memptr();
+            for (uword j = 0; j < n1; j++) {
+                rp[j] = src[2*j];
+                ip[j] = src[2*j+1];
+            }
+
+            Col<T1> realOut(n2), imagOut(n2);
+            metal_dft_adjoint(static_cast<MetalDFTContext*>(metalCtx),
+                rp, ip, realOut.memptr(), imagOut.memptr());
+
+            // Re-interleave into pgCol
+            pgCol<pgComplex<T1>> result(n2);
+            T1* dst = reinterpret_cast<T1*>(result.memptr());
+            const T1* ro = realOut.memptr();
+            const T1* io = imagOut.memptr();
+            for (uword j = 0; j < n2; j++) {
+                dst[2*j]   = ro[j];
+                dst[2*j+1] = io[j];
+            }
+            return result;
+        }
+    }
+#endif
+    Col<CxT1> armaResult = this->operator/(d.getArma());
+    return pgCol<pgComplex<T1>>(armaResult);
+}
+
 // Explicit Instantiations
 template class Gdft<float>;
 template class Gdft<double>;

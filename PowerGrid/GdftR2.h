@@ -31,6 +31,8 @@ Developed by:
 
 #include "PGIncludes.h"
 #include "ftCpuWithGrads.h"
+#include "pgCol.hpp"
+#include "pgComplex.hpp"
 
 using namespace arma;
 using namespace std;
@@ -67,6 +69,11 @@ public:
 
   int numX, numY, numZ;
 
+#ifdef METAL_COMPUTE
+  void* metalCtx = nullptr; // MetalDFTContext*, created for T1=float
+  ~GdftR2();
+#endif
+
   // Overloaded methods for forward and adjoint transform
   // Forward transform operation
   Col<CxT1> operator*(const Col<CxT1> &d) const;
@@ -75,6 +82,10 @@ public:
 
   void calcGradientMaps(Col<T1> &Gx, Col<T1> &Gy, Col<T1> &Gz);
   Col<T1> Cd(const Col<T1> &d, uword dim) const;
+
+  // pgCol overloads — fallback via arma (Metal GPU in Phase 3)
+  pgCol<pgComplex<T1>> operator*(const pgCol<pgComplex<T1>> &d) const;
+  pgCol<pgComplex<T1>> operator/(const pgCol<pgComplex<T1>> &d) const;
 };
 
 extern template class GdftR2<float>;

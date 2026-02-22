@@ -304,11 +304,10 @@ operator*(const Col<complex<T1>>& d) const
             tempD_pg.set_col(ii, col_copy);
         }
 
-        // Forward NUFFT per segment
+        // Forward NUFFT per segment (pgCol overload — no arma conversion)
         for (unsigned int ii = 0; ii < this->L; ii++) {
             pgCol<pgComplex<T1>> seg = tempD_pg.col_copy(ii);
-            Col<complex<T1>> result = (*G) * seg.getArma();
-            outData_pg.set_col(ii, pgCol<pgComplex<T1>>(result));
+            outData_pg.set_col(ii, (*G) * seg);
         }
 
         // Weight by interpolation coefficients
@@ -360,11 +359,10 @@ operator/(const Col<complex<T1>>& d) const
             tempAD_pg.set_col(ii, col_copy);
         }
 
-        // Adjoint NUFFT per segment
+        // Adjoint NUFFT per segment (pgCol overload — no arma conversion)
         for (unsigned int ii = 0; ii < this->L; ii++) {
             pgCol<pgComplex<T1>> seg = tempAD_pg.col_copy(ii);
-            Col<complex<T1>> result = (*G) / seg.getArma();
-            outImg_pg.set_col(ii, pgCol<pgComplex<T1>>(result));
+            outImg_pg.set_col(ii, (*G) / seg);
         }
 
         // Weight by conjugate field map
@@ -393,6 +391,71 @@ operator/(const Col<complex<T1>>& d) const
     }
 
     return sum(outImg, 1);
+}
+
+// pgCol forward: image → k-space with field correction
+template <typename T1, typename Tobj>
+pgCol<pgComplex<T1>> TimeSegmentation<T1, Tobj>::
+operator*(const pgCol<pgComplex<T1>>& d) const
+{
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        Tobj* G = this->obj;
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            pgCol<pgComplex<T1>> col_copy = Wo_pg.col_copy(ii);
+            col_copy %= d;
+            tempD_pg.set_col(ii, col_copy);
+        }
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            pgCol<pgComplex<T1>> seg = tempD_pg.col_copy(ii);
+            outData_pg.set_col(ii, (*G) * seg);
+        }
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            outData_pg.col(ii) %= AA_pg.col(ii);
+        }
+
+        return sum(outData_pg, 1);
+    }
+#endif
+    // Fallback: convert to arma, call arma operator, convert back
+    Col<CxT1> armaResult = this->operator*(d.getArma());
+    return pgCol<pgComplex<T1>>(armaResult);
+}
+
+// pgCol adjoint: k-space → image with field correction
+template <typename T1, typename Tobj>
+pgCol<pgComplex<T1>> TimeSegmentation<T1, Tobj>::
+operator/(const pgCol<pgComplex<T1>>& d) const
+{
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        Tobj* G = this->obj;
+
+        pgMat<pgComplex<T1>> conjAA_pg = conj(AA_pg);
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            pgCol<pgComplex<T1>> col_copy = conjAA_pg.col_copy(ii);
+            col_copy %= d;
+            tempAD_pg.set_col(ii, col_copy);
+        }
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            pgCol<pgComplex<T1>> seg = tempAD_pg.col_copy(ii);
+            outImg_pg.set_col(ii, (*G) / seg);
+        }
+
+        for (unsigned int ii = 0; ii < this->L; ii++) {
+            outImg_pg.col(ii) %= WoH_pg.col(ii);
+        }
+
+        return sum(outImg_pg, 1);
+    }
+#endif
+    // Fallback: convert to arma, call arma operator, convert back
+    Col<CxT1> armaResult = this->operator/(d.getArma());
+    return pgCol<pgComplex<T1>>(armaResult);
 }
 
 // Explicit Instantiations

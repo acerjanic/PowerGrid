@@ -31,10 +31,8 @@
 #include "Gnufft.h"
 #include "TimeSegmentation.h"
 
-#ifdef METAL_COMPUTE
 #include "pgCol.hpp"
 #include "pgMat.hpp"
-#endif
 
 using namespace arma;
 //using namespace PowerGrid;
@@ -58,7 +56,8 @@ Mat<CxT1> SMap;   // coil sensitivity, dimensions Image size(n1) by number of
 Mat<CxT1> conjSMap;
 Mat<T1> PMap;   // shot phase, dimensions Image size(n1) by number of shots. in
                 // radians.
-Mat<CxT1> expiPMap;
+Mat<CxT1> expiPMap;      // exp(i*PMap) — used in forward
+Mat<CxT1> conjExpiPMap;  // exp(-i*PMap) — used in adjoint
 Col<T1> FMap;   // Fieldmap
 Mat<T1> Kx;     // kspace coordinates in x direction
 Mat<T1> Ky;     // kspace coordinates in y direction
@@ -81,6 +80,7 @@ Gdft<T1> **AObj = NULL;
 pgMat<pgComplex<T1>> SMap_pg;
 pgMat<pgComplex<T1>> conjSMap_pg;
 pgMat<pgComplex<T1>> expiPMap_pg;
+pgMat<pgComplex<T1>> conjExpiPMap_pg;
 #endif
 	//TimeSegmentation <T1, Gnufft<T1>> **AObj = NULL;
 
@@ -98,6 +98,10 @@ Col<CxT1> operator*(const Col<CxT1> &d) const;
 // For the adjoint operation, we have to weight the adjoint transform of the
 // coil data by the SENSE map.
 Col<CxT1> operator/(const Col<CxT1> &d) const;
+
+// pgCol overloads — avoid arma conversion overhead
+pgCol<pgComplex<T1>> operator*(const pgCol<pgComplex<T1>> &d) const;
+pgCol<pgComplex<T1>> operator/(const pgCol<pgComplex<T1>> &d) const;
 };
 
 // Explicit Instantiation

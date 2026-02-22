@@ -120,8 +120,14 @@ pcSenseTimeSeg<T1>::pcSenseTimeSeg(Col<T1> kx, Col<T1> ky, Col<T1> kz, uword nx,
         std::cout << "WARNING : shotSpecificSenseMap has NAN!! " << std::endl;
 
     if(conjShotSpecificSenseMap.has_nan())
-        std::cout << "WARNING : conjShotSpecificSenseMap has NAN!! " << std::endl;        
+        std::cout << "WARNING : conjShotSpecificSenseMap has NAN!! " << std::endl;
 
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        shotSpecificSenseMap_pg = pgMat<pgComplex<T1>>(shotSpecificSenseMap);
+        conjShotSpecificSenseMap_pg = pgMat<pgComplex<T1>>(conjShotSpecificSenseMap);
+    }
+#endif
 }
 
 // Overloaded operators go here
@@ -168,6 +174,60 @@ Col<complex<T1> > pcSenseTimeSeg<T1>::operator/(const Col<complex<T1> >& d) cons
     if (outData.has_nan())
         std::cout << "Warning:: Output of operator/ in pcSenseTimeSeg is about to return NaN" << std::endl;
     return vectorise(outData);
+}
+
+// pgCol forward: image → k-space through coil/phase sensitivities + time segmentation
+template <typename T1>
+pgCol<pgComplex<T1>> pcSenseTimeSeg<T1>::
+operator*(const pgCol<pgComplex<T1>>& d) const
+{
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        pgMat<pgComplex<T1>> outData_pg(Nd, Ns * Nc);
+
+        for (unsigned int ii = 0; ii < Nc; ii++) {
+            for (unsigned int jj = 0; jj < Ns; jj++) {
+                pgCol<pgComplex<T1>> weighted(d);
+                weighted %= shotSpecificSenseMap_pg.col(jj + ii * Ns);
+
+                outData_pg.set_col(jj + ii * Ns, (*AObj[jj]) * weighted);
+            }
+        }
+
+        return vectorise(outData_pg);
+    }
+#endif
+    Col<complex<T1>> armaResult = this->operator*(d.getArma());
+    return pgCol<pgComplex<T1>>(armaResult);
+}
+
+// pgCol adjoint: k-space → image through conjugate coil/phase sensitivities + time segmentation
+template <typename T1>
+pgCol<pgComplex<T1>> pcSenseTimeSeg<T1>::
+operator/(const pgCol<pgComplex<T1>>& d) const
+{
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        pgMat<pgComplex<T1>> inData_pg(d, Nd, Ns * Nc);
+
+        pgCol<pgComplex<T1>> outData_pg(Ni);
+        outData_pg.zeros();
+
+        for (unsigned int ii = 0; ii < Nc; ii++) {
+            for (unsigned int jj = 0; jj < Ns; jj++) {
+                pgCol<pgComplex<T1>> seg = inData_pg.col_copy(jj + ii * Ns);
+                pgCol<pgComplex<T1>> adjResult = (*AObj[jj]) / seg;
+
+                adjResult %= conjShotSpecificSenseMap_pg.col(jj + ii * Ns);
+                outData_pg += adjResult;
+            }
+        }
+
+        return outData_pg;
+    }
+#endif
+    Col<complex<T1>> armaResult = this->operator/(d.getArma());
+    return pgCol<pgComplex<T1>>(armaResult);
 }
 
 // Explicit Instantiation

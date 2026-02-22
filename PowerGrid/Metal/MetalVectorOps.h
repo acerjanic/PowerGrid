@@ -92,5 +92,21 @@ float metal_cvec_norm2sq(MetalVectorContext* ctx, const float* A, size_t n);
 /// Sum of real float vector.
 float metal_vec_sum(MetalVectorContext* ctx, const float* A, size_t n);
 
+// ============================================================================
+// Zero-copy variants.  Caller memory MUST be page-aligned (e.g. pgCol's
+// aligned_alloc(16384, ...)).  These create ephemeral MTLBuffers that wrap the
+// caller's memory directly — no memcpy.  Used for benchmarking and for
+// production paths where pgCol data is already page-aligned.
+// ============================================================================
+
+void metal_vec_add_zc(MetalVectorContext* ctx,
+                      float* A, float* B, float* C, size_t n);
+void metal_cvec_mul_zc(MetalVectorContext* ctx,
+                       float* A, float* B, float* C, size_t n);
+void metal_cvec_cdot_zc(MetalVectorContext* ctx,
+                        float* A, float* B,
+                        float* outRe, float* outIm, size_t n);
+float metal_vec_sum_zc(MetalVectorContext* ctx, float* A, size_t n);
+
 #endif // METAL_COMPUTE
 #endif // POWER_GRID_MetalVectorOps_h

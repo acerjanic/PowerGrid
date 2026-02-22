@@ -66,8 +66,8 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
     pgCol<pgComplex<T1>> yi_pg(yi);
     pgCol<T1> W_pg(W);
 
-    // Initial forward projection
-    pgCol<pgComplex<T1>> Ax_pg(A * xInitial);
+    // Initial forward projection (pgCol overload — no arma conversion)
+    pgCol<pgComplex<T1>> Ax_pg = A * x_pg;
     if (Ax_pg.has_nan())
       cout << "Warning: Ax has NaN in solve_pwls_pcg" << endl;
 
@@ -82,7 +82,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       // Compute negative gradient: ngrad = A' * (W .* (yi - Ax))
       pgCol<pgComplex<T1>> residual = yi_pg - Ax_pg;        // Metal cvec_sub
       pgCol<pgComplex<T1>> Wresidual = W_pg % residual;     // Metal rvec_cmul
-      pgCol<pgComplex<T1>> ngrad_pg(A / Wresidual.getArma()); // arma boundary
+      pgCol<pgComplex<T1>> ngrad_pg = A / Wresidual; // pgCol overload
 
       if (ngrad_pg.has_nan())
         cout << "Warning: ngrad has NaN in solve_pwls_pcg" << endl;
@@ -123,7 +123,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       }
 
       // Step size in search direction
-      Adir_pg = pgCol<pgComplex<T1>>(A * ddir_pg.getArma()); // arma boundary
+      Adir_pg = A * ddir_pg; // pgCol overload
       if (Adir_pg.has_nan())
         cout << "Warning: NaN found in Adir in solve_pwls_pcg" << endl;
 

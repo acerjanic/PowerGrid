@@ -35,11 +35,8 @@ Developed by:
 #include "Gdft.h"
 #include "Gnufft.h"
 #include "PGIncludes.h"
-
-#ifdef METAL_COMPUTE
 #include "pgCol.hpp"
 #include "pgMat.hpp"
-#endif
 
 using namespace std;
 
@@ -90,6 +87,10 @@ public:
   // Overloaded operators go here
   Col<CxT1> operator*(const Col<CxT1> &d) const;
   Col<CxT1> operator/(const Col<CxT1> &d) const;
+
+  // pgCol overloads — avoid arma conversion overhead
+  pgCol<pgComplex<T1>> operator*(const pgCol<pgComplex<T1>> &d) const;
+  pgCol<pgComplex<T1>> operator/(const pgCol<pgComplex<T1>> &d) const;
 
   protected:
 

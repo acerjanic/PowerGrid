@@ -508,4 +508,148 @@ float metal_cvec_norm2sq(MetalVectorContext* ctx, const float* A, size_t n)
     return sum;
 }
 
+// ===========================================================================
+//  Zero-copy variants — wrap caller's page-aligned memory as MTLBuffer
+//  No memcpy.  Requires page-aligned pointers (pgCol's aligned_alloc(16384)).
+// ===========================================================================
+
+static size_t pageAlignedBytes(size_t bytes) {
+    // Round up to next page boundary (Apple Silicon page size = 16384)
+    const size_t pageSize = 16384;
+    return (bytes + pageSize - 1) & ~(pageSize - 1);
+}
+
+static id<MTLBuffer> wrapZeroCopy(id<MTLDevice> dev, void* ptr, size_t bytes) {
+    size_t aligned = pageAlignedBytes(bytes);
+    return [dev newBufferWithBytesNoCopy:ptr
+                                 length:aligned
+                                options:MTLResourceStorageModeShared
+                            deallocator:nil];
+}
+
+// Zero-copy element-wise dispatch
+static void ewise3_zc(MetalVectorContext* ctx,
+                       id<MTLComputePipelineState> ps,
+                       float* A, size_t bytesA,
+                       float* B, size_t bytesB,
+                       float* C, size_t bytesC,
+                       size_t gridWidth)
+{
+    id<MTLBuffer> bufA = wrapZeroCopy(ctx->device, A, bytesA);
+    id<MTLBuffer> bufB = wrapZeroCopy(ctx->device, B, bytesB);
+    id<MTLBuffer> bufC = wrapZeroCopy(ctx->device, C, bytesC);
+
+    if (!bufA || !bufB || !bufC) {
+        fprintf(stderr, "[MetalVectorOps] zero-copy buffer creation failed "
+                "(pointer alignment?)\n");
+        return;
+    }
+
+    id<MTLCommandBuffer>         cmd = [ctx->queue commandBuffer];
+    id<MTLComputeCommandEncoder> enc = [cmd computeCommandEncoder];
+    [enc setComputePipelineState:ps];
+    [enc setBuffer:bufA offset:0 atIndex:0];
+    [enc setBuffer:bufB offset:0 atIndex:1];
+    [enc setBuffer:bufC offset:0 atIndex:2];
+
+    NSUInteger tg = MIN((NSUInteger)ps.maxTotalThreadsPerThreadgroup, kTGSize);
+    [enc dispatchThreads:MTLSizeMake(gridWidth, 1, 1)
+         threadsPerThreadgroup:MTLSizeMake(tg, 1, 1)];
+    [enc endEncoding];
+    [cmd commit];
+    [cmd waitUntilCompleted];
+}
+
+void metal_vec_add_zc(MetalVectorContext* ctx,
+                      float* A, float* B, float* C, size_t n)
+{
+    size_t bytes = n * sizeof(float);
+    ewise3_zc(ctx, ctx->ps_vec_add, A, bytes, B, bytes, C, bytes, n);
+}
+
+void metal_cvec_mul_zc(MetalVectorContext* ctx,
+                       float* A, float* B, float* C, size_t n)
+{
+    size_t bytes = 2 * n * sizeof(float);
+    ewise3_zc(ctx, ctx->ps_cvec_mul, A, bytes, B, bytes, C, bytes, n);
+}
+
+void metal_cvec_cdot_zc(MetalVectorContext* ctx,
+                        float* A, float* B,
+                        float* outRe, float* outIm, size_t n)
+{
+    size_t bytes     = 2 * n * sizeof(float);
+    size_t numGroups = (n + kTGSize - 1) / kTGSize;
+
+    id<MTLBuffer> bufA = wrapZeroCopy(ctx->device, A, bytes);
+    id<MTLBuffer> bufB = wrapZeroCopy(ctx->device, B, bytes);
+    growPartial(ctx, numGroups);
+
+    if (!bufA || !bufB) {
+        fprintf(stderr, "[MetalVectorOps] zero-copy cdot buffer creation failed\n");
+        return;
+    }
+
+    uint32_t N = (uint32_t)n;
+
+    id<MTLCommandBuffer>         cmd = [ctx->queue commandBuffer];
+    id<MTLComputeCommandEncoder> enc = [cmd computeCommandEncoder];
+    [enc setComputePipelineState:ctx->ps_reduce_cdot];
+    [enc setBuffer:bufA            offset:0 atIndex:0];
+    [enc setBuffer:bufB            offset:0 atIndex:1];
+    [enc setBuffer:ctx->bufPartRe  offset:0 atIndex:2];
+    [enc setBuffer:ctx->bufPartIm  offset:0 atIndex:3];
+    [enc setBytes:&N length:sizeof(uint32_t) atIndex:4];
+
+    [enc dispatchThreadgroups:MTLSizeMake(numGroups, 1, 1)
+         threadsPerThreadgroup:MTLSizeMake(kTGSize, 1, 1)];
+    [enc endEncoding];
+    [cmd commit];
+    [cmd waitUntilCompleted];
+
+    const float* pre = (const float*)[ctx->bufPartRe contents];
+    const float* pim = (const float*)[ctx->bufPartIm contents];
+    float re = 0.0f, im = 0.0f;
+    for (size_t i = 0; i < numGroups; i++) {
+        re += pre[i];
+        im += pim[i];
+    }
+    *outRe = re;
+    *outIm = im;
+}
+
+float metal_vec_sum_zc(MetalVectorContext* ctx, float* A, size_t n)
+{
+    size_t bytesA    = n * sizeof(float);
+    size_t numGroups = (n + kTGSize - 1) / kTGSize;
+
+    id<MTLBuffer> bufA = wrapZeroCopy(ctx->device, A, bytesA);
+    growPartial(ctx, numGroups);
+
+    if (!bufA) {
+        fprintf(stderr, "[MetalVectorOps] zero-copy sum buffer creation failed\n");
+        return 0.0f;
+    }
+
+    uint32_t N = (uint32_t)n;
+
+    id<MTLCommandBuffer>         cmd = [ctx->queue commandBuffer];
+    id<MTLComputeCommandEncoder> enc = [cmd computeCommandEncoder];
+    [enc setComputePipelineState:ctx->ps_reduce_sum];
+    [enc setBuffer:bufA            offset:0 atIndex:0];
+    [enc setBuffer:ctx->bufPartRe  offset:0 atIndex:1];
+    [enc setBytes:&N length:sizeof(uint32_t) atIndex:2];
+
+    [enc dispatchThreadgroups:MTLSizeMake(numGroups, 1, 1)
+         threadsPerThreadgroup:MTLSizeMake(kTGSize, 1, 1)];
+    [enc endEncoding];
+    [cmd commit];
+    [cmd waitUntilCompleted];
+
+    const float* p = (const float*)[ctx->bufPartRe contents];
+    float sum = 0.0f;
+    for (size_t i = 0; i < numGroups; i++) sum += p[i];
+    return sum;
+}
+
 #endif // METAL_COMPUTE

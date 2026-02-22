@@ -30,6 +30,8 @@
 #include "Gnufft.h"
 #include "PGIncludes.h"
 #include "TimeSegmentation.h"
+#include "pgCol.hpp"
+#include "pgMat.hpp"
 
 using namespace arma;
 //using namespace PowerGrid;
@@ -73,6 +75,11 @@ public:
     Mat<CxT1> shotSpecificSenseMap;
     Mat<CxT1> conjShotSpecificSenseMap;
 
+#ifdef METAL_COMPUTE
+    pgMat<pgComplex<T1>> shotSpecificSenseMap_pg;
+    pgMat<pgComplex<T1>> conjShotSpecificSenseMap_pg;
+#endif
+
     Gnufft<T1>** G = NULL;
     TimeSegmentation<T1, Gnufft<T1> >** AObj = NULL;
 
@@ -90,6 +97,10 @@ public:
     // For the adjoint operation, we have to weight the adjoint transform of the
     // coil data by the SENSE map.
     Col<CxT1> operator/(const Col<CxT1>& d) const;
+
+    // pgCol overloads — avoid arma conversion overhead
+    pgCol<pgComplex<T1>> operator*(const pgCol<pgComplex<T1>> &d) const;
+    pgCol<pgComplex<T1>> operator/(const pgCol<pgComplex<T1>> &d) const;
 };
 
 // Explicit Instantiation

@@ -28,7 +28,9 @@ Developed by:
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <complex>
 #include <cstdio>
+#include <cstdlib>
 #include <vector>
 
 #include "PGIncludes.h"
@@ -37,6 +39,9 @@ Developed by:
 #include "fftCPU.h"
 #include "pgCol.hpp"
 #include "pgComplex.hpp"
+
+#include <Accelerate/Accelerate.h>
+#include "AccelerateDispatch.hpp"
 
 using namespace arma;
 using Clock = std::chrono::high_resolution_clock;
@@ -179,9 +184,9 @@ int main()
     // For each operation, the Metal threshold is 4096 elements, so we
     // test sizes above that where Metal dispatch is active.
     // -----------------------------------------------------------------------
-    printf("[ pgCol vector algebra — Metal GPU vs CPU ]\n");
+    printf("[ pgCol vector algebra — Accelerate (float) vs scalar (double) ]\n");
     printf("  %-10s  %-24s  %10s  %10s  %8s\n",
-           "N", "Operation", "Metal (ms)", "CPU (ms)", "Speedup");
+           "N", "Operation", "Accel (ms)", "CPU (ms)", "Speedup");
 
     // Helper: disable Metal temporarily by using double (which always falls
     // through to CPU) and compare against float (which uses Metal).
@@ -266,6 +271,162 @@ int main()
             printf("  %-10lu  %-24s  %10.3f  %10.3f  %7.2fx\n",
                    (unsigned long)N, "cdot (float vs dbl)",
                    tMetal, tCPU, (tMetal > 0.0) ? tCPU / tMetal : 0.0);
+        }
+
+        printf("\n");
+    }
+
+    // -----------------------------------------------------------------------
+    // Part 4: Raw pointer dispatch comparison: Accelerate/vDSP vs CPU scalar
+    // -----------------------------------------------------------------------
+    printf("[ Raw pointer dispatch: Accelerate vs CPU scalar ]\n\n");
+
+    // Helper: allocate page-aligned buffer (16384 = Apple Silicon page size)
+    auto pageAlloc = [](size_t count) -> float* {
+        size_t bytes = count * sizeof(float);
+        size_t pageSize = 16384;
+        size_t aligned = (bytes + pageSize - 1) & ~(pageSize - 1);
+        return (float*)std::aligned_alloc(pageSize, aligned);
+    };
+
+    for (uword N : {8192u, 65536u, 262144u, 1048576u}) {
+
+        printf("  N = %lu\n", (unsigned long)N);
+        printf("  %-24s  %10s  %10s  %8s\n",
+               "Operation", "Accel", "CPU", "Speedup");
+
+        // ----- Real float add: C = A + B -----
+        {
+            float* A = pageAlloc(N);
+            float* B = pageAlloc(N);
+            float* C = pageAlloc(N);
+            for (uword i = 0; i < N; i++) {
+                A[i] = (float)(i % 1000) * 0.001f;
+                B[i] = (float)((i + 500) % 1000) * 0.001f;
+            }
+
+            double tAcc = median_ms([&]{
+                vDSP_vadd(A, 1, B, 1, C, 1, (vDSP_Length)N);
+                doNotOptimize(C[0]);
+            }, 3, 15);
+
+            double tCPU = median_ms([&]{
+                for (uword i = 0; i < N; i++) C[i] = A[i] + B[i];
+                doNotOptimize(C[0]);
+            }, 3, 15);
+
+            printf("  %-24s  %10.3f  %10.3f  %7.2fx\n",
+                   "real add", tAcc, tCPU, (tAcc > 0.0) ? tCPU / tAcc : 0.0);
+
+            std::free(A); std::free(B); std::free(C);
+        }
+
+        // ----- Complex element-wise multiply -----
+        {
+            float* A = pageAlloc(2 * N);
+            float* B = pageAlloc(2 * N);
+            float* C = pageAlloc(2 * N);
+            for (uword i = 0; i < 2 * N; i++) {
+                A[i] = (float)(i % 1000) * 0.001f - 0.5f;
+                B[i] = (float)((i + 333) % 1000) * 0.001f - 0.5f;
+            }
+
+            // Accelerate via split-complex vDSP_zvmul
+            float* tmpSplitAr = pageAlloc(N);
+            float* tmpSplitAi = pageAlloc(N);
+            float* tmpSplitBr = pageAlloc(N);
+            float* tmpSplitBi = pageAlloc(N);
+            float* tmpSplitCr = pageAlloc(N);
+            float* tmpSplitCi = pageAlloc(N);
+            for (uword i = 0; i < N; i++) {
+                tmpSplitAr[i] = A[2*i]; tmpSplitAi[i] = A[2*i+1];
+                tmpSplitBr[i] = B[2*i]; tmpSplitBi[i] = B[2*i+1];
+            }
+            DSPSplitComplex scA = {tmpSplitAr, tmpSplitAi};
+            DSPSplitComplex scB = {tmpSplitBr, tmpSplitBi};
+            DSPSplitComplex scC = {tmpSplitCr, tmpSplitCi};
+
+            double tAcc = median_ms([&]{
+                vDSP_zvmul(&scA, 1, &scB, 1, &scC, 1, (vDSP_Length)N, 1);
+                doNotOptimize(tmpSplitCr[0]);
+            }, 3, 15);
+
+            double tCPU = median_ms([&]{
+                for (uword i = 0; i < N; i++) {
+                    float ar = A[2*i], ai = A[2*i+1];
+                    float br = B[2*i], bi = B[2*i+1];
+                    C[2*i]   = ar*br - ai*bi;
+                    C[2*i+1] = ar*bi + ai*br;
+                }
+                doNotOptimize(C[0]);
+            }, 3, 15);
+
+            printf("  %-24s  %10.3f  %10.3f  %7.2fx\n",
+                   "complex mul", tAcc, tCPU, (tAcc > 0.0) ? tCPU / tAcc : 0.0);
+
+            std::free(A); std::free(B); std::free(C);
+            std::free(tmpSplitAr); std::free(tmpSplitAi);
+            std::free(tmpSplitBr); std::free(tmpSplitBi);
+            std::free(tmpSplitCr); std::free(tmpSplitCi);
+        }
+
+        // ----- Real sum (reduction) -----
+        {
+            float* A = pageAlloc(N);
+            for (uword i = 0; i < N; i++)
+                A[i] = (float)(i % 1000) * 0.001f - 0.5f;
+
+            double tAcc = median_ms([&]{
+                float r;
+                vDSP_sve(A, 1, &r, (vDSP_Length)N);
+                doNotOptimize(r);
+            }, 3, 15);
+
+            double tCPU = median_ms([&]{
+                float r = 0.0f;
+                for (uword i = 0; i < N; i++) r += A[i];
+                doNotOptimize(r);
+            }, 3, 15);
+
+            printf("  %-24s  %10.3f  %10.3f  %7.2fx\n",
+                   "real sum", tAcc, tCPU, (tAcc > 0.0) ? tCPU / tAcc : 0.0);
+
+            std::free(A);
+        }
+
+        // ----- Complex dot product (cdot) -----
+        {
+            float* A = pageAlloc(2 * N);
+            float* B = pageAlloc(2 * N);
+            for (uword i = 0; i < 2 * N; i++) {
+                A[i] = (float)(i % 1000) * 0.001f - 0.5f;
+                B[i] = (float)((i + 333) % 1000) * 0.001f - 0.5f;
+            }
+
+            double tAcc = median_ms([&]{
+                std::complex<float> result;
+                cblas_cdotc_sub((int)N,
+                                reinterpret_cast<const std::complex<float>*>(A), 1,
+                                reinterpret_cast<const std::complex<float>*>(B), 1,
+                                &result);
+                doNotOptimize(result);
+            }, 3, 15);
+
+            double tCPU = median_ms([&]{
+                float sumRe = 0, sumIm = 0;
+                for (uword i = 0; i < N; i++) {
+                    float ar = A[2*i], ai = A[2*i+1];
+                    float br = B[2*i], bi = B[2*i+1];
+                    sumRe += ar*br + ai*bi;
+                    sumIm += ar*bi - ai*br;
+                }
+                doNotOptimize(sumRe);
+            }, 3, 15);
+
+            printf("  %-24s  %10.3f  %10.3f  %7.2fx\n",
+                   "cdot", tAcc, tCPU, (tAcc > 0.0) ? tCPU / tAcc : 0.0);
+
+            std::free(A); std::free(B);
         }
 
         printf("\n");

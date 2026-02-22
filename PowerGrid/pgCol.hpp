@@ -14,8 +14,8 @@
 #include "accel.h"
 #endif
 
-#ifdef METAL_COMPUTE
-#include "Metal/MetalVectorOps_dispatch.hpp"
+#ifdef __APPLE__
+#include "AccelerateDispatch.hpp"
 #endif
 
 
@@ -331,7 +331,7 @@ template <typename U = T,
           typename std::enable_if<!std::is_same<U, pgComplex<float>>::value &&
                                   !std::is_same<U, pgComplex<double>>::value,
                                   int>::type = 0>
-arma::Col<T> getArma() {
+arma::Col<T> getArma() const {
     #ifdef _OPENACC
     #pragma acc update host(mem[0:n_elem])
     #endif
@@ -344,7 +344,7 @@ arma::Col<T> getArma() {
 template <typename U = T,
           typename std::enable_if<std::is_same<U, pgComplex<double>>::value,
                                   int>::type = 0>
-arma::Col<std::complex<double>> getArma() {
+arma::Col<std::complex<double>> getArma() const {
     #ifdef _OPENACC
     #pragma acc update host(mem[0:n_elem])
     #endif
@@ -357,7 +357,7 @@ arma::Col<std::complex<double>> getArma() {
 template <typename U = T,
           typename std::enable_if<std::is_same<U, pgComplex<float>>::value,
                                   int>::type = 0>
-arma::Col<std::complex<float>> getArma() {
+arma::Col<std::complex<float>> getArma() const {
     #ifdef _OPENACC
     #pragma acc update host(mem[0:n_elem])
     #endif
@@ -494,9 +494,9 @@ pgCol<T>& operator=(pgCol<T>&& d) {
 }
 
 pgCol<T>& operator+=(const T& A) {
-    #ifdef METAL_COMPUTE
+    #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
-        if (pg_metal::try_metal_add_scalar(mem, A, mem, n_elem))
+        if (pg_accel::try_accel_add_scalar(mem, A, mem, n_elem))
             return *this;
     }
     #endif
@@ -510,9 +510,9 @@ pgCol<T>& operator+=(const T& A) {
 }
 
 pgCol<T>& operator-=(const T& A) {
-    #ifdef METAL_COMPUTE
+    #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
-        if (pg_metal::try_metal_sub_scalar(mem, A, mem, n_elem))
+        if (pg_accel::try_accel_sub_scalar(mem, A, mem, n_elem))
             return *this;
     }
     #endif
@@ -526,12 +526,12 @@ pgCol<T>& operator-=(const T& A) {
 }
 
 pgCol<T>& operator%=(const T& A) {
-    #ifdef METAL_COMPUTE
+    #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
-        if (pg_metal::try_metal_mul_scalar(mem, A, mem, n_elem))
+        if (pg_accel::try_accel_mul_scalar(mem, A, mem, n_elem))
             return *this;
     } else if constexpr (std::is_same<T, pgComplex<float>>::value) {
-        if (pg_metal::try_metal_mul_scalar(mem, A, mem, n_elem))
+        if (pg_accel::try_accel_mul_scalar(mem, A, mem, n_elem))
             return *this;
     }
     #endif
@@ -556,9 +556,9 @@ pgCol<T>& operator/=(const T& A) {
 
 template<typename X>
 pgCol<T>& operator+=(const pgCol<X> &pgA) {
-    #ifdef METAL_COMPUTE
-    if constexpr (pg_metal::is_metal_type<T>::value && std::is_same<T, X>::value) {
-        if (pg_metal::try_metal_add(mem, pgA.memptr(), mem, n_elem))
+    #ifdef __APPLE__
+    if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
+        if (pg_accel::try_accel_add(mem, pgA.memptr(), mem, n_elem))
             return *this;
     }
     #endif
@@ -573,9 +573,9 @@ pgCol<T>& operator+=(const pgCol<X> &pgA) {
 
 template<typename X>
 pgCol<T>& operator-=(const pgCol<X> &pgA) {
-    #ifdef METAL_COMPUTE
-    if constexpr (pg_metal::is_metal_type<T>::value && std::is_same<T, X>::value) {
-        if (pg_metal::try_metal_sub(mem, pgA.memptr(), mem, n_elem))
+    #ifdef __APPLE__
+    if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
+        if (pg_accel::try_accel_sub(mem, pgA.memptr(), mem, n_elem))
             return *this;
     }
     #endif
@@ -590,9 +590,9 @@ pgCol<T>& operator-=(const pgCol<X> &pgA) {
 
 template<typename X>
 pgCol<T>& operator%=(const pgCol<X> &pgA) {
-    #ifdef METAL_COMPUTE
-    if constexpr (pg_metal::is_metal_type<T>::value && std::is_same<T, X>::value) {
-        if (pg_metal::try_metal_mul(mem, pgA.memptr(), mem, n_elem))
+    #ifdef __APPLE__
+    if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
+        if (pg_accel::try_accel_mul(mem, pgA.memptr(), mem, n_elem))
             return *this;
     }
     #endif
@@ -607,9 +607,9 @@ pgCol<T>& operator%=(const pgCol<X> &pgA) {
 
 template<typename X>
 pgCol<T>& operator/=(const pgCol<X> &pgA) {
-    #ifdef METAL_COMPUTE
-    if constexpr (pg_metal::is_metal_type<T>::value && std::is_same<T, X>::value) {
-        if (pg_metal::try_metal_div(mem, pgA.memptr(), mem, n_elem))
+    #ifdef __APPLE__
+    if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
+        if (pg_accel::try_accel_div(mem, pgA.memptr(), mem, n_elem))
             return *this;
     }
     #endif
@@ -625,9 +625,9 @@ pgCol<T>& operator/=(const pgCol<X> &pgA) {
 // Operators(pgCol, scalar)
 const pgCol<T> operator+(const T& B) const {
     pgCol<T> pgC(n_elem);
-    #ifdef METAL_COMPUTE
+    #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
-        if (pg_metal::try_metal_add_scalar(mem, B, pgC.memptr(), n_elem))
+        if (pg_accel::try_accel_add_scalar(mem, B, pgC.memptr(), n_elem))
             return std::move(pgC);
     }
     #endif
@@ -642,9 +642,9 @@ const pgCol<T> operator+(const T& B) const {
 
 const pgCol<T> operator-( const T& B) const {
     pgCol<T> pgC(n_elem);
-    #ifdef METAL_COMPUTE
+    #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
-        if (pg_metal::try_metal_sub_scalar(mem, B, pgC.memptr(), n_elem))
+        if (pg_accel::try_accel_sub_scalar(mem, B, pgC.memptr(), n_elem))
             return std::move(pgC);
     }
     #endif
@@ -659,12 +659,12 @@ const pgCol<T> operator-( const T& B) const {
 
 const pgCol<T> operator%(const T& B) const {
     pgCol<T> pgC(n_elem);
-    #ifdef METAL_COMPUTE
+    #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
-        if (pg_metal::try_metal_mul_scalar(mem, B, pgC.memptr(), n_elem))
+        if (pg_accel::try_accel_mul_scalar(mem, B, pgC.memptr(), n_elem))
             return std::move(pgC);
     } else if constexpr (std::is_same<T, pgComplex<float>>::value) {
-        if (pg_metal::try_metal_mul_scalar(mem, B, pgC.memptr(), n_elem))
+        if (pg_accel::try_accel_mul_scalar(mem, B, pgC.memptr(), n_elem))
             return std::move(pgC);
     }
     #endif
@@ -692,9 +692,9 @@ const pgCol<T> operator/(const T& B) const {
 template<typename X>
 const pgCol<T> operator+(const pgCol<X>& pgB) const {
     pgCol<T> pgC(n_elem);
-    #ifdef METAL_COMPUTE
-    if constexpr (pg_metal::is_metal_type<T>::value && std::is_same<T, X>::value) {
-        if (pg_metal::try_metal_add(mem, pgB.memptr(), pgC.memptr(), n_elem))
+    #ifdef __APPLE__
+    if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
+        if (pg_accel::try_accel_add(mem, pgB.memptr(), pgC.memptr(), n_elem))
             return std::move(pgC);
     }
     #endif
@@ -710,9 +710,9 @@ const pgCol<T> operator+(const pgCol<X>& pgB) const {
 template<typename X>
 const pgCol<T> operator-(const pgCol<X>& pgB) const {
     pgCol<T> pgC(n_elem);
-    #ifdef METAL_COMPUTE
-    if constexpr (pg_metal::is_metal_type<T>::value && std::is_same<T, X>::value) {
-        if (pg_metal::try_metal_sub(mem, pgB.memptr(), pgC.memptr(), n_elem))
+    #ifdef __APPLE__
+    if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
+        if (pg_accel::try_accel_sub(mem, pgB.memptr(), pgC.memptr(), n_elem))
             return std::move(pgC);
     }
     #endif
@@ -728,9 +728,9 @@ template<typename X,
          typename std::enable_if<std::is_same<T, X>::value, int>::type = 0>
 const pgCol<T> operator%(const pgCol<X>& pgB) const {
     pgCol<T> pgC(n_elem);
-    #ifdef METAL_COMPUTE
-    if constexpr (pg_metal::is_metal_type<T>::value) {
-        if (pg_metal::try_metal_mul(mem, pgB.memptr(), pgC.memptr(), n_elem))
+    #ifdef __APPLE__
+    if constexpr (pg_accel::is_accel_type<T>::value) {
+        if (pg_accel::try_accel_mul(mem, pgB.memptr(), pgC.memptr(), n_elem))
             return std::move(pgC);
     }
     #endif
@@ -747,9 +747,9 @@ const pgCol<T> operator%(const pgCol<X>& pgB) const {
 template<typename X>
 const pgCol<T> operator/(const pgCol<X>& pgB) const {
     pgCol<T> pgC(n_elem);
-    #ifdef METAL_COMPUTE
-    if constexpr (pg_metal::is_metal_type<T>::value && std::is_same<T, X>::value) {
-        if (pg_metal::try_metal_div(mem, pgB.memptr(), pgC.memptr(), n_elem))
+    #ifdef __APPLE__
+    if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
+        if (pg_accel::try_accel_div(mem, pgB.memptr(), pgC.memptr(), n_elem))
             return std::move(pgC);
     }
     #endif
@@ -789,10 +789,10 @@ const pgComplex<T> sum(const pgCol<pgComplex<T>> &pgA) {
 
 template<typename T>
 const T sum(const pgCol<T> &pgA) {
-    #ifdef METAL_COMPUTE
+    #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
         T result;
-        if (pg_metal::try_metal_sum(pgA.memptr(), &result, pgA.n_elem))
+        if (pg_accel::try_accel_sum(pgA.memptr(), &result, pgA.n_elem))
             return result;
     }
     #endif
@@ -814,10 +814,10 @@ const T sum(const pgCol<T> &pgA) {
 /// Complex dot product: sum(conj(A[i]) * B[i]).
 template<typename T>
 pgComplex<T> cdot(const pgCol<pgComplex<T>>& A, const pgCol<pgComplex<T>>& B) {
-    #ifdef METAL_COMPUTE
+    #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
         pgComplex<T> result;
-        if (pg_metal::try_metal_cdot(A.memptr(), B.memptr(), &result, A.n_elem))
+        if (pg_accel::try_accel_cdot(A.memptr(), B.memptr(), &result, A.n_elem))
             return result;
     }
     #endif
@@ -834,10 +834,10 @@ pgComplex<T> cdot(const pgCol<pgComplex<T>>& A, const pgCol<pgComplex<T>>& B) {
 /// L2 norm of a complex vector: sqrt(sum(|A[i]|^2)).
 template<typename T>
 T norm(const pgCol<pgComplex<T>>& A) {
-    #ifdef METAL_COMPUTE
+    #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
         T n2;
-        if (pg_metal::try_metal_norm2sq(A.memptr(), &n2, A.n_elem))
+        if (pg_accel::try_accel_norm2sq(A.memptr(), &n2, A.n_elem))
             return std::sqrt(n2);
     }
     #endif
@@ -852,10 +852,12 @@ T norm(const pgCol<pgComplex<T>>& A) {
 /// L2 norm of a real vector.
 template<typename T>
 T norm(const pgCol<T>& A) {
-    #ifdef METAL_COMPUTE
+    #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
-        // norm^2 = sum(A[i]^2).  Use metal_vec_sum on A.*A via scratch.
-        // For now, fall through to CPU — real norm is less critical.
+        // Use Accelerate: compute sum of squares via vDSP
+        float n2;
+        vDSP_svesq(A.memptr(), 1, &n2, (vDSP_Length)A.n_elem);
+        return std::sqrt(n2);
     }
     #endif
     T acc = T(0);
@@ -907,13 +909,13 @@ pgCol<T> imag(const pgCol<pgComplex<T>>& A) {
 
 /// Real-weight element-wise multiply with complex vector: C[i] = W[i] * X[i].
 /// W is real (pgCol<T>), X is complex (pgCol<pgComplex<T>>).
-/// Metal dispatch via rvec_cmul for float.
+/// Accelerate dispatch via rvec_cmul for float.
 template<typename T>
 pgCol<pgComplex<T>> operator%(const pgCol<T>& W, const pgCol<pgComplex<T>>& X) {
     pgCol<pgComplex<T>> out(W.n_elem);
-    #ifdef METAL_COMPUTE
+    #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
-        if (pg_metal::try_metal_rvec_cmul(W.memptr(), X.memptr(), out.memptr(), W.n_elem))
+        if (pg_accel::try_accel_rvec_cmul(W.memptr(), X.memptr(), out.memptr(), W.n_elem))
             return out;
     }
     #endif

@@ -73,9 +73,8 @@ Col<complex<T1>> SENSE<T1, Tobj>::operator*(const Col<complex<T1>>& d) const
             pgCol<pgComplex<T1>> weighted(d_pg);
             weighted %= SMap_pg.col(ii);
 
-            // Gnufft forward: stays in arma at the boundary
-            Col<complex<T1>> result = (*this->G_obj) * weighted.getArma();
-            outData_pg.set_col(ii, pgCol<pgComplex<T1>>(result));
+            // Forward transform (pgCol overload — no arma conversion)
+            outData_pg.set_col(ii, (*this->G_obj) * weighted);
         }
 
         pgCol<pgComplex<T1>> outVec = vectorise(outData_pg);
@@ -113,9 +112,8 @@ Col<complex<T1>> SENSE<T1, Tobj>::operator/(const Col<complex<T1>>& d) const
             // Extract coil's k-space data slice (view, no copy)
             pgCol<pgComplex<T1>> dSlice = d_pg.subvec(ii * n1, (ii + 1) * n1 - 1);
 
-            // Gnufft adjoint: stays in arma at the boundary
-            Col<complex<T1>> adjResult = (*this->G_obj) / dSlice.getArma();
-            outImg_pg.set_col(ii, pgCol<pgComplex<T1>>(adjResult));
+            // Adjoint transform (pgCol overload — no arma conversion)
+            outImg_pg.set_col(ii, (*this->G_obj) / dSlice);
         }
 
         // Weight by conjugate SENSE map: outImg(:,ii) .*= conj(SMap(:,ii))
@@ -141,6 +139,48 @@ Col<complex<T1>> SENSE<T1, Tobj>::operator/(const Col<complex<T1>>& d) const
     }
 
     return sum(outImg, 1);
+}
+
+// pgCol forward: image → k-space through coil sensitivities
+template <typename T1, typename Tobj>
+pgCol<pgComplex<T1>> SENSE<T1, Tobj>::
+operator*(const pgCol<pgComplex<T1>>& d) const
+{
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        for (unsigned int ii = 0; ii < this->nc; ii++) {
+            pgCol<pgComplex<T1>> weighted(d);
+            weighted %= SMap_pg.col(ii);
+            outData_pg.set_col(ii, (*this->G_obj) * weighted);
+        }
+        return vectorise(outData_pg);
+    }
+#endif
+    Col<CxT1> armaResult = this->operator*(d.getArma());
+    return pgCol<pgComplex<T1>>(armaResult);
+}
+
+// pgCol adjoint: k-space → image through conjugate coil sensitivities
+template <typename T1, typename Tobj>
+pgCol<pgComplex<T1>> SENSE<T1, Tobj>::
+operator/(const pgCol<pgComplex<T1>>& d) const
+{
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        for (unsigned int ii = 0; ii < this->nc; ii++) {
+            pgCol<pgComplex<T1>> dSlice = d.subvec(ii * n1, (ii + 1) * n1 - 1);
+            outImg_pg.set_col(ii, (*this->G_obj) / dSlice);
+        }
+
+        for (unsigned int ii = 0; ii < this->nc; ii++) {
+            outImg_pg.col(ii) %= conjSMap_pg.col(ii);
+        }
+
+        return sum(outImg_pg, 1);
+    }
+#endif
+    Col<CxT1> armaResult = this->operator/(d.getArma());
+    return pgCol<pgComplex<T1>>(armaResult);
 }
 
 // Explicit Instantiations

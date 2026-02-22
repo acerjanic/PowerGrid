@@ -102,7 +102,7 @@ if(APPLE)
 		if(METAL_FOUND)
 			# if constexpr (used in Gnufft.cpp for T1==float guard) requires C++17
 			set(CMAKE_CXX_STANDARD 17)
-			add_definitions(-DMETAL_COMPUTE)
+			add_definitions(-DMETAL_COMPUTE -DACCELERATE_NEW_LAPACK)
 			find_library(FOUNDATION_LIBRARY Foundation REQUIRED)
 			set(LIBS ${LIBS} ${METAL_LIBRARY} ${ACCELERATE_LIBRARY} ${FOUNDATION_LIBRARY})
 
@@ -127,31 +127,30 @@ if(APPLE)
 					-P ${CMAKE_SOURCE_DIR}/cmake/embed_binary.cmake
 				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/PowerGrid/Metal
 				DEPENDS ${METAL_SRC}
-				COMMENT "Compiling and embedding Metal shaders")
+				COMMENT "Compiling and embedding Metal gridding shaders")
 
-			add_custom_target(MetalShaders ALL DEPENDS ${METALEMBED})
-			include_directories(${CMAKE_BINARY_DIR}/PowerGrid/Metal)
-
-			# Vector ops Metal shaders (separate metallib)
-			set(VECOPS_SRC    ${CMAKE_SOURCE_DIR}/PowerGrid/Metal/vectorops_metal.metal)
-			set(VECOPS_AIR    ${CMAKE_BINARY_DIR}/PowerGrid/Metal/vectorops.air)
-			set(VECOPS_LIB    ${CMAKE_BINARY_DIR}/PowerGrid/Metal/vectorops.metallib)
-			set(VECOPS_EMBED  ${CMAKE_BINARY_DIR}/PowerGrid/Metal/vectorops_metallib.h)
+			# DFT Metal shader (Gdft/GdftR2)
+			set(DFT_METAL_SRC  ${CMAKE_SOURCE_DIR}/PowerGrid/Metal/dft_metal.metal)
+			set(DFT_METAL_AIR  ${CMAKE_BINARY_DIR}/PowerGrid/Metal/dft.air)
+			set(DFT_METALLIB   ${CMAKE_BINARY_DIR}/PowerGrid/Metal/dft.metallib)
+			set(DFT_METALEMBED ${CMAKE_BINARY_DIR}/PowerGrid/Metal/dft_metallib.h)
 
 			add_custom_command(
-				OUTPUT ${VECOPS_EMBED}
-				COMMAND ${METAL_COMPILER} -O3 -o ${VECOPS_AIR} -c ${VECOPS_SRC}
-				COMMAND xcrun -sdk macosx metallib -o ${VECOPS_LIB} ${VECOPS_AIR}
+				OUTPUT ${DFT_METALEMBED}
+				COMMAND ${METAL_COMPILER} -O3 -o ${DFT_METAL_AIR} -c ${DFT_METAL_SRC}
+				COMMAND xcrun -sdk macosx metallib -o ${DFT_METALLIB} ${DFT_METAL_AIR}
 				COMMAND ${CMAKE_COMMAND}
-					-DINPUT=${VECOPS_LIB}
-					-DOUTPUT=${VECOPS_EMBED}
-					-DVAR_NAME=vectorops_metallib
+					-DINPUT=${DFT_METALLIB}
+					-DOUTPUT=${DFT_METALEMBED}
+					-DVAR_NAME=dft_metallib
 					-P ${CMAKE_SOURCE_DIR}/cmake/embed_binary.cmake
 				WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/PowerGrid/Metal
-				DEPENDS ${VECOPS_SRC}
-				COMMENT "Compiling and embedding Metal vector ops shaders")
+				DEPENDS ${DFT_METAL_SRC}
+				COMMENT "Compiling and embedding Metal DFT shaders")
 
-			add_custom_target(MetalVecOpsShaders ALL DEPENDS ${VECOPS_EMBED})
+			add_custom_target(MetalShaders ALL DEPENDS ${METALEMBED} ${DFT_METALEMBED})
+			include_directories(${CMAKE_BINARY_DIR}/PowerGrid/Metal)
+
 		else()
 			message(WARNING "METAL_COMPUTE=ON but Metal toolchain not found; disabling Metal compute.")
 			set(METAL_COMPUTE OFF)
@@ -194,13 +193,13 @@ if(METAL_COMPUTE AND METAL_FOUND)
     add_executable(metal_tests
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/main.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/MetalNufftTests.cpp
-        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/MetalVectorOpsTests.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgComplexTests.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgColTests.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgColCplxTests.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgMatTests.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/pgPhase2Tests.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/SyntheticReconTests.cpp
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/GdftBenchmarks.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/ISMRMRDWriteTests.cpp)
     target_include_directories(metal_tests PRIVATE
         ${CATCH_INCLUDE_DIR}
@@ -244,7 +243,8 @@ endif()
 set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/Support/Catch)
 add_executable(cpu_tests
     ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/main.cpp
-    ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/SyntheticReconTests.cpp)
+    ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/SyntheticReconTests.cpp
+    ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/GdftBenchmarks.cpp)
 target_include_directories(cpu_tests PRIVATE
     ${CATCH_INCLUDE_DIR}
     ${CMAKE_SOURCE_DIR}/PowerGrid

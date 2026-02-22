@@ -31,6 +31,8 @@ Developed by:
 
 #include "PGIncludes.h"
 #include "ftCpu.h"
+#include "pgCol.hpp"
+#include "pgComplex.hpp"
 
 using namespace arma;
 using namespace std;
@@ -61,11 +63,20 @@ public:
   Col<T1> FM;
   Col<T1> t;
 
+#ifdef METAL_COMPUTE
+  void* metalCtx = nullptr; // MetalDFTContext*, created for T1=float
+  ~Gdft();
+#endif
+
   // Overloaded methods for forward and adjoint transform
   // Forward transform operation
   Col<CxT1> operator*(const Col<CxT1> &d) const;
   // Adjoint transform operation
   Col<CxT1> operator/(const Col<CxT1> &d) const;
+
+  // pgCol overloads — Metal GPU for float, arma fallback for double
+  pgCol<pgComplex<T1>> operator*(const pgCol<pgComplex<T1>> &d) const;
+  pgCol<pgComplex<T1>> operator/(const pgCol<pgComplex<T1>> &d) const;
 };
 
 extern template class Gdft<float>;

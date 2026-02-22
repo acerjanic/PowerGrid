@@ -95,7 +95,8 @@ pcSENSE<T1>::pcSENSE(Col<T1> kx, Col<T1> ky, Col<T1> kz, uword nx, uword ny,
         }
         
         //Precompute some things used in the forward and adjoint operations
-        expiPMap = conj(exp(-i * PMap));
+        expiPMap = conj(exp(-i * PMap));       // exp(+i*PMap) — forward weight
+        conjExpiPMap = conj(expiPMap);          // exp(-i*PMap) — adjoint weight
         conjSMap = conj(SMap);
 
 #ifdef METAL_COMPUTE
@@ -103,6 +104,7 @@ pcSENSE<T1>::pcSENSE(Col<T1> kx, Col<T1> ky, Col<T1> kz, uword nx, uword ny,
             SMap_pg = pgMat<pgComplex<T1>>(SMap);
             conjSMap_pg = pgMat<pgComplex<T1>>(conjSMap);
             expiPMap_pg = pgMat<pgComplex<T1>>(expiPMap);
+            conjExpiPMap_pg = pgMat<pgComplex<T1>>(conjExpiPMap);
         }
 #endif
 }
@@ -172,9 +174,9 @@ Col<complex<T1> > pcSENSE<T1>::operator/(const Col<complex<T1> > &d) const {
 
             for (unsigned int ii = 0; ii < Nc; ii++) {
                 for (unsigned int jj = 0; jj < Ns; jj++) {
-                    // Compute weight = conj(SMap(:,ii)) .* expiPMap(:,jj)
+                    // Compute weight = conj(SMap(:,ii)) .* conj(expiPMap(:,jj))
                     pgCol<pgComplex<T1>> weight = conjSMap_pg.col_copy(ii);
-                    weight %= expiPMap_pg.col(jj);
+                    weight %= conjExpiPMap_pg.col(jj);
 
                     // Adjoint transform (arma boundary)
                     pgCol<pgComplex<T1>> seg = inData_pg.col_copy(jj + ii * Ns);
@@ -196,11 +198,71 @@ Col<complex<T1> > pcSENSE<T1>::operator/(const Col<complex<T1> > &d) const {
         Col<complex<T1> > outData = zeros<Col<complex<T1> > >(Ni);
         for (unsigned int ii = 0; ii < Nc; ii++) {
                 for (unsigned int jj = 0; jj < Ns; jj++) {
-                        outData += (conjSMap.col(ii) % expiPMap.col(jj)) %
+                        outData += (conjSMap.col(ii) % conjExpiPMap.col(jj)) %
                                    ((*AObj[jj]) / inData.col(jj + ii * Ns));
                 }
         }
         return vectorise(outData);
+}
+
+// pgCol forward: image → k-space through coil/phase sensitivities
+template <typename T1>
+pgCol<pgComplex<T1>> pcSENSE<T1>::
+operator*(const pgCol<pgComplex<T1>>& d) const
+{
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        pgMat<pgComplex<T1>> outData_pg(Nd, Ns * Nc);
+
+        for (unsigned int ii = 0; ii < Nc; ii++) {
+            for (unsigned int jj = 0; jj < Ns; jj++) {
+                pgCol<pgComplex<T1>> weight = SMap_pg.col_copy(ii);
+                weight %= expiPMap_pg.col(jj);
+
+                pgCol<pgComplex<T1>> weighted(d);
+                weighted %= weight;
+
+                outData_pg.set_col(jj + ii * Ns, (*AObj[jj]) * weighted);
+            }
+        }
+
+        return vectorise(outData_pg);
+    }
+#endif
+    Col<complex<T1>> armaResult = this->operator*(d.getArma());
+    return pgCol<pgComplex<T1>>(armaResult);
+}
+
+// pgCol adjoint: k-space → image through conjugate coil/phase sensitivities
+template <typename T1>
+pgCol<pgComplex<T1>> pcSENSE<T1>::
+operator/(const pgCol<pgComplex<T1>>& d) const
+{
+#ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T1, float>::value) {
+        pgMat<pgComplex<T1>> inData_pg(d, Nd, Ns * Nc);
+
+        pgCol<pgComplex<T1>> outData_pg(Ni);
+        outData_pg.zeros();
+
+        for (unsigned int ii = 0; ii < Nc; ii++) {
+            for (unsigned int jj = 0; jj < Ns; jj++) {
+                pgCol<pgComplex<T1>> weight = conjSMap_pg.col_copy(ii);
+                weight %= conjExpiPMap_pg.col(jj);
+
+                pgCol<pgComplex<T1>> seg = inData_pg.col_copy(jj + ii * Ns);
+                pgCol<pgComplex<T1>> adjResult = (*AObj[jj]) / seg;
+
+                adjResult %= weight;
+                outData_pg += adjResult;
+            }
+        }
+
+        return outData_pg;
+    }
+#endif
+    Col<complex<T1>> armaResult = this->operator/(d.getArma());
+    return pgCol<pgComplex<T1>>(armaResult);
 }
 
 // Explicit Instantiation
