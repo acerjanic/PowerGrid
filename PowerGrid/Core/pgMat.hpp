@@ -1,3 +1,6 @@
+/// @file pgMat.hpp
+/// @brief GPU-managed matrix for OpenACC-accelerated MRI computations.
+
 // pgMat.hpp
 
 #ifndef POWER_GRID_pgMat_hpp
@@ -11,6 +14,14 @@
 #include "openacc.h"
 #endif
 
+/// @brief Matrix with transparent CPU/GPU memory management via OpenACC.
+///
+/// Stores data in column-major order under a raw pointer managed with OpenACC
+/// `enter data` / `exit data` directives.  Provides 2-D `at(row, col)` access,
+/// column extraction via `col()`, flattening via `vectorise()`, and row/column
+/// summation via `sum(dim)`.
+///
+/// @tparam T  Element type (e.g., `float`, `double`, `pgComplex<float>`).
 template<typename T>
 class pgMat {
 

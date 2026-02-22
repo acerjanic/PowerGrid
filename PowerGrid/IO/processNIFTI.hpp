@@ -23,6 +23,9 @@ Developed by:
 
  *****************************************************************************/
 
+/// @file processNIFTI.hpp
+/// @brief Helper functions for writing NIfTI-1 image files from Armadillo column vectors.
+
 #ifndef POWERGRID_PROCESSNIFTI_HPP
 #define POWERGRID_PROCESSNIFTI_HPP
 

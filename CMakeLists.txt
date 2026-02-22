@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.17) #CMake version 3.2 required to properly sup
 ## need to be set BEFORE calling project command (which does introspection and sets
 ## variables about the behavior of the compiler).
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project("PowerGrid" CXX)
 

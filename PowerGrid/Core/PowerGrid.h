@@ -23,6 +23,10 @@
 
 *****************************************************************************/
 
+/// @file PowerGrid.h
+/// @brief Main project umbrella header: includes all encoding operators, regularizers,
+///        solvers, ISMRMRD support, and (optionally) MPI-distributed variants.
+
 #ifndef PowerGrid_PowerGrid_h
 #define PowerGrid_PowerGrid_h
 //#define ARMA_NO_DEBUG // Disable this comment only for release.

@@ -24,6 +24,9 @@ Developed by:
     Date        [12/2/2016]
 
  *****************************************************************************/
+/// @file TimeSegmentation.h
+/// @brief Off-resonance correction via time-segmented interpolation.
+
 // We are using two template types at the moment. One for the type of data to be
 // processed (ie Col<cx_double>) and one for the type of G object (ie
 // Gfft<Col<cx_double>>
@@ -40,28 +43,49 @@ Developed by:
 
 using namespace std;
 
+/// @brief Off-resonance correction via time-segmented interpolation.
+///
+/// Wraps any encoding operator @p Tobj with field-map-based off-resonance
+/// correction using the time-segmentation approximation.  The field map and
+/// per-sample timing vector are used to construct L time-segment sub-problems,
+/// each solved with the underlying operator, then combined via interpolation
+/// coefficients AA.
+///
+/// @tparam T1    Floating-point precision type (`float` or `double`).
+/// @tparam Tobj  Underlying encoding operator type (e.g., `Gnufft<T1>`).
 template <typename T1, typename Tobj> class TimeSegmentation {
   typedef complex<T1> CxT1;
 
 public:
+  /// @brief Default constructor.
   TimeSegmentation();
 
-  // Class variables go here
-  uword n1;     // Data size
-  uword n2;     // Image size
-  int L;        // number of time segments
-  uword type;   // type of time segmentation
-  uword Nshots; // Number of shots, used to reduce complexity of calculating
-                // interpolator
-  T1 tau;       // time segment length
-  T1 T_min;     // minimum time in the time vector (i.e. TE for spiral out)
+  /// @brief Number of k-space samples (output length of forward transform).
+  uword n1;
+  /// @brief Number of image pixels (input length of forward transform).
+  uword n2;
+  /// @brief Number of time segments L.
+  int L;
+  /// @brief Interpolation type: 1 = Hanning, 2 = exact min-max, 3 = approx min-max.
+  uword type;
+  /// @brief Number of shots; used to reduce complexity of interpolator calculation.
+  uword Nshots;
+  /// @brief Time-segment length tau (seconds).
+  T1 tau;
+  /// @brief Minimum time in the time vector (e.g., TE for spiral-out), in seconds.
+  T1 T_min;
+  /// @brief Pointer to the underlying single-coil encoding operator.
   Tobj *obj;
-  Col<T1> fieldMap; // Field map (in radians per second)
-  Col<T1> timeVec;  // timing vector of when each data point was collected
-                    // relative to the echo time (in seconds)
-  Mat<CxT1> AA;     // interpolator coefficients for the different time segments
+  /// @brief Off-resonance field map (rad/s), length n2.
+  Col<T1> fieldMap;
+  /// @brief Per-sample readout time vector (s), length n1.
+  Col<T1> timeVec;
+  /// @brief Interpolation coefficient matrix, size L x n1.
+  Mat<CxT1> AA;
   CxT1 i = CxT1(0., 1.);
+  /// @brief Phase modulation matrices Wo (n2 x L) for forward transform.
   Mat<CxT1> Wo;
+  /// @brief Conjugate phase modulation matrices WoH (n2 x L) for adjoint transform.
   Mat<CxT1> WoH;
   Col<T1> RowOnes;
   mutable Mat<complex<T1>> outData;
@@ -80,12 +104,29 @@ public:
   mutable pgMat<pgComplex<T1>> tempAD_pg;
 #endif
 
-  // Class constructor
+  /// @brief Construct a TimeSegmentation operator.
+  ///
+  /// @param G          Reference to the underlying encoding operator.
+  /// @param map_in     Off-resonance field map in rad/s, length n2.
+  /// @param timeVec_in Per-sample readout times in seconds, length n1.
+  /// @param a          Number of k-space samples (n1).
+  /// @param b          Number of image pixels (n2).
+  /// @param c          Number of time segments (L).
+  /// @param interptype Interpolation method: 1=Hanning, 2=exact min-max, 3=approx min-max (default 1).
+  /// @param shots      Number of shots for segmentation (default 1).
   TimeSegmentation(Tobj &G, Col<T1> map_in, Col<T1> timeVec_in, uword a,
                    uword b, uword c, uword interptype = 1, uword shots = 1);
 
-  // Overloaded operators go here
+  /// @brief Forward transform: image -> k-space with off-resonance correction.
+  ///
+  /// @param d  Input image vector of length @p n2.
+  /// @returns  Output k-space vector of length @p n1.
   Col<CxT1> operator*(const Col<CxT1> &d) const;
+
+  /// @brief Adjoint transform: k-space -> image with off-resonance correction.
+  ///
+  /// @param d  Input k-space vector of length @p n1.
+  /// @returns  Output image vector of length @p n2.
   Col<CxT1> operator/(const Col<CxT1> &d) const;
 
   // pgCol overloads — avoid arma conversion overhead
@@ -94,7 +135,11 @@ public:
 
   protected:
 
-  // Handy utility function for fftw via armadillo
+  /// @brief Compute 1-D FFT along the time dimension for interpolator construction.
+  ///
+  /// @param d   Input complex vector.
+  /// @param KK  FFT length.
+  /// @returns   FFT output vector of length @p KK.
   Col<CxT1> calcFFT1D(const Col<CxT1> &d, uword KK) const;
 };
 

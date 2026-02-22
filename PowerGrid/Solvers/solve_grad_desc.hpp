@@ -26,6 +26,9 @@ Developed by:
 
  *****************************************************************************/
 
+/// @file solve_grad_desc.hpp
+/// @brief Gradient descent solver (demonstration only — not for production use).
+
 #ifndef POWERGRID_SOLVE_GRAD_DESC_HPP_
 #define POWERGRID_SOLVE_GRAD_DESC_HPP_
 
@@ -33,6 +36,19 @@ Developed by:
 
 using namespace arma;
 
+/// @brief Solve an image reconstruction problem via gradient descent (no line search).
+///
+/// This is a demonstration solver showing how to use the PowerGrid encoding
+/// operators. It is **not recommended** for practical reconstructions; use
+/// solve_pwls_pcg instead.
+///
+/// @tparam T1    Floating-point precision type (`float` or `double`).
+/// @tparam Tobj  Encoding operator type (must support `A * x` and `A / y`).
+/// @param xInitial  Initial image estimate.
+/// @param A         Encoding operator.
+/// @param yi        Measured k-space data.
+/// @param niter     Number of gradient descent iterations.
+/// @returns         Image estimate after @p niter iterations.
 template<typename T1, typename Tobj>
 Col <complex<T1>> solve_grad_desc(const Col <complex<T1>> &xInitial, Tobj const &A, Col <complex<T1>> const &yi,
                                   uword niter) {

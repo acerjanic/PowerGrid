@@ -1,3 +1,6 @@
+/// @file fftshift.hpp
+/// @brief Circular FFT-shift utilities for 1-D and 2-D Armadillo arrays.
+
 //
 //  fftshift.hpp
 //  PowerGrid
@@ -14,10 +17,26 @@
 using namespace arma;
 using namespace std;
 
+/// @brief Circular shift of a 1-D or 2-D array along a single dimension.
+///
+/// Shifts @p X by floor(size/2) positions along the given dimension, implementing
+/// the standard FFT-shift for centring the zero-frequency component.
+///
+/// @tparam T1   Armadillo array type (e.g., `Col<cx_float>`, `Mat<float>`).
+/// @param X     Input array (modified in-place via circshift copy).
+/// @param dim   Dimension to shift: 0 = rows, 1 = columns.
+/// @returns     Shifted copy of @p X.
 template<typename T1>
 arma_inline
 T1 fftshift(T1& X, uword dim);
 
+/// @brief 2-D FFT-shift: shift both rows and columns by floor(size/2).
+///
+/// Equivalent to calling `fftshift(X, 0)` then `fftshift(X, 1)`.
+///
+/// @tparam T1   Armadillo array type.
+/// @param X     Input 2-D array.
+/// @returns     2-D shifted copy of @p X.
 template<typename T1>
 arma_inline
 T1 fftshift(T1 X);

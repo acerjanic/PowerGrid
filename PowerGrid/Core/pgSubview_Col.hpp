@@ -1,3 +1,6 @@
+/// @file pgSubview_Col.hpp
+/// @brief Draft subview reference for pgCol (work-in-progress, not complete).
+
 // pgCol.hpp
 
 #include "PGIncludes.h"

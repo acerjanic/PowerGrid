@@ -26,6 +26,9 @@ Developed by:
 
  *****************************************************************************/
 
+/// @file Gdft.h
+/// @brief Non-uniform field-corrected discrete Fourier transform operator.
+
 #ifndef PowerGrid_Gdft_h
 #define PowerGrid_Gdft_h
 
@@ -37,30 +40,59 @@ Developed by:
 using namespace arma;
 using namespace std;
 
-template <typename T1> // This is of type complex<double> or complex<float>, or
-// any other type like float or single
+/// @brief Non-uniform field-corrected discrete Fourier transform (DFT) operator.
+///
+/// Computes the MRI signal model d = G * x where x is the image and d is the
+/// k-space data. Supports optional off-resonance correction via a field map FM
+/// and a per-sample time vector t.
+///
+/// Use `G * x` for the forward transform and `G / d` for the adjoint.
+///
+/// @tparam T1  Floating-point precision type (`float` or `double`).
+template <typename T1>
 class Gdft {
   typedef complex<T1> CxT1;
 
 public:
-  // Default Class Constructor and Destructor
+  /// @brief Default constructor. Produces an uninitialized operator.
   Gdft();
-  // Class Constructor
+
+  /// @brief Construct a Gdft operator with the given trajectory and field map.
+  ///
+  /// @param a   Number of k-space samples (n1, output size of forward transform).
+  /// @param b   Number of image pixels (n2, input size of forward transform).
+  /// @param k1  k-space x-coordinates, length @p a (units: cycles/FOV, range [-N/2, N/2)).
+  /// @param k2  k-space y-coordinates, length @p a.
+  /// @param k3  k-space z-coordinates, length @p a (set to zeros for 2-D).
+  /// @param i1  Image-space x-coordinates, length @p b (units: fraction of FOV, range [0, 1)).
+  /// @param i2  Image-space y-coordinates, length @p b.
+  /// @param i3  Image-space z-coordinates, length @p b (set to zeros for 2-D).
+  /// @param f1  Off-resonance field map, length @p b (units: rad/s).
+  /// @param t1  Per-sample readout time vector, length @p a (units: s).
   Gdft(uword a, uword b, const Col<T1> &k1, const Col<T1> &k2,
        const Col<T1> &k3, const Col<T1> &i1, const Col<T1> &i2,
        const Col<T1> &i3, const Col<T1> &f1, const Col<T1> &t1);
 
-  // Class variables go here. Change as necessary
+  /// @brief Number of k-space samples (output length of forward transform).
   uword n1 = 0;
+  /// @brief Number of image pixels (input length of forward transform).
   uword n2 = 0;
 
-  Col<T1> kx; // k-space coordinates
+  /// @brief k-space x-coordinates (length n1).
+  Col<T1> kx;
+  /// @brief k-space y-coordinates (length n1).
   Col<T1> ky;
+  /// @brief k-space z-coordinates (length n1).
   Col<T1> kz;
-  Col<T1> ix; // image space coordinates
+  /// @brief Image-space x-coordinates (length n2).
+  Col<T1> ix;
+  /// @brief Image-space y-coordinates (length n2).
   Col<T1> iy;
+  /// @brief Image-space z-coordinates (length n2).
   Col<T1> iz;
+  /// @brief Off-resonance field map in rad/s (length n2).
   Col<T1> FM;
+  /// @brief Per-sample readout time vector in seconds (length n1).
   Col<T1> t;
 
 #ifdef METAL_COMPUTE
@@ -68,14 +100,29 @@ public:
   ~Gdft();
 #endif
 
-  // Overloaded methods for forward and adjoint transform
-  // Forward transform operation
+  /// @brief Forward DFT: image -> k-space.
+  ///
+  /// Computes d[j] = sum_k x[k] * exp(-i*2*pi*(kx[j]*ix[k] + ky[j]*iy[k] + kz[j]*iz[k]) - i*FM[k]*t[j]).
+  ///
+  /// @param d  Input image vector of length @p n2.
+  /// @returns  Output k-space vector of length @p n1.
   Col<CxT1> operator*(const Col<CxT1> &d) const;
-  // Adjoint transform operation
+
+  /// @brief Adjoint DFT: k-space -> image.
+  ///
+  /// Computes the conjugate transpose of the forward operator (G^H).
+  ///
+  /// @param d  Input k-space vector of length @p n1.
+  /// @returns  Output image vector of length @p n2.
   Col<CxT1> operator/(const Col<CxT1> &d) const;
 
-  // pgCol overloads — Metal GPU for float, arma fallback for double
+  /// @brief Forward DFT (pgCol overload for Metal path).
+  /// @param d  Input image vector of length @p n2.
+  /// @returns  Output k-space vector of length @p n1.
   pgCol<pgComplex<T1>> operator*(const pgCol<pgComplex<T1>> &d) const;
+  /// @brief Adjoint DFT (pgCol overload for Metal path).
+  /// @param d  Input k-space vector of length @p n1.
+  /// @returns  Output image vector of length @p n2.
   pgCol<pgComplex<T1>> operator/(const pgCol<pgComplex<T1>> &d) const;
 };
 

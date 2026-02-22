@@ -25,6 +25,13 @@ Developed by:
 
  *****************************************************************************/
 
+/// @file fftGPU.h
+/// @brief cuFFT-based GPU FFT wrappers for 1-D, 2-D, and 3-D transforms.
+///
+/// All functions are only available when compiled with `OPENACC_GPU` defined.
+/// Each function operates on a GPU-resident interleaved real/imag array via
+/// an OpenACC stream and a pre-allocated cuFFT plan.
+
 // Based on
 // https://www.olcf.ornl.gov/tutorials/mixing-openacc-with-gpu-libraries/
 
@@ -41,42 +48,124 @@ Developed by:
 // We need enable_if to choose which version to run based on the type of the
 // template parameter.
 
+/// @brief In-place 1-D forward FFT on GPU (single precision).
+///
+/// @tparam T1    Must be `float`.
+/// @param d_data GPU pointer to interleaved real/imag float array, length 2·nx.
+/// @param nx     Number of complex samples.
+/// @param stream OpenACC/CUDA stream pointer.
+/// @param plan   Pointer to a pre-allocated cuFFT plan.
 template <typename T1, typename std::enable_if<std::is_same<T1, float>::value,
                                                int>::type = 0>
 void fft1dGPU(T1 *d_data, int nx, void *stream, cufftHandle *plan);
 
+/// @brief In-place 2-D inverse FFT on GPU (single precision).
+///
+/// @tparam T1    Must be `float`.
+/// @param d_data GPU pointer to interleaved real/imag float array, length 2·nx·ny.
+/// @param nx     Transform size in x.
+/// @param ny     Transform size in y.
+/// @param stream OpenACC/CUDA stream pointer.
+/// @param plan   Pointer to a pre-allocated cuFFT plan.
 template <typename T1, typename std::enable_if<std::is_same<T1, float>::value,
                                                int>::type = 0>
 void ifft2dGPU(T1 *d_data, int nx, int ny, void *stream, cufftHandle *plan);
 
+/// @brief In-place 2-D forward FFT on GPU (single precision).
+///
+/// @tparam T1    Must be `float`.
+/// @param d_data GPU pointer to interleaved real/imag float array, length 2·nx·ny.
+/// @param nx     Transform size in x.
+/// @param ny     Transform size in y.
+/// @param stream OpenACC/CUDA stream pointer.
+/// @param plan   Pointer to a pre-allocated cuFFT plan.
 template <typename T1, typename std::enable_if<std::is_same<T1, float>::value,
                                                int>::type = 0>
 void fft2dGPU(T1 *d_data, int nx, int ny, void *stream, cufftHandle *plan);
 
+/// @brief In-place 3-D inverse FFT on GPU (single precision).
+///
+/// @tparam T1    Must be `float`.
+/// @param d_data GPU pointer to interleaved real/imag float array.
+/// @param nx     Transform size in x.
+/// @param ny     Transform size in y.
+/// @param nz     Transform size in z.
+/// @param stream OpenACC/CUDA stream pointer.
+/// @param plan   Pointer to a pre-allocated cuFFT plan.
 template <typename T1, typename std::enable_if<std::is_same<T1, float>::value,
                                                int>::type = 0>
 void ifft3dGPU(T1 *d_data, int nx, int ny, int nz, void *stream, cufftHandle *plan);
 
+/// @brief In-place 3-D forward FFT on GPU (single precision).
+///
+/// @tparam T1    Must be `float`.
+/// @param d_data GPU pointer to interleaved real/imag float array.
+/// @param nx     Transform size in x.
+/// @param ny     Transform size in y.
+/// @param nz     Transform size in z.
+/// @param stream OpenACC/CUDA stream pointer.
+/// @param plan   Pointer to a pre-allocated cuFFT plan.
 template <typename T1, typename std::enable_if<std::is_same<T1, float>::value,
                                                int>::type = 0>
 void fft3dGPU(T1 *d_data, int nx, int ny, int nz, void *stream, cufftHandle *plan);
 
+/// @brief In-place 1-D forward FFT on GPU (double precision).
+///
+/// @tparam T1    Must be `double`.
+/// @param d_data GPU pointer to interleaved real/imag double array, length 2·nx.
+/// @param nx     Number of complex samples.
+/// @param stream OpenACC/CUDA stream pointer.
+/// @param plan   Pointer to a pre-allocated cuFFT plan.
 template <typename T1, typename std::enable_if<std::is_same<T1, double>::value,
                                                int>::type = 0>
 void fft1dGPU(T1 *d_data, int nx, void *stream, cufftHandle *plan);
 
+/// @brief In-place 2-D inverse FFT on GPU (double precision).
+///
+/// @tparam T1    Must be `double`.
+/// @param d_data GPU pointer to interleaved real/imag double array, length 2·nx·ny.
+/// @param nx     Transform size in x.
+/// @param ny     Transform size in y.
+/// @param stream OpenACC/CUDA stream pointer.
+/// @param plan   Pointer to a pre-allocated cuFFT plan.
 template <typename T1, typename std::enable_if<std::is_same<T1, double>::value,
                                                int>::type = 0>
 void ifft2dGPU(T1 *d_data, int nx, int ny, void *stream, cufftHandle *plan);
 
+/// @brief In-place 2-D forward FFT on GPU (double precision).
+///
+/// @tparam T1    Must be `double`.
+/// @param d_data GPU pointer to interleaved real/imag double array, length 2·nx·ny.
+/// @param nx     Transform size in x.
+/// @param ny     Transform size in y.
+/// @param stream OpenACC/CUDA stream pointer.
+/// @param plan   Pointer to a pre-allocated cuFFT plan.
 template <typename T1, typename std::enable_if<std::is_same<T1, double>::value,
                                                int>::type = 0>
 void fft2dGPU(T1 *d_data, int nx, int ny, void *stream, cufftHandle *plan);
 
+/// @brief In-place 3-D inverse FFT on GPU (double precision).
+///
+/// @tparam T1    Must be `double`.
+/// @param d_data GPU pointer to interleaved real/imag double array.
+/// @param nx     Transform size in x.
+/// @param ny     Transform size in y.
+/// @param nz     Transform size in z.
+/// @param stream OpenACC/CUDA stream pointer.
+/// @param plan   Pointer to a pre-allocated cuFFT plan.
 template <typename T1, typename std::enable_if<std::is_same<T1, double>::value,
                                                int>::type = 0>
 void ifft3dGPU(T1 *d_data, int nx, int ny, int nz, void *stream, cufftHandle *plan);
 
+/// @brief In-place 3-D forward FFT on GPU (double precision).
+///
+/// @tparam T1    Must be `double`.
+/// @param d_data GPU pointer to interleaved real/imag double array.
+/// @param nx     Transform size in x.
+/// @param ny     Transform size in y.
+/// @param nz     Transform size in z.
+/// @param stream OpenACC/CUDA stream pointer.
+/// @param plan   Pointer to a pre-allocated cuFFT plan.
 template <typename T1, typename std::enable_if<std::is_same<T1, double>::value,
                                                int>::type = 0>
 void fft3dGPU(T1 *d_data, int nx, int ny, int nz, void *stream, cufftHandle *plan);

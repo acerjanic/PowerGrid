@@ -11,6 +11,27 @@ Software for CPU and GPU accelerated iterative magnetic resonance imaging recons
 
 *   [SuperLU5](https://github.com/xiaoyeli/superlu) - Library to support advanced matrix decompositions in Armadillo.
 
+## Generating API Documentation
+
+PowerGrid uses [hdoc](https://hdoc.io) to generate API documentation from `///` doc
+comments in the headers. A dedicated Docker image bundles hdoc and all build dependencies.
+
+### Build the docs image (one-time)
+
+```shell
+docker build -t powergrid-hdoc docker/pg-hdoc/
+```
+
+### Generate the docs
+
+```shell
+docker run --rm -v "$(pwd)":/root/PowerGrid powergrid-hdoc \
+    bash scripts/generate-docs.sh
+```
+
+Output is written to `docs/api/index.html` (excluded from version control via `.gitignore`).
+The script runs cmake to produce `compile_commands.json` and then invokes `hdoc --verbose`.
+
 ## Installing PowerGrid on Linux distributions
 Note that GPU accelerated recons are only supported on Linux distributions due to limitations in Nvidia-docker only supporting Linux hosts. As docker support for GPUs expands to other platforms, this may change in the future.
 

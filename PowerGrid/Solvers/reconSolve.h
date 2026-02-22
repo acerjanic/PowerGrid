@@ -24,6 +24,9 @@
 
 *****************************************************************************/
 
+/// @file reconSolve.h
+/// @brief High-level iterative reconstruction entry point and image-space coordinate helper.
+
 #ifndef POWERGRID_RECONSOLVE_H
 #define POWERGRID_RECONSOLVE_H
 
@@ -45,6 +48,19 @@
 using namespace arma;
 
 
+/// @brief Initialise image-space coordinate vectors for a 3-D grid.
+///
+/// Fills @p ix, @p iy, @p iz with the fractional voxel positions
+/// (range [0, (N-1)/N]) for each pixel of an Nx×Ny×Nz volume, in
+/// column-major (x-fastest) order.
+///
+/// @tparam T1  Floating-point precision type (`float` or `double`).
+/// @param ix   Output x-coordinate vector, length Nx·Ny·Nz.
+/// @param iy   Output y-coordinate vector, same length.
+/// @param iz   Output z-coordinate vector, same length.
+/// @param Nx   Image size in x.
+/// @param Ny   Image size in y.
+/// @param Nz   Image size in z (use 1 for 2-D).
 template <typename T1>
 void initImageSpaceCoords(Col<T1> &ix, Col<T1> &iy, Col<T1> &iz, uword Nx,
                           uword Ny, uword Nz);
@@ -58,6 +74,27 @@ Col<complex<T1> > reconSolve(Col<complex<T1> > data, TObj &Sg, RObj R,
                              uword Ny, uword Nz, Col<T1> tvec, uword niter);
 */
 
+/// @brief High-level iterative MRI image reconstruction via PCG.
+///
+/// Sets up a penalized weighted least-squares problem and solves it using
+/// solve_pwls_pcg with uniform data weights.  Starting from a zero image,
+/// it returns the reconstructed image after @p niter iterations.
+///
+/// @tparam T1    Floating-point precision type (`float` or `double`).
+/// @tparam TObj  Encoding operator type (e.g., `SENSE<T1, Gnufft<T1>>`).
+/// @tparam RObj  Regularization object type (e.g., `QuadPenalty<T1>`).
+/// @param data   Measured k-space data (stacked multi-coil if using SENSE), length n1.
+/// @param Sg     Encoding operator.
+/// @param R      Regularization penalty object.
+/// @param kx     k-space x-coordinates, length n1 (unused by this function; provided for context).
+/// @param ky     k-space y-coordinates, length n1.
+/// @param kz     k-space z-coordinates, length n1.
+/// @param Nx     Image size in x.
+/// @param Ny     Image size in y.
+/// @param Nz     Image size in z (use 1 for 2-D).
+/// @param tvec   Per-sample readout time vector in seconds, length n1.
+/// @param niter  Maximum number of PCG iterations.
+/// @returns      Reconstructed image vector, length Nx·Ny·Nz.
 // Template parameters are  T1: data precision (double, float, FP16 etc...),
 // TObj: Transform Object, RObj is regularization object
 template <typename T1, typename TObj, typename RObj>

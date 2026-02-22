@@ -23,6 +23,9 @@
 
 *****************************************************************************/
 
+/// @file pcSENSE.h
+/// @brief Phase-corrected SENSE operator for multi-shot non-Cartesian acquisitions.
+
 #ifndef PowerGrid_pcSENSE_hpp
 #define PowerGrid_pcSENSE_hpp
 
@@ -37,42 +40,68 @@
 using namespace arma;
 //using namespace PowerGrid;
 
+/// @brief Phase-corrected multi-shot SENSE operator.
+///
+/// Extends the standard SENSE model with per-shot phase maps to correct for
+/// inter-shot phase inconsistencies in multi-shot non-Cartesian acquisitions.
+/// Uses a per-shot Gdft encoding operator to handle arbitrary trajectories.
+///
+/// @tparam T1  Floating-point precision type (`float` or `double`).
 template <typename T1> class pcSENSE {
 typedef std::complex<T1> CxT1;
 
 public:
+/// @brief Default constructor.
 pcSENSE();
 
 ~pcSENSE();
 
-// Class variables go here
-uword Nd = 0;   // Data size  (the size of one gdft or Gnufft object, length of
-                // a single shot)
-uword Ni = 0;   // Image size
-uword Nc = 0;   // number of coils
-uword Ns = 0;   // number of shots
-Mat<CxT1> SMap;   // coil sensitivity, dimensions Image size(n1) by number of
-                  // coils (nc)
+/// @brief Number of k-space samples per shot.
+uword Nd = 0;
+/// @brief Number of image pixels.
+uword Ni = 0;
+/// @brief Number of receiver coils.
+uword Nc = 0;
+/// @brief Number of shots.
+uword Ns = 0;
+/// @brief Coil sensitivity maps, size Ni x Nc.
+Mat<CxT1> SMap;
+/// @brief Conjugate sensitivity maps, size Ni x Nc.
 Mat<CxT1> conjSMap;
-Mat<T1> PMap;   // shot phase, dimensions Image size(n1) by number of shots. in
-                // radians.
-Mat<CxT1> expiPMap;      // exp(i*PMap) — used in forward
-Mat<CxT1> conjExpiPMap;  // exp(-i*PMap) — used in adjoint
-Col<T1> FMap;   // Fieldmap
-Mat<T1> Kx;     // kspace coordinates in x direction
-Mat<T1> Ky;     // kspace coordinates in y direction
-Mat<T1> Kz;     // kspace coordinates in z direction
-Mat<T1> Tvec;   // timing vector for a single shot (all shots assumed to have
-                // same timing vector)
+/// @brief Per-shot phase maps in radians, size Ni x Ns.
+Mat<T1> PMap;
+/// @brief Complex exponential of phase maps (exp(i*PMap)), size Ni x Ns.
+Mat<CxT1> expiPMap;
+/// @brief Conjugate complex exponential of phase maps (exp(-i*PMap)), size Ni x Ns.
+Mat<CxT1> conjExpiPMap;
+/// @brief Off-resonance field map (rad/s), length Ni.
+Col<T1> FMap;
+/// @brief k-space x-coordinates matrix, size (samples/shot) x Ns.
+Mat<T1> Kx;
+/// @brief k-space y-coordinates matrix, size (samples/shot) x Ns.
+Mat<T1> Ky;
+/// @brief k-space z-coordinates matrix, size (samples/shot) x Ns.
+Mat<T1> Kz;
+/// @brief Readout time vector (s), size (samples/shot) x Ns.
+Mat<T1> Tvec;
+/// @brief Image size in x.
 uword Nx;
+/// @brief Image size in y.
 uword Ny;
+/// @brief Image size in z.
 uword Nz;
+/// @brief Image-space x-coordinates, length Ni.
 Col<T1> Ix;
+/// @brief Image-space y-coordinates, length Ni.
 Col<T1> Iy;
+/// @brief Image-space z-coordinates, length Ni.
 Col<T1> Iz;
 CxT1 i = CxT1(0., 1.);
-uword type = 1;   // 2 for min max time seg and 1 for Hanning
+/// @brief Interpolation type: 1 = Hanning, 2 = exact min-max.
+uword type = 1;
+/// @brief Number of time segments for field-map correction.
 uword L = 20;
+/// @brief Array of per-shot encoding operator pointers.
 Gdft<T1> **AObj = NULL;
 
 #ifdef METAL_COMPUTE
@@ -84,23 +113,42 @@ pgMat<pgComplex<T1>> conjExpiPMap_pg;
 #endif
 	//TimeSegmentation <T1, Gnufft<T1>> **AObj = NULL;
 
-// Class constructor
+/// @brief Construct a phase-corrected SENSE operator.
+///
+/// @param kx          k-space x-coordinates (all shots concatenated), length Nd*Ns.
+/// @param ky          k-space y-coordinates, length Nd*Ns.
+/// @param kz          k-space z-coordinates, length Nd*Ns.
+/// @param nx          Image size in x.
+/// @param ny          Image size in y.
+/// @param nz          Image size in z.
+/// @param nc          Number of receiver coils.
+/// @param t           Per-sample readout time vector (s), length Nd*Ns.
+/// @param SENSEmap    Sensitivity maps as flat vector, length Ni*Nc.
+/// @param FieldMap    Off-resonance field map (rad/s), length Ni.
+/// @param ShotPhaseMap  Per-shot phase maps in radians, length Ni*Ns.
 pcSENSE(Col<T1> kx, Col<T1> ky, Col<T1> kz, uword nx, uword ny, uword nz,
         uword nc, Col<T1> t, Col<CxT1> SENSEmap, Col<T1> FieldMap,
         Col<T1> ShotPhaseMap);
 
-// Overloaded operators go here
-
-// Forward transformation is *
-// d is the vector of data of type T1, note it is const, so we don't modify it
-// directly rather return another vector of type T1
+/// @brief Forward phase-corrected SENSE transform: image -> k-space.
+///
+/// @param d  Input image vector of length Ni.
+/// @returns  Stacked k-space vector of length Nd*Ns*Nc.
 Col<CxT1> operator*(const Col<CxT1> &d) const;
-// For the adjoint operation, we have to weight the adjoint transform of the
-// coil data by the SENSE map.
+
+/// @brief Adjoint phase-corrected SENSE transform: k-space -> image.
+///
+/// @param d  Input k-space vector of length Nd*Ns*Nc.
+/// @returns  Output image vector of length Ni.
 Col<CxT1> operator/(const Col<CxT1> &d) const;
 
-// pgCol overloads — avoid arma conversion overhead
+/// @brief Forward phase-corrected SENSE transform (pgCol overload for Metal path).
+/// @param d  Input image vector of length Ni.
+/// @returns  Stacked k-space vector of length Nd*Ns*Nc.
 pgCol<pgComplex<T1>> operator*(const pgCol<pgComplex<T1>> &d) const;
+/// @brief Adjoint phase-corrected SENSE transform (pgCol overload for Metal path).
+/// @param d  Input k-space vector of length Nd*Ns*Nc.
+/// @returns  Output image vector of length Ni.
 pgCol<pgComplex<T1>> operator/(const pgCol<pgComplex<T1>> &d) const;
 };
 

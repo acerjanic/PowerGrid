@@ -24,6 +24,9 @@ Developed by:
 
  *****************************************************************************/
 
+/// @file solve_pwls_pcg.hpp
+/// @brief Preconditioned weighted least-squares solver via conjugate gradient.
+
 #ifndef POWERGRID_SOLVE_PWLS_PCG_HPP_
 #define POWERGRID_SOLVE_PWLS_PCG_HPP_
 
@@ -37,6 +40,14 @@ Developed by:
 
 using namespace arma;
 
+/// @brief Element-wise dot product (without conjugation) of two complex vectors.
+///
+/// Computes Σ_k A[k] · B[k] (no complex conjugate on A).
+///
+/// @tparam T1  Floating-point base type.
+/// @param A    First complex vector.
+/// @param B    Second complex vector, same length as @p A.
+/// @returns    Scalar dot product.
 template <typename T1>
 inline complex<T1> dot_double(const Col<complex<T1>>& A,
                               const Col<complex<T1>>& B) {
@@ -44,6 +55,15 @@ inline complex<T1> dot_double(const Col<complex<T1>>& A,
   return sumReturn;
 }
 
+/// @brief Normalized gradient magnitude for convergence testing.
+///
+/// Returns ‖g‖ / (yi^T · W · yi), providing a scale-invariant stopping criterion.
+///
+/// @tparam T1  Floating-point base type.
+/// @param g    Current gradient vector.
+/// @param yi   Measured k-space data vector.
+/// @param W    Non-negative data weights vector, same length as @p yi.
+/// @returns    Normalized gradient magnitude.
 template <typename T1>
 inline T1 norm_grad(const Col<complex<T1>> &g, const Col<complex<T1>> &yi,
                     const Col<T1> &W) {
@@ -51,6 +71,23 @@ inline T1 norm_grad(const Col<complex<T1>> &g, const Col<complex<T1>> &yi,
   return normGrad;
 }
 
+/// @brief Solve a penalized weighted least-squares problem via preconditioned CG.
+///
+/// Minimises: min_x { ‖W^½ (yi − A·x)‖² + R(x) }
+///
+/// Uses the Polak-Ribière conjugate gradient update with a 3-step inner loop
+/// for step-size selection (quadratic surrogate approximation).
+///
+/// @tparam T1    Floating-point precision type (`float` or `double`).
+/// @tparam Tobj  Encoding operator type (must support `A * x` and `A / y`).
+/// @tparam Robj  Regularization object type (must support `Gradient`, `Denom`).
+/// @param xInitial  Initial image estimate, length n2.
+/// @param A         Encoding operator (forward: image→data, adjoint: data→image).
+/// @param W         Non-negative data weights, length n1.
+/// @param yi        Measured k-space data, length n1.
+/// @param R         Regularization penalty object.
+/// @param niter     Maximum number of CG iterations.
+/// @returns         Reconstructed image estimate, length n2.
 template <typename T1, typename Tobj, typename Robj>
 Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
                                 Col<T1> const &W, Col<complex<T1>> const &yi,

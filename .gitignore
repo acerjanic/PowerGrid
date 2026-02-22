@@ -42,8 +42,8 @@ data/*
 build/
 build_*/
 
-# Generated documentation
-docs/
+# Generated documentation (keep docs/pages/ for hdoc source pages)
+docs/api/
 
 # Performance profiling traces
 profiles/

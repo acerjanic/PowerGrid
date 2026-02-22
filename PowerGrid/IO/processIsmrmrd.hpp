@@ -23,6 +23,9 @@ Developed by:
 
  *****************************************************************************/
 
+/// @file processIsmrmrd.hpp
+/// @brief Helper functions for reading and writing ISMRMRD MRI raw-data files.
+
 #ifndef POWERGRID_PROCESSISMRMRD_HPP
 #define POWERGRID_PROCESSISMRMRD_HPP
 
@@ -31,6 +34,15 @@ Developed by:
 using namespace arma;
 typedef std::tuple<std::size_t,std::size_t,std::size_t> D3tuple;
 
+/// @brief Open an ISMRMRD dataset and initialise bookkeeping structures.
+///
+/// Allocates and opens the ISMRMRD::Dataset object, reads and deserialises the
+/// XML header, and constructs an acqTracking object for the file.
+///
+/// @param inputDataFile  Path to the ISMRMRD HDF5 file.
+/// @param d              Output: pointer to the newly opened dataset.
+/// @param hdr            Output: parsed ISMRMRD header.
+/// @param acqTrack       Output: pointer to the newly created acqTracking object.
 void openISMRMRDData(std::string inputDataFile, ISMRMRD::Dataset *&d, ISMRMRD::IsmrmrdHeader &hdr, acqTracking *&acqTrack) {
 	RANGE()
     std::cout << "trying to create an ISMRMD::Dataset object" << std::endl;

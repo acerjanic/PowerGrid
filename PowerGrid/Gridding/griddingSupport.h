@@ -24,6 +24,10 @@
     Date        [12/2/2016]
 
 *****************************************************************************/
+
+/// @file griddingSupport.h
+/// @brief Kaiser-Bessel kernel support: modified Bessel I0, LUT computation, and gridding utilities.
+
 #ifndef PowerGrid_griddingSupport_h
 #define PowerGrid_griddingSupport_h
 
@@ -35,12 +39,28 @@
 
 using namespace std; // where to put?
 
-// From Numerical Recipes in C, 2nd Edition
-// Just a vanilla I(0,x) function approximation
+/// @brief Modified Bessel function of the first kind, order zero: I0(x).
+///
+/// Used as the Kaiser-Bessel kernel in the NUFFT gridding step.
+/// Approximation from Numerical Recipes in C, 2nd edition.
+///
+/// @tparam T1  Floating-point type.
+/// @param x    Input value.
+/// @returns    I0(x) >= 1 for all real x.
 #pragma acc routine seq
 template <typename T1>
 T1 bessi0(T1 x);
 
+/// @brief Precompute a Kaiser-Bessel kernel lookup table.
+///
+/// Evaluates the KB kernel on a uniform grid of @p sizeLUT points over [0, width/2]
+/// and stores the result. Caller takes ownership of the allocated @p LUT array.
+///
+/// @tparam T1      Floating-point type.
+/// @param beta     Kaiser-Bessel shape parameter beta.
+/// @param width    Kernel half-width.
+/// @param LUT      Output: pointer to newly allocated LUT array.
+/// @param sizeLUT  Output: number of entries in the LUT.
 template <typename T1>
 void calculateLUT(T1 beta, T1 width, T1*& LUT, uword& sizeLUT);
 
@@ -51,6 +71,16 @@ inline bool isnanPG(T1 x)
     return x != x;
 };
 
+/// @brief Evaluate the Kaiser-Bessel kernel from a precomputed lookup table.
+///
+/// Linearly interpolates between LUT entries.
+///
+/// @tparam T1      Floating-point type.
+/// @param dist     Distance from kernel centre (must be < width/2).
+/// @param LUT      Precomputed LUT array.
+/// @param sizeLUT  Number of LUT entries.
+/// @param width    Kernel half-width (same units as @p dist).
+/// @returns        Interpolated kernel value at @p dist.
 #pragma acc routine seq
 template <typename T1>
 T1 kernel_value_LUT(T1 dist, const T1* LUT, uword sizeLUT, T1 width);

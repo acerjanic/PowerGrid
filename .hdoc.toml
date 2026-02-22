@@ -1,0 +1,23 @@
+[project]
+name               = "PowerGrid"
+version            = "1.0.0"
+git_repo_url       = "https://github.com/acerjanic/PowerGrid/"
+git_default_branch = "HPCSDK_25.1"
+
+[paths]
+compile_commands = "build/compile_commands.json"
+output_dir       = "docs/api"
+
+[ignore]
+ignore_private_members = true
+paths = [
+  "PowerGrid/Tests/",
+  "PowerGrid/Tutorials/",
+  "PowerGrid/Microbenchmarks/",
+  "Support/",
+  "apps/",
+]
+
+[pages]
+homepage = "docs/pages/index.md"
+paths    = ["docs/pages/index.md"]

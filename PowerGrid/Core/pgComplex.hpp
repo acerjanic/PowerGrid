@@ -1,3 +1,6 @@
+/// @file pgComplex.hpp
+/// @brief GPU-compatible complex number type for OpenACC kernels.
+
 // pgComplex.hpp
 
 #ifndef POWER_GRID_pgComplex_h
@@ -8,6 +11,15 @@
 #include <complex>
 #include <type_traits>
 
+/// @brief Complex number type compatible with OpenACC GPU offload.
+///
+/// Provides the same arithmetic interface as `std::complex<T>` but is a plain
+/// struct with no virtual methods, making it safe to use inside OpenACC
+/// `parallel` and `kernels` regions.  Supports construction from `pgComplex<X>`
+/// and `std::complex<X>`, and provides the standard arithmetic operators along
+/// with `abs`, `arg`, `norm`, `conj`, and `polar`.
+///
+/// @tparam T  Underlying real type (`float` or `double`).
 template<typename T>
 class pgComplex {
 

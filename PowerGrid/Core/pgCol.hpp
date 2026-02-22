@@ -1,3 +1,6 @@
+/// @file pgCol.hpp
+/// @brief GPU-managed column vector for OpenACC-accelerated MRI computations.
+
 // pgCol.hpp
 
 #ifndef POWER_GRID_pgCol_hpp
@@ -18,7 +21,14 @@
 #include "AccelerateDispatch.hpp"
 #endif
 
-
+/// @brief Column vector with transparent CPU/GPU memory management via OpenACC.
+///
+/// Wraps a raw pointer and uses OpenACC `enter data` / `exit data` directives
+/// to keep data resident on the GPU when compiled with OpenACC.  Provides
+/// element access via `at()`, scalar arithmetic operators, and conversion
+/// to/from Armadillo `Col<T>` via `getArma()`.
+///
+/// @tparam T  Element type (e.g., `float`, `double`, `pgComplex<float>`).
 template<typename T>
 class pgCol {
 

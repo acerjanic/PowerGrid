@@ -29,6 +29,9 @@ Developed by:
 
  *****************************************************************************/
 
+/// @file ftCpu.h
+/// @brief CPU (and OpenACC-annotated) non-uniform DFT and adjoint DFT kernels.
+
 #ifndef FT_CPU_H
 #define FT_CPU_H
 
@@ -95,15 +98,33 @@ iftCpu(T1 *idata_r, T1 *idata_i,
 /*                                                                           */
 /*===========================================================================*/
 
+/// @brief Normalized sinc function used internally by the DFT kernels.
+///
+/// @tparam T1  Floating-point type.
+/// @param x    Input value.
+/// @returns    sinc(x) = sin(x)/x, with sinc(0) = 1.
 template <typename T1> T1 sinc_cpu(T1 x);
 
-/*===========================================================================*/
-/*                                                                           */
-/*  Synopsis    [CPU kernel of the Fourier Transformation (FT).]             */
-/*                                                                           */
-/*  Description []                                                           */
-/*                                                                           */
-/*===========================================================================*/
+/// @brief Non-uniform forward DFT kernel (CPU / OpenACC).
+///
+/// Computes kdata[j] = Sigma_k (idata_r[k] + i*idata_i[k]) *
+///   exp(-i*2*pi*(kx[j]*ix[k] + ky[j]*iy[k] + kz[j]*iz[k]) - i*FM[k]*t[j]).
+///
+/// @tparam T1       Floating-point precision type.
+/// @param kdata_r   Output k-space real part array, length num_k.
+/// @param kdata_i   Output k-space imaginary part array, length num_k.
+/// @param idata_r   Input image real part array, length num_i.
+/// @param idata_i   Input image imaginary part array, length num_i.
+/// @param kx        k-space x-coordinates, length num_k.
+/// @param ky        k-space y-coordinates, length num_k.
+/// @param kz        k-space z-coordinates, length num_k.
+/// @param ix        Image-space x-coordinates, length num_i.
+/// @param iy        Image-space y-coordinates, length num_i.
+/// @param iz        Image-space z-coordinates, length num_i.
+/// @param FM        Off-resonance field map (rad/s), length num_i.
+/// @param t         Per-sample readout time (s), length num_k.
+/// @param num_k     Number of k-space samples.
+/// @param num_i     Number of image pixels.
 template <typename T1>
 void ftCpu(T1 *kdata_r, T1 *kdata_i, const T1 *idata_r, const T1 *idata_i,
            const T1 *kx, const T1 *ky, const T1 *kz, const T1 *ix, const T1 *iy,
@@ -129,6 +150,26 @@ extern template void ftCpu<double>(double *, double *, const double *,
 /*  Description [] */
 /*                                                                           */
 /*===========================================================================*/
+/// @brief Non-uniform adjoint DFT kernel (CPU / OpenACC).
+///
+/// Computes idata[k] = Sigma_j (kdata_r[j] + i*kdata_i[j]) *
+///   exp(+i*2*pi*(kx[j]*ix[k] + ky[j]*iy[k] + kz[j]*iz[k]) + i*FM[k]*t[j]).
+///
+/// @tparam T1       Floating-point precision type.
+/// @param idata_r   Output image real part array, length num_i.
+/// @param idata_i   Output image imaginary part array, length num_i.
+/// @param kdata_r   Input k-space real part array, length num_k.
+/// @param kdata_i   Input k-space imaginary part array, length num_k.
+/// @param kx        k-space x-coordinates, length num_k.
+/// @param ky        k-space y-coordinates, length num_k.
+/// @param kz        k-space z-coordinates, length num_k.
+/// @param ix        Image-space x-coordinates, length num_i.
+/// @param iy        Image-space y-coordinates, length num_i.
+/// @param iz        Image-space z-coordinates, length num_i.
+/// @param FM        Off-resonance field map (rad/s), length num_i.
+/// @param t         Per-sample readout time (s), length num_k.
+/// @param num_k     Number of k-space samples.
+/// @param num_i     Number of image pixels.
 template <typename T1>
 void iftCpu(T1 *idata_r, T1 *idata_i, const T1 *kdata_r, const T1 *kdata_i,
             const T1 *kx, const T1 *ky, const T1 *kz, const T1 *ix,

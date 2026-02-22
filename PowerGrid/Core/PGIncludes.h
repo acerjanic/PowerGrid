@@ -23,6 +23,11 @@
     Date        [12/27/2016]
 
 *****************************************************************************/
+
+/// @file PGIncludes.h
+/// @brief Internal base include file: pulls in Armadillo (or MPI variant), OpenACC/CUDA headers,
+///        numeric constants, and the Tracer RAII profiling utility.
+
 #ifndef PGINCLUDES_H
 #define PGINCLUDES_H
 
