@@ -94,3 +94,71 @@ TEST_CASE("pgComplex<float>: operations against std::complex", "[pgComplex]") {
     }
 
 }
+
+TEST_CASE("pgComplex<float>: edge cases and invariants", "[pgComplex]") {
+
+    float re_ = 1.2f;
+    float im_ = -3.4f;
+
+    pgComplex<float> z(re_, im_);
+    pgComplex<float> zZero = {};
+    pgComplex<float> zJ(0.0f, 1.0f);
+
+    SECTION("Unary minus negates both components") {
+        pgComplex<float> neg = -z;
+        REQUIRE(neg.real() == -re_);
+        REQUIRE(neg.imag() == -im_);
+    }
+
+    SECTION("operator!= reports inequality") {
+        REQUIRE(z != zZero);
+        REQUIRE_FALSE(z != pgComplex<float>(re_, im_));
+    }
+
+    SECTION("Zero magnitude: abs and norm are both 0") {
+        REQUIRE(abs(zZero) == 0.0f);
+        REQUIRE(norm(zZero) == 0.0f);
+    }
+
+    SECTION("conj(z) * z equals norm(z) with zero imaginary part") {
+        pgComplex<float> product = conj(z) * z;
+        REQUIRE(product.real() == Approx(norm(z)));
+        REQUIRE(product.imag() == Approx(0.0f).margin(1e-5f));
+    }
+
+    SECTION("polar: abs and arg recover r and theta") {
+        float r = 2.5f;
+        float theta = 0.7f;
+        pgComplex<float> zPolar = polar(r, theta);
+        REQUIRE(abs(zPolar) == Approx(r));
+        REQUIRE(arg(zPolar) == Approx(theta));
+    }
+
+    SECTION("exp/log round-trip recovers original value") {
+        pgComplex<float> roundTrip = exp(log(z));
+        REQUIRE(roundTrip.real() == Approx(re_).epsilon(1e-5f));
+        REQUIRE(roundTrip.imag() == Approx(im_).epsilon(1e-5f));
+    }
+
+    SECTION("Cross-type construct: pgComplex<double> to pgComplex<float>") {
+        pgComplex<double> zDouble(static_cast<double>(re_), static_cast<double>(im_));
+        pgComplex<float> zFromDouble(zDouble);
+        REQUIRE(zFromDouble.real() == Approx(re_));
+        REQUIRE(zFromDouble.imag() == Approx(im_));
+    }
+
+    SECTION("std::complex round-trip: construct from std::complex, values match") {
+        std::complex<float> cplx(re_, im_);
+        pgComplex<float> fromCplx(cplx);
+        REQUIRE(fromCplx.real() == re_);
+        REQUIRE(fromCplx.imag() == im_);
+    }
+
+    SECTION("norm equals real^2 + imag^2") {
+        REQUIRE(norm(z) == Approx(re_ * re_ + im_ * im_));
+    }
+
+    SECTION("abs equals sqrt of norm") {
+        REQUIRE(abs(z) == Approx(std::sqrt(norm(z))));
+    }
+}

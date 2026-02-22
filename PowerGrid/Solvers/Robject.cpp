@@ -108,12 +108,17 @@ Col<complex<T1>> Robject<T1>::Ctd(const Col<complex<T1> > &d, uword dim) const {
                      << endl;
         }
         
+        uword n = Ny * Nx * Nz;
         uword offset = ll + jj * Ny + kk * Nx * Ny;
-        out(offset - 1) = -d(offset);
-        out(Ny * Nx * Nz - 1 - offset) = d(Ny * Nx * Nz - 1 - offset);
-        
-        for (uword ii = offset; ii < Ny * Nx * Nz - 1; ii++) {
-                out(ii - offset) = d(ii - offset) - d(ii);
+
+        for (uword i = 0; i < offset; i++) {
+                out(i) = -d(i + offset);
+        }
+        for (uword i = offset; i < n - offset; i++) {
+                out(i) = d(i) - d(i + offset);
+        }
+        for (uword i = n - offset; i < n; i++) {
+                out(i) = d(i);
         }
 
         return out;

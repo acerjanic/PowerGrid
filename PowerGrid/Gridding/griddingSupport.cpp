@@ -74,29 +74,25 @@ void calculateLUT(T1 beta, T1 width, T1*& LUT, uword& sizeLUT)
         }
     }
 }
-/*
 #pragma acc routine seq
 template <typename T1>
 T1 kernel_value_LUT(T1 dist, const T1 *LUT, uword sizeLUT,
-                    T1 width) { // v is between [0,width/2.0]
-  uword k0;
-  // T1 v0;
+                    T1 width) {
   T1 _width2_4 =
       4.0 /
       (width * width); // Reciprocal of _width2_4 from calculateLUT function
 
-  k0 = (uword)((dist * dist * _width2_4) * (T1)sizeLUT);
-
-  // cout << "dist = " << dist << " k0 =" << k0 << endl;
+  uword k0 = (uword)((dist * dist * _width2_4) * (T1)sizeLUT);
 
   if (k0 >= sizeLUT) {
     return 0;
-  }  else {
-   //cout << "about to access the look up table" << endl;
-  return LUT[k0];
+  } else {
+    return LUT[k0];
   }
 }
-*/
+
+template float kernel_value_LUT<float>(float dist, const float *LUT, uword sizeLUT, float width);
+template double kernel_value_LUT<double>(double dist, const double *LUT, uword sizeLUT, double width);
 template <typename T1>
 void deinterleave_data2d(
     T1* __restrict pSrc, T1* __restrict outR_d, T1* __restrict outI_d,
