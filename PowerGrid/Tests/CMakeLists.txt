@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2) #CMake version 3.2 required to properly support CMAKE_CXX_STANDARD
+cmake_minimum_required(VERSION 3.14) #CMake 3.14 required for FetchContent
 
 ## Flags and settings that change the compiler (i.e. from default to C++11 or C++14)
 ## need to be set BEFORE calling project command (which does introspection and sets
@@ -7,6 +7,16 @@ set(CMAKE_CXX_STANDARD 17)
 #set(CMAKE_CXX_EXTENSIONS ON)
 
 project("PowerGridTests" CXX)
+
+# Fetch spdlog and indicators for structured logging
+include(FetchContent)
+FetchContent_Declare(spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG        v1.14.1)
+FetchContent_Declare(indicators
+    GIT_REPOSITORY https://github.com/p-ranav/indicators.git
+    GIT_TAG        v2.3)
+FetchContent_MakeAvailable(spdlog indicators)
 
 
 # Prepare "Catch" library for other executables
@@ -76,4 +86,4 @@ endif()
 # Make test executable
 add_executable(tests ${TEST_SOURCES})
 target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
-target_link_libraries(tests Catch ${ARMADILLO_LIBRARIES} ${FFTW_LIBRARIES} ${FFTWF_LIBRARIES})
+target_link_libraries(tests Catch ${ARMADILLO_LIBRARIES} ${FFTW_LIBRARIES} ${FFTWF_LIBRARIES} spdlog::spdlog indicators::indicators)

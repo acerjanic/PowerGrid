@@ -29,6 +29,7 @@ Developed by:
 
 // //Project headers.
 #include "../PowerGrid/Core/PowerGrid.h"
+#include "../PowerGrid/Core/PGLog.hpp"
 #include "../PowerGrid/IO/processIsmrmrd.hpp"
 #include "../PowerGrid/IO/processNIFTI.hpp"
 #include <boost/program_options.hpp>
@@ -58,7 +59,8 @@ int main(int argc, char **argv) {
           ("TimeSegments,t", po::value<uword>(&L), "Number of time segments")
           ("Beta,B", po::value<double>(&beta), "Spatial regularization penalty weight")
           ("CGIterations,n", po::value<uword>(&NIter), "Number of preconditioned conjugate gradient interations for main solver")
-          ("Dims2Penalize,D", po::value<uword>(&dims2penalize), "Dimensions to apply regularization to (2 or 3).");
+          ("Dims2Penalize,D", po::value<uword>(&dims2penalize), "Dimensions to apply regularization to (2 or 3).")
+          ("log-level", po::value<std::string>()->default_value("info"), "Log level (trace, debug, info, warn, error)");
 
 
   po::variables_map vm;
@@ -110,6 +112,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  PG_LOG_INIT(vm["log-level"].as<std::string>());
 
   ISMRMRD::Dataset *d;
   ISMRMRD::IsmrmrdHeader hdr;
@@ -147,13 +150,10 @@ int main(int argc, char **argv) {
 
   // Check and abort if we have more than one encoding space (No Navigators for
   // now).
-  std::cout << "hdr.encoding.size() = " << hdr.encoding.size() << std::endl;
+  PG_DEBUG("hdr.encoding.size() = {}", hdr.encoding.size());
   if (hdr.encoding.size() != 1) {
-    std::cout << "There are " << hdr.encoding.size()
-              << " encoding spaces in this file" << std::endl;
-    std::cout
-        << "This recon does not handle more than one encoding space. Aborting."
-        << std::endl;
+    PG_ERROR("There are {} encoding spaces in this file. This recon does not handle more than one. Aborting.",
+             hdr.encoding.size());
     return -1;
   }
 
@@ -167,18 +167,10 @@ int main(int argc, char **argv) {
   int NEchoMax  = hdr.encoding[0].encodingLimits.contrast->maximum;
   int NPhaseMax = hdr.encoding[0].encodingLimits.phase->maximum;
 
-  std::cout << "NParMax = "   << NParMax << std::endl;
-  std::cout << "NShotMax = "  << NShotMax << std::endl;
-  std::cout << "NSliceMax = " << NSliceMax << std::endl;
-  std::cout << "NSetMax = "   << NSetMax << std::endl;
-  std::cout << "NRepMax = "   << NRepMax << std::endl;
-  std::cout << "NAvgMax = "   << NAvgMax << std::endl;
-  std::cout << "NEchoMax = "  << NEchoMax << std::endl;
-  std::cout << "NPhaseMax = " << NPhaseMax << std::endl;
-  std::cout << "NSegMax = "   << NSegMax << std::endl;
+  PG_INFO("Encoding limits: NParMax={}, NShotMax={}, NSliceMax={}, NSetMax={}, NRepMax={}, NAvgMax={}, NEchoMax={}, NPhaseMax={}, NSegMax={}",
+          NParMax, NShotMax, NSliceMax, NSetMax, NRepMax, NAvgMax, NEchoMax, NPhaseMax, NSegMax);
 
-   std::cout << "About to loop through the counters and scan the file"
-            << std::endl;
+  PG_INFO("Starting reconstruction loop");
 
   std::string baseFilename = "img";
 
@@ -229,15 +221,11 @@ int main(int argc, char **argv) {
 								            default: 
 									          L = 0;
 							            }
-							            std::cout << "Info: Setting L = " << L << " by default." << std::endl; 
+							            PG_INFO("Setting L = {} by default", L); 
 						            }
 
 
-	                    std::cout << "Number of elements in kx = " << kx.n_rows << std::endl;
-	                    std::cout << "Number of elements in ky = " << ky.n_rows << std::endl;
-	                    std::cout << "Number of elements in kz = " << kz.n_rows << std::endl;
-	                    std::cout << "Number of rows in data = " << data.n_rows << std::endl;
-	                    std::cout << "Number of columns in data = " << data.n_cols << std::endl;
+	                    PG_DEBUG("kx={}, ky={}, kz={}, data={}x{}", kx.n_rows, ky.n_rows, kz.n_rows, data.n_rows, data.n_cols);
 
 	                    QuadPenalty<float> R(Nx, Ny, Nz, beta, dims2penalize);
 

@@ -23,6 +23,7 @@
 
 *****************************************************************************/
 #include "pcSENSE.h"
+#include "Core/PGLog.hpp"
 
 template <typename T1> pcSENSE<T1>::~pcSENSE() {
 
@@ -44,10 +45,7 @@ pcSENSE<T1>::pcSENSE(Col<T1> kx, Col<T1> ky, Col<T1> kz, uword nx, uword ny,
         Nc = nc;
         Ns = ShotPhaseMap.n_elem / Ni;
         Nd = kx.n_elem / Ns;
-        std::cout << "Nd = " << Nd << std::endl;
-        std::cout << "Ns = " << Ns << std::endl;
-        std::cout << "Nc = " << Nc << std::endl;
-        std::cout << "Ni = " << Ni << std::endl;
+        PG_INFO("pcSENSE: Nd={}, Ns={}, Nc={}, Ni={}", Nd, Ns, Nc, Ni);
         SMap = reshape(SENSEmap, Ni, Nc);
         PMap = reshape(ShotPhaseMap, Ni, Ns);
         FMap = FieldMap;

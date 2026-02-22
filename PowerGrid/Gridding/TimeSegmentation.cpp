@@ -24,6 +24,7 @@
 
 *****************************************************************************/
 #include "TimeSegmentation.h"
+#include "Core/PGLog.hpp"
 // This using field correction by time segmentation
 // The data is corrected to time 0 with reference to the time vector passed
 //
@@ -100,8 +101,8 @@ TimeSegmentation<T1, Tobj>::TimeSegmentation(Tobj& G, Col<T1> map_in,
     } else {
         Mat<complex<T1>> tempAA(NOneShot, L);
         if (type == 1) { // Hanning interpolator
-            cout << "Using Hanning window temporal interpolator" << endl;
-            cout << "Field Map size = " << this->fieldMap.n_rows << endl;
+            PG_INFO("Using Hanning window temporal interpolator");
+            PG_DEBUG("Field Map size = {}", this->fieldMap.n_rows);
             for (unsigned int ii = 0; ii < L; ii++) {
                 for (unsigned int jj = 0; jj < NOneShot; jj++) {
                     if ((abs(timeVec(jj) - ((ii)*tau))) <= tau) {
@@ -115,7 +116,7 @@ TimeSegmentation<T1, Tobj>::TimeSegmentation(Tobj& G, Col<T1> map_in,
             //AA.save("AA.csv", arma::csv_ascii);
         } else if (type == 2) { // Min-max interpolator: Exact LS interpolator
 
-            cout << "Using exact LS minmax temporal interpolator" << endl;
+            PG_INFO("Using exact LS minmax temporal interpolator");
 
             Mat<complex<T1>> Ltp;
             Ltp.ones(1, L);
@@ -180,7 +181,7 @@ TimeSegmentation<T1, Tobj>::TimeSegmentation(Tobj& G, Col<T1> map_in,
             // Estimate histogram of field map
             auto start = std::chrono::high_resolution_clock::now();
 
-            std::cout << "Using approximate minmax temporal interpolator." << std::endl;
+            PG_INFO("Using approximate minmax temporal interpolator");
             int numBins = 256;
             Col<uword> fm_histo = hist(vectorise(fieldMap), numBins).eval();
 
@@ -188,12 +189,12 @@ TimeSegmentation<T1, Tobj>::TimeSegmentation(Tobj& G, Col<T1> map_in,
             T1 maxFM = max(vectorise(fieldMap));
 
             T1 rangeFM = maxFM - minFM;
-            std::cout << "rangeFM = " << rangeFM << std::endl;
+            PG_DEBUG("rangeFM = {}", rangeFM);
 
             Col<T1> bin_edges = linspace<Col<T1>>(minFM, maxFM, numBins);
 
             int KK = floor(2.0 * datum::pi / ((rangeFM / (T1)numBins) * tau));
-            std::cout << "KK = " << KK << std::endl;
+            PG_DEBUG("KK = {}", KK);
             T1 dwn = 2 * datum::pi / (KK * tau);
 
             //cx_vec ftwe_ap = vectorise(fft(fm_histo % (exp(i * dwn * regspace(0,(numBins-1))*tau*L)),KK));
@@ -213,7 +214,7 @@ TimeSegmentation<T1, Tobj>::TimeSegmentation(Tobj& G, Col<T1> map_in,
                 iGTGap_ap = inv(GTGap_ap.st());
             } else {
                 iGTGap_ap = pinv(GTGap_ap.st().eval());
-                std::cout << "Used pinv instead" << std::endl;
+                PG_WARN("GTG ill-conditioned, using pinv");
             }
             Col<CxT1> ftc_ap, GTc_ap;
 
@@ -229,7 +230,7 @@ TimeSegmentation<T1, Tobj>::TimeSegmentation(Tobj& G, Col<T1> map_in,
             auto finish = std::chrono::high_resolution_clock::now();
 
             std::chrono::duration<float> elapsed = finish - start;
-            std::cout << "Time Segmentation Histo Elapsed time: " << elapsed.count() << " s\n";
+            PG_INFO("Time segmentation setup elapsed: {:.3f} s", elapsed.count());
         }
 
         Wo.set_size(n2, L + 1);

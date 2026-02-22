@@ -29,6 +29,7 @@ Developed by:
 
 #include <cstdlib>
 #include <chrono>
+#include "Core/PGLog.hpp"
 
 #ifdef METAL_COMPUTE
 #include "Core/pgCol.hpp"
@@ -59,7 +60,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
 #ifdef METAL_COMPUTE
   if constexpr (std::is_same<T1, float>::value) {
     // Metal path: pgCol with GPU-dispatched vector algebra
-    cout << "Entering solve_pwls_pcg (Metal path)" << endl;
+    PG_INFO("Starting PCG solver (Metal path): {} iterations requested", niter);
 
     // Convert inputs to pgCol
     pgCol<pgComplex<T1>> x_pg(xInitial);
@@ -69,7 +70,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
     // Initial forward projection (pgCol overload — no arma conversion)
     pgCol<pgComplex<T1>> Ax_pg = A * x_pg;
     if (Ax_pg.has_nan())
-      cout << "Warning: Ax has NaN in solve_pwls_pcg" << endl;
+      PG_WARN("Ax has NaN after initial forward projection");
 
     pgComplex<T1> oldinprod(0, 0);
     pgComplex<T1> gamma(0, 0);
@@ -77,7 +78,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
     pgCol<pgComplex<T1>> Adir_pg;
     pgComplex<T1> newinprod;
 
-    cout << "Entering solve_pwls_pcg iteration loop (Metal)" << endl;
+    PG_DEBUG("Entering PCG iteration loop (Metal)");
     for (unsigned int ii = 0; ii < niter; ii++) {
       // Compute negative gradient: ngrad = A' * (W .* (yi - Ax))
       pgCol<pgComplex<T1>> residual = yi_pg - Ax_pg;        // Metal cvec_sub
@@ -85,10 +86,10 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       pgCol<pgComplex<T1>> ngrad_pg = A / Wresidual; // pgCol overload
 
       if (ngrad_pg.has_nan())
-        cout << "Warning: ngrad has NaN in solve_pwls_pcg" << endl;
+        PG_WARN("ngrad has NaN at iteration {}", ii);
 
       if (norm_grad<T1>(ngrad_pg.getArma(), yi, W) < 1e-10) {
-        cout << "Terminating early due to zero gradient." << endl;
+        PG_INFO("Terminating early: zero gradient at iteration {}", ii);
         return x_pg.getArma();
       }
 
@@ -118,14 +119,14 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       // Check descent direction
       pgComplex<T1> descCheck = cdot(ddir_pg, ngrad_pg);     // Metal cvec_cdot
       if (descCheck.real() < 0) {
-        cout << " Warning descent direction not negative" << endl;
+        PG_WARN("Descent direction is not downhill at iteration {} -- stopping", ii);
         return x_pg.getArma();
       }
 
       // Step size in search direction
       Adir_pg = A * ddir_pg; // pgCol overload
       if (Adir_pg.has_nan())
-        cout << "Warning: NaN found in Adir in solve_pwls_pcg" << endl;
+        PG_WARN("NaN in Adir at iteration {}", ii);
 
       pgCol<pgComplex<T1>> WAdir_pg = W_pg % Adir_pg;       // Metal rvec_cmul
       pgComplex<T1> dAWAd = cdot(Adir_pg, WAdir_pg);        // Metal cvec_cdot
@@ -148,10 +149,10 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
         if (std::abs(denom_re) < 1e-20 || std::isinf(denom_re) || std::isnan(denom_re)) {
           T1 n = norm(ngrad_pg);
           if (n == 0) {
-            cout << " Found exact solution" << endl;
+            PG_INFO("Found exact solution");
             return x_pg.getArma();
           } else {
-            cout << "inf denom (denom_re=" << denom_re << ")" << endl;
+            PG_WARN("inf denom (denom_re={})", denom_re);
             return x_pg.getArma();
           }
         }
@@ -167,7 +168,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
 
       // Check downhill direction
       if (step_pg.real() < 0) {
-        cout << "Warning downhill?" << endl;
+        PG_WARN("Step size is negative (downhill?) at iteration {}", ii);
       }
 
       // Update: Ax += step * Adir, x += step * ddir
@@ -175,18 +176,17 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       x_pg += ddir_pg % step_pg;                             // Metal cvec_mul_scalar + add
 
       T1 errNorm = norm(yi_pg - Ax_pg);
-      cout << "Iteration Error Norm = " << errNorm << endl;
-      cout << "Iteration Complete = " << ii << endl;
+      PG_DEBUG("PCG iteration {}/{}: error norm = {}", ii + 1, niter, errNorm);
     }
     return x_pg.getArma();
   }
 #endif
 
   // Armadillo path (double, or non-Metal builds)
-  cout << "Entering solve_pwls_pcg" << endl;
+  PG_INFO("Starting PCG solver: {} iterations requested", niter);
   Col<CxT1> Ax = A * xInitial;
   if (Ax.has_nan())
-    cout << "Warning: Ax has NaN in solve_pwls_pcg" << endl;
+    PG_WARN("Ax has NaN after initial forward projection");
   Col<CxT1> x = xInitial;
   CxT1 oldinprod = 0;
   CxT1 gamma = 0.0;
@@ -205,17 +205,17 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
   CxT1 step;
   CxT1 newinprod;
 
-  cout << "Entering solve_pwls_pcg iteration loop" << endl;
+  PG_DEBUG("Entering PCG iteration loop");
   for (unsigned int ii = 0; ii < niter; ii++) {
     // Compute negative gradient
 
     ngrad = A / (W % (yi - Ax));
     if(ngrad.has_nan())
-      cout << "Warning: ngrad has NaN in solve_pwls_pcg" << endl;
+      PG_WARN("ngrad has NaN at iteration {}", ii);
 
 
     if (norm_grad<T1>(ngrad, yi, W) < 1e-10) {
-      cout << "Terminating early due to zero gradient." << endl;
+      PG_INFO("Terminating early: zero gradient at iteration {}", ii);
       return x;
     }
     ngrad -= R.Gradient(x);
@@ -240,14 +240,14 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
 
     // Check if descent direction
     if (real(cdot(ddir, ngrad)) < 0) {
-      cout << " Warning descent direction not negative" << endl;
+      PG_WARN("Descent direction is not downhill at iteration {} -- stopping", ii);
       return x;
     }
 
     // Step size in search direction
     Adir = A * ddir;
     if (Adir.has_nan())
-      cout << "Warning: NaN found in Adir in solve_pwls_pcg" << endl;
+      PG_WARN("NaN in Adir at iteration {}", ii);
 
     WAdir = W % Adir;
     dAWAd = as_scalar(real(cdot(Adir, WAdir)));
@@ -259,14 +259,14 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       pdenom = R.Denom(ddir, x + step * ddir);
       denom = dAWAd + pdenom;
       if( denom != denom)
-        cout << "Warning: denom has NaN in solve_pwls_pcg" << endl;
+        PG_WARN("denom has NaN at iteration {}", ii);
 
       if (std::abs(denom) < 1e-20 || std::isinf(std::abs(denom)) || std::isnan(std::abs(denom))) {
         if (norm(ngrad, 2) == 0) {
-          cout << " Found exact solution" << endl;
+          PG_INFO("Found exact solution");
           return x;
         } else {
-          cout << "inf denom (denom=" << denom << ")" << endl;
+          PG_WARN("inf denom (denom={})", std::abs(denom));
           return x;
         }
       }
@@ -279,14 +279,13 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
     }
 
     if (as_scalar(real(step)) < 0) {
-      cout << "Warning downhill?" << endl;
+      PG_WARN("Step size is negative (downhill?) at iteration {}", ii);
     }
 
     // Update
     Ax += step * Adir;
     x += (step * ddir);
-    cout << "Iteration Error Norm = " << norm(yi - Ax, 2) << endl;
-    cout << "Iteration Complete = " << ii << endl;
+    PG_DEBUG("PCG iteration {}/{}: error norm = {}", ii + 1, niter, norm(yi - Ax, 2));
 
   }
   return x;

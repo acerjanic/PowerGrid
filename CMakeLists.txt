@@ -7,6 +7,20 @@ set(CMAKE_CXX_STANDARD 17)
 
 project("PowerGrid" CXX)
 
+# Fetch spdlog and indicators for structured logging and progress bars
+include(FetchContent)
+
+FetchContent_Declare(spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG        v1.14.1)
+set(SPDLOG_BUILD_PIC ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(spdlog)
+
+FetchContent_Declare(indicators
+    GIT_REPOSITORY https://github.com/p-ranav/indicators.git
+    GIT_TAG        v2.3)
+FetchContent_MakeAvailable(indicators)
+
 option(OPENACC_GPU "Enable OpenACC support on NVIDIA GPU" ON)
 option(OPENACC_MP "Enable OpenACC support on CPU (PGI Only) " OFF)
 option(MPISupport "Enable MPI Support" ON)
@@ -199,6 +213,8 @@ add_definitions(-DARMA_DONT_USE_HDF5)
 if(OPENACC_GPU)
 	add_definitions(-DUSE_NVTX)
 endif()
+
+set(LIBS ${LIBS} spdlog::spdlog indicators::indicators)
 
 add_subdirectory(PowerGrid)
 

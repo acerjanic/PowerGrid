@@ -23,6 +23,7 @@ Developed by:
 
  *****************************************************************************/
 #include "SENSE.h"
+#include "Core/PGLog.hpp"
 
 using namespace arma;
 
@@ -36,6 +37,7 @@ SENSE<T1, Tobj>::SENSE(Tobj& G, Col<complex<T1>> SENSEmap, uword a, uword b,
     n1 = a;
     n2 = b;
     nc = c;
+    PG_INFO("SENSE: n1={}, n2={}, nc={}", n1, n2, nc);
     G_obj = &G;
     SMap = reshape(SENSEmap, n2, nc);
     conjSMap = conj(SMap);
