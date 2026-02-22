@@ -298,18 +298,18 @@ TEST_CASE("pcSENSE 3D recon with stack-of-spirals (small grid)",
 // ===========================================================================
 // Test 6: pcSenseTimeSeg 3D reconstruction (full grid)
 // ===========================================================================
-TEST_CASE("pcSenseTimeSeg 3D recon with stack-of-spirals (120x120x60)",
+TEST_CASE("pcSenseTimeSeg 3D recon with stack-of-spirals (64x64x32)",
           "[spiral3D][pcSenseTimeSeg3D][recon][bench3D]")
 {
     using T1 = float;
     using CxT1 = std::complex<T1>;
 
-    const uword Nx = 120, Ny = 120, Nz = 60;
+    const uword Nx = 64, Ny = 64, Nz = 32;
     const uword Ni = Nx * Ny * Nz;
     const uword Nc = 16;
     const uword nInterleaves = 16, nSamplesPerArm = 512;
     const uword R_xy = 2, R_z = 2;
-    const uword L = 8;
+    const uword L = 4;
     const uword niter = 5;
 
     std::cout << "Setting up 3D stack-of-spirals reconstruction..." << std::endl;
@@ -375,10 +375,84 @@ TEST_CASE("pcSenseTimeSeg 3D recon with stack-of-spirals (120x120x60)",
 }
 
 // ===========================================================================
-// Test 7: Write NIfTI volumes for visualization
+// Test 7: pcSenseTimeSeg 3D reconstruction — medium (96x96x30)
 // ===========================================================================
-TEST_CASE("Write 3D spiral recon NIfTI volumes",
-          "[spiral3D][nifti3D]")
+TEST_CASE("pcSenseTimeSeg 3D recon with stack-of-spirals (96x96x30)",
+          "[spiral3D][pcSenseTimeSeg3D][recon][bench3D_medium]")
+{
+    using T1 = float;
+    using CxT1 = std::complex<T1>;
+
+    const uword Nx = 96, Ny = 96, Nz = 30;
+    const uword Ni = Nx * Ny * Nz;
+    const uword Nc = 16;
+    const uword nInterleaves = 16, nSamplesPerArm = 512;
+    const uword R_xy = 2, R_z = 2;
+    const uword L = 4;
+    const uword niter = 5;
+
+    std::cout << "Setting up 3D stack-of-spirals reconstruction..." << std::endl;
+    std::cout << "  Grid: " << Nx << "x" << Ny << "x" << Nz
+              << " (" << Ni << " voxels)" << std::endl;
+
+    Col<T1> kx, ky, kz;
+    uword Nd_per_shot, Ns;
+    stackOfSpiralsTrajectory3D<T1>(nInterleaves, nSamplesPerArm, Nx, Nz,
+                                    R_xy, R_z, kx, ky, kz, Nd_per_shot, Ns);
+
+    uword nKzAcq = Nz / R_z;
+    Col<T1> tvec = stackOfSpiralsTimingVector<T1>(nSamplesPerArm, nKzAcq, Ns, (T1)0.005);
+
+    std::cout << "  Ns=" << Ns << ", Nd_per_shot=" << Nd_per_shot
+              << ", Nc=" << Nc << ", L=" << L << std::endl;
+
+    Col<CxT1> phantom = brainPhantom3D<T1>(Nx, Ny, Nz);
+    Col<CxT1> SENSEmap = syntheticCoils3D<T1>(Nx, Ny, Nz, Nc);
+    Col<T1> fmapHz = syntheticFieldMap3D<T1>(Nx, Ny, Nz, (T1)50.0);
+    Col<T1> fmapRad = fmapHz * (T1)(2.0 * M_PI);
+    Col<T1> shotPhase = randomShotPhase3D<T1>(Nx, Ny, Nz, Ns, (T1)(M_PI / 2.0), 42);
+
+    std::cout << "  Data generated. Constructing pcSenseTimeSeg operator..." << std::endl;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    pcSenseTimeSeg<T1> P(kx, ky, kz, Nx, Ny, Nz, Nc, tvec, L, 1,
+                          SENSEmap, fmapRad, shotPhase);
+    auto t1 = std::chrono::high_resolution_clock::now();
+    double setupMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+    std::cout << "  Setup: " << setupMs << " ms" << std::endl;
+
+    std::cout << "  Forward simulation..." << std::endl;
+    auto t2 = std::chrono::high_resolution_clock::now();
+    Col<CxT1> y = P * phantom;
+    auto t3 = std::chrono::high_resolution_clock::now();
+    double fwdMs = std::chrono::duration<double, std::milli>(t3 - t2).count();
+    std::cout << "  Forward: " << fwdMs << " ms, data size: " << y.n_elem << std::endl;
+
+    REQUIRE(y.n_elem == Nd_per_shot * Ns * Nc);
+
+    Col<T1> W = ones<Col<T1>>(y.n_elem);
+    QuadPenalty<T1> R(Nx, Ny, Nz, (T1)1e-4, 3);
+    Col<CxT1> x0 = zeros<Col<CxT1>>(Ni);
+
+    std::cout << "  Reconstructing (" << niter << " PCG iterations)..." << std::endl;
+    auto t4 = std::chrono::high_resolution_clock::now();
+    Col<CxT1> xhat = solve_pwls_pcg<T1>(x0, P, W, y, R, niter);
+    auto t5 = std::chrono::high_resolution_clock::now();
+    double reconMs = std::chrono::duration<double, std::milli>(t5 - t4).count();
+
+    T1 nrmse = norm(phantom - xhat) / norm(phantom);
+    std::cout << "  Recon: " << reconMs << " ms" << std::endl;
+    std::cout << "  NRMSE: " << nrmse << std::endl;
+    std::cout << "  Total: " << (setupMs + fwdMs + reconMs) << " ms" << std::endl;
+
+    REQUIRE(nrmse < (T1)0.80);
+}
+
+// ===========================================================================
+// Test 8: pcSenseTimeSeg 3D reconstruction — large (120x120x60)
+// ===========================================================================
+TEST_CASE("pcSenseTimeSeg 3D recon with stack-of-spirals (120x120x60)",
+          "[spiral3D][pcSenseTimeSeg3D][recon][bench3D_large]")
 {
     using T1 = float;
     using CxT1 = std::complex<T1>;
@@ -388,7 +462,155 @@ TEST_CASE("Write 3D spiral recon NIfTI volumes",
     const uword Nc = 16;
     const uword nInterleaves = 16, nSamplesPerArm = 512;
     const uword R_xy = 2, R_z = 2;
-    const uword L = 8;
+    const uword L = 4;
+    const uword niter = 5;
+
+    std::cout << "Setting up 3D stack-of-spirals reconstruction..." << std::endl;
+    std::cout << "  Grid: " << Nx << "x" << Ny << "x" << Nz
+              << " (" << Ni << " voxels)" << std::endl;
+
+    Col<T1> kx, ky, kz;
+    uword Nd_per_shot, Ns;
+    stackOfSpiralsTrajectory3D<T1>(nInterleaves, nSamplesPerArm, Nx, Nz,
+                                    R_xy, R_z, kx, ky, kz, Nd_per_shot, Ns);
+
+    uword nKzAcq = Nz / R_z;
+    Col<T1> tvec = stackOfSpiralsTimingVector<T1>(nSamplesPerArm, nKzAcq, Ns, (T1)0.005);
+
+    std::cout << "  Ns=" << Ns << ", Nd_per_shot=" << Nd_per_shot
+              << ", Nc=" << Nc << ", L=" << L << std::endl;
+
+    Col<CxT1> phantom = brainPhantom3D<T1>(Nx, Ny, Nz);
+    Col<CxT1> SENSEmap = syntheticCoils3D<T1>(Nx, Ny, Nz, Nc);
+    Col<T1> fmapHz = syntheticFieldMap3D<T1>(Nx, Ny, Nz, (T1)50.0);
+    Col<T1> fmapRad = fmapHz * (T1)(2.0 * M_PI);
+    Col<T1> shotPhase = randomShotPhase3D<T1>(Nx, Ny, Nz, Ns, (T1)(M_PI / 2.0), 42);
+
+    std::cout << "  Data generated. Constructing pcSenseTimeSeg operator..." << std::endl;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    pcSenseTimeSeg<T1> P(kx, ky, kz, Nx, Ny, Nz, Nc, tvec, L, 1,
+                          SENSEmap, fmapRad, shotPhase);
+    auto t1 = std::chrono::high_resolution_clock::now();
+    double setupMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+    std::cout << "  Setup: " << setupMs << " ms" << std::endl;
+
+    std::cout << "  Forward simulation..." << std::endl;
+    auto t2 = std::chrono::high_resolution_clock::now();
+    Col<CxT1> y = P * phantom;
+    auto t3 = std::chrono::high_resolution_clock::now();
+    double fwdMs = std::chrono::duration<double, std::milli>(t3 - t2).count();
+    std::cout << "  Forward: " << fwdMs << " ms, data size: " << y.n_elem << std::endl;
+
+    REQUIRE(y.n_elem == Nd_per_shot * Ns * Nc);
+
+    Col<T1> W = ones<Col<T1>>(y.n_elem);
+    QuadPenalty<T1> R(Nx, Ny, Nz, (T1)1e-4, 3);
+    Col<CxT1> x0 = zeros<Col<CxT1>>(Ni);
+
+    std::cout << "  Reconstructing (" << niter << " PCG iterations)..." << std::endl;
+    auto t4 = std::chrono::high_resolution_clock::now();
+    Col<CxT1> xhat = solve_pwls_pcg<T1>(x0, P, W, y, R, niter);
+    auto t5 = std::chrono::high_resolution_clock::now();
+    double reconMs = std::chrono::duration<double, std::milli>(t5 - t4).count();
+
+    T1 nrmse = norm(phantom - xhat) / norm(phantom);
+    std::cout << "  Recon: " << reconMs << " ms" << std::endl;
+    std::cout << "  NRMSE: " << nrmse << std::endl;
+    std::cout << "  Total: " << (setupMs + fwdMs + reconMs) << " ms" << std::endl;
+
+    REQUIRE(nrmse < (T1)0.85);
+}
+
+// ===========================================================================
+// Test 9: pcSenseTimeSeg 3D reconstruction — extra large (192x192x96)
+// ===========================================================================
+TEST_CASE("pcSenseTimeSeg 3D recon with stack-of-spirals (192x192x96)",
+          "[spiral3D][pcSenseTimeSeg3D][recon][bench3D_xlarge]")
+{
+    using T1 = float;
+    using CxT1 = std::complex<T1>;
+
+    const uword Nx = 192, Ny = 192, Nz = 96;
+    const uword Ni = Nx * Ny * Nz;
+    const uword Nc = 16;
+    const uword nInterleaves = 16, nSamplesPerArm = 512;
+    const uword R_xy = 2, R_z = 2;
+    const uword L = 4;
+    const uword niter = 5;
+
+    std::cout << "Setting up 3D stack-of-spirals reconstruction..." << std::endl;
+    std::cout << "  Grid: " << Nx << "x" << Ny << "x" << Nz
+              << " (" << Ni << " voxels)" << std::endl;
+
+    Col<T1> kx, ky, kz;
+    uword Nd_per_shot, Ns;
+    stackOfSpiralsTrajectory3D<T1>(nInterleaves, nSamplesPerArm, Nx, Nz,
+                                    R_xy, R_z, kx, ky, kz, Nd_per_shot, Ns);
+
+    uword nKzAcq = Nz / R_z;
+    Col<T1> tvec = stackOfSpiralsTimingVector<T1>(nSamplesPerArm, nKzAcq, Ns, (T1)0.005);
+
+    std::cout << "  Ns=" << Ns << ", Nd_per_shot=" << Nd_per_shot
+              << ", Nc=" << Nc << ", L=" << L << std::endl;
+
+    Col<CxT1> phantom = brainPhantom3D<T1>(Nx, Ny, Nz);
+    Col<CxT1> SENSEmap = syntheticCoils3D<T1>(Nx, Ny, Nz, Nc);
+    Col<T1> fmapHz = syntheticFieldMap3D<T1>(Nx, Ny, Nz, (T1)50.0);
+    Col<T1> fmapRad = fmapHz * (T1)(2.0 * M_PI);
+    Col<T1> shotPhase = randomShotPhase3D<T1>(Nx, Ny, Nz, Ns, (T1)(M_PI / 2.0), 42);
+
+    std::cout << "  Data generated. Constructing pcSenseTimeSeg operator..." << std::endl;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    pcSenseTimeSeg<T1> P(kx, ky, kz, Nx, Ny, Nz, Nc, tvec, L, 1,
+                          SENSEmap, fmapRad, shotPhase);
+    auto t1 = std::chrono::high_resolution_clock::now();
+    double setupMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+    std::cout << "  Setup: " << setupMs << " ms" << std::endl;
+
+    std::cout << "  Forward simulation..." << std::endl;
+    auto t2 = std::chrono::high_resolution_clock::now();
+    Col<CxT1> y = P * phantom;
+    auto t3 = std::chrono::high_resolution_clock::now();
+    double fwdMs = std::chrono::duration<double, std::milli>(t3 - t2).count();
+    std::cout << "  Forward: " << fwdMs << " ms, data size: " << y.n_elem << std::endl;
+
+    REQUIRE(y.n_elem == Nd_per_shot * Ns * Nc);
+
+    Col<T1> W = ones<Col<T1>>(y.n_elem);
+    QuadPenalty<T1> R(Nx, Ny, Nz, (T1)1e-4, 3);
+    Col<CxT1> x0 = zeros<Col<CxT1>>(Ni);
+
+    std::cout << "  Reconstructing (" << niter << " PCG iterations)..." << std::endl;
+    auto t4 = std::chrono::high_resolution_clock::now();
+    Col<CxT1> xhat = solve_pwls_pcg<T1>(x0, P, W, y, R, niter);
+    auto t5 = std::chrono::high_resolution_clock::now();
+    double reconMs = std::chrono::duration<double, std::milli>(t5 - t4).count();
+
+    T1 nrmse = norm(phantom - xhat) / norm(phantom);
+    std::cout << "  Recon: " << reconMs << " ms" << std::endl;
+    std::cout << "  NRMSE: " << nrmse << std::endl;
+    std::cout << "  Total: " << (setupMs + fwdMs + reconMs) << " ms" << std::endl;
+
+    REQUIRE(nrmse < (T1)0.90);
+}
+
+// ===========================================================================
+// Test 10: Write NIfTI volumes for visualization
+// ===========================================================================
+TEST_CASE("Write 3D spiral recon NIfTI volumes",
+          "[spiral3D][nifti3D]")
+{
+    using T1 = float;
+    using CxT1 = std::complex<T1>;
+
+    const uword Nx = 96, Ny = 96, Nz = 30;
+    const uword Ni = Nx * Ny * Nz;
+    const uword Nc = 16;
+    const uword nInterleaves = 16, nSamplesPerArm = 512;
+    const uword R_xy = 2, R_z = 2;
+    const uword L = 4;
     const uword niter = 5;
 
     std::cout << "Generating 3D reconstruction for NIfTI output..." << std::endl;
@@ -422,6 +644,14 @@ TEST_CASE("Write 3D spiral recon NIfTI volumes",
     }
     coilSoS = sqrt(coilSoS);
     writeNifti<T1>("spiral3d_coil_sos", coilSoS, Nx, Ny, Nz);
+
+    // Individual coil sensitivity maps
+    std::cout << "Writing individual coil maps:" << std::endl;
+    for (uword cc = 0; cc < Nc; cc++) {
+        Col<CxT1> coilMap = SENSEmap.subvec(cc * Ni, (cc + 1) * Ni - 1);
+        std::string name = "spiral3d_coil_" + std::to_string(cc);
+        writeNiftiComplex<T1>(name, coilMap, Nx, Ny, Nz);
+    }
 
     // Construct operator and forward simulate
     std::cout << "Running pcSenseTimeSeg reconstruction..." << std::endl;

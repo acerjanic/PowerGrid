@@ -12,7 +12,8 @@ Developed by:
 /// @file SyntheticCoils3D.hpp
 /// @brief 3D coil sensitivity map generator for multi-channel MRI.
 ///
-/// Extends the 2D coil model to 3D: coils on a ring in the xy-plane with
+/// Two staggered rings of coils at different z-positions, mimicking a
+/// cylindrical receive array. Nc/2 coils per ring with angular offset,
 /// 1/(1+r^2) magnitude falloff and atan2 phase variation, SoS-normalized.
 
 #ifndef POWERGRID_TESTS_SYNTHETICCOILS3D_HPP
@@ -23,29 +24,47 @@ Developed by:
 
 /// Generate 3D coil sensitivity maps for Nc coils.
 ///
-/// Coils are placed on a ring of radius coilRadius in the xy-plane at z=0.
-/// Sensitivity magnitude: 1/(1+dist^2), phase: atan2(dy, dx).
+/// Coils are arranged in two staggered rings on a cylinder of radius
+/// coilRadius.  The lower ring (Nc/2 coils) sits at z = -ringZ and
+/// the upper ring (Nc/2 coils) at z = +ringZ, offset by half an
+/// angular step to provide better azimuthal coverage.
+///
+/// Sensitivity magnitude: 1/(1+dist^2), phase: atan2 of displacement
+/// projected into each coil's local tangent plane.
+///
 /// Maps are SoS-normalized so that sum-of-squares = 1 at each voxel.
 ///
 /// @param Nx         Image width
 /// @param Ny         Image height
 /// @param Nz         Number of slices
-/// @param Nc         Number of coils
-/// @param coilRadius Distance of coils from FOV center (in normalized coords)
+/// @param Nc         Number of coils (must be even)
+/// @param coilRadius Distance of coils from FOV center in xy (normalized)
+/// @param ringZ      z-offset of each ring from center (normalized)
 /// @return           Vectorized (Nx*Ny*Nz*Nc) complex column (Nc maps concatenated)
 template<typename T1>
 arma::Col<std::complex<T1>> syntheticCoils3D(
     arma::uword Nx, arma::uword Ny, arma::uword Nz, arma::uword Nc,
-    T1 coilRadius = (T1)1.5)
+    T1 coilRadius = (T1)1.5, T1 ringZ = (T1)0.5)
 {
     arma::uword Ni = Nx * Ny * Nz;
+    arma::uword coilsPerRing = Nc / 2;
     arma::Mat<std::complex<T1>> SMap(Ni, Nc, arma::fill::zeros);
 
     for (arma::uword cc = 0; cc < Nc; cc++) {
-        T1 angle = (T1)2.0 * M_PI * (T1)cc / (T1)Nc;
+        // Determine which ring this coil belongs to
+        arma::uword ring = cc / coilsPerRing;   // 0 = lower, 1 = upper
+        arma::uword idxInRing = cc % coilsPerRing;
+
+        // Angular position: upper ring offset by half a step
+        T1 angularStep = (T1)2.0 * M_PI / (T1)coilsPerRing;
+        T1 angle = angularStep * (T1)idxInRing;
+        if (ring == 1) {
+            angle += angularStep * (T1)0.5;  // stagger upper ring
+        }
+
         T1 cx = coilRadius * std::cos(angle);
         T1 cy = coilRadius * std::sin(angle);
-        T1 cz = (T1)0.0;
+        T1 cz = (ring == 0) ? -ringZ : ringZ;
 
         // Loop order matches pcSENSE.cpp Cube(Nx,Ny,Nz) vectorization
         for (arma::uword ii = 0; ii < Ny; ii++) {
