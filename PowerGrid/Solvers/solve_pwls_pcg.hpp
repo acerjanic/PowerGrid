@@ -104,10 +104,15 @@ inline T1 norm_grad(const Col<complex<T1>> &g, const Col<complex<T1>> &yi,
 /// @param R         Regularization penalty object.
 /// @param niter     Maximum number of CG iterations.
 /// @returns         Reconstructed image estimate, length n2.
+/// Sentinel value indicating no parent progress bar.
+constexpr size_t PG_NO_PARENT_BAR = static_cast<size_t>(-1);
+
 template <typename T1, typename Tobj, typename Robj>
 Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
                                 Col<T1> const &W, Col<complex<T1>> const &yi,
-                                Robj const &R, uword niter) {
+                                Robj const &R, uword niter,
+                                size_t parent_bar_idx = PG_NO_PARENT_BAR,
+                                size_t parent_bar_offset = 0) {
   typedef complex<T1> CxT1;
   RANGE("solve_pwls_pcg")
 
@@ -252,6 +257,8 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       PG_DEBUG("PCG iteration {}/{}: error norm = {}, penalty = {}", ii + 1, niter, errNorm, penaltyVal);
       PG_PROGRESS_TICK(pcg_bar_idx, static_cast<size_t>(ii + 1), fmt::format("iter {}/{} err={:.4e}", ii + 1, niter, errNorm));
       PG_METRICS(pcg_bar_idx, static_cast<size_t>(ii + 1), static_cast<double>(errNorm), static_cast<double>(penaltyVal));
+      if (parent_bar_idx != PG_NO_PARENT_BAR)
+        PG_PROGRESS_TICK(parent_bar_idx, parent_bar_offset + static_cast<size_t>(ii + 1));
     }
     PG_PROGRESS_DONE(pcg_bar_idx);
     return x_pg.getArma();
@@ -385,6 +392,8 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
     PG_DEBUG("PCG iteration {}/{}: error norm = {}, penalty = {}", ii + 1, niter, errNorm, penaltyVal);
     PG_PROGRESS_TICK(pcg_bar_idx, static_cast<size_t>(ii + 1), fmt::format("iter {}/{} err={:.4e}", ii + 1, niter, errNorm));
     PG_METRICS(pcg_bar_idx, static_cast<size_t>(ii + 1), static_cast<double>(errNorm), static_cast<double>(penaltyVal));
+    if (parent_bar_idx != PG_NO_PARENT_BAR)
+      PG_PROGRESS_TICK(parent_bar_idx, parent_bar_offset + static_cast<size_t>(ii + 1));
 
   }
   PG_PROGRESS_DONE(pcg_bar_idx);

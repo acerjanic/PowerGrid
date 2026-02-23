@@ -176,6 +176,7 @@ int main(int argc, char **argv) {
 
   // Outer progress bar for overall reconstruction across all slices/reps/etc.
   size_t totalRecons = (size_t)(NSliceMax+1) * (NPhaseMax+1) * (NEchoMax+1) * (NAvgMax+1) * (NRepMax+1);
+  size_t totalIters = totalRecons * NIter;
   auto recon_bar = std::make_shared<PGProgressBar>(
       indicators::option::BarWidth{30},
       indicators::option::PrefixText{"Recon "},
@@ -185,9 +186,9 @@ int main(int argc, char **argv) {
       indicators::option::ShowPercentage{true},
       indicators::option::ShowElapsedTime{true},
       indicators::option::ShowRemainingTime{true},
-      indicators::option::MaxProgress{totalRecons}
+      indicators::option::MaxProgress{totalIters}
   );
-  size_t recon_bar_idx = PG_PROGRESS_ADD(recon_bar, "Recon", totalRecons);
+  size_t recon_bar_idx = PG_PROGRESS_ADD(recon_bar, "Recon", totalIters);
   size_t recon_count = 0;
 
   std::string baseFilename = "img";
@@ -247,6 +248,7 @@ int main(int argc, char **argv) {
 
 	                    QuadPenalty<float> R(Nx, Ny, Nz, beta, dims2penalize);
 
+                      size_t iter_offset = recon_count * NIter;
                       if (FtType == 1) {
 	                      Gnufft<float> G(kx.n_rows, (float) 2.0, Nx, Ny, Nz, kx, ky, kz, ix,
 			                    iy, iz);
@@ -254,26 +256,28 @@ int main(int argc, char **argv) {
                         SENSE<float, TimeSegmentation<float, Gnufft<float>>> Sg(A, senSlice, kx.n_rows, Nx*Ny*Nz, nc);
 	                      ImageTemp = reconSolve<float, SENSE<float, TimeSegmentation<float, Gnufft<float>>>,
 			                    QuadPenalty<float>>(data, Sg, R, kx, ky, kz, Nx,
-			                    Ny, Nz, tvec, NIter);
+			                    Ny, Nz, tvec, NIter,
+			                    recon_bar_idx, iter_offset);
                       } else if (FtType == 2) {
                         Gdft<float> A(kx.n_rows, Nx*Ny*Nz,kx,ky,kz,ix,iy,iz,fmSlice,tvec);
 	                      SENSE<float, Gdft<float>> Sg(A, senSlice, kx.n_rows, Nx*Ny*Nz, nc);
 	                      ImageTemp = reconSolve<float, SENSE<float, Gdft<float>>,
 	                            QuadPenalty<float>>(data, Sg, R, kx, ky, kz, Nx,
-                              Ny, Nz, tvec, NIter);
+                              Ny, Nz, tvec, NIter,
+                              recon_bar_idx, iter_offset);
                       } else if (FtType == 3) {
                         GdftR2<float> A(kx.n_rows, Nx*Ny*Nz,kx,ky,kz,ix,iy,iz,fmSlice,tvec,Nx,Ny,Nz);
 	                      SENSE<float, GdftR2<float>> Sg(A, senSlice, kx.n_rows, Nx*Ny*Nz, nc);
 	                      ImageTemp = reconSolve<float, SENSE<float, GdftR2<float>>,
 	                            QuadPenalty<float>>(data, Sg, R, kx, ky, kz, Nx,
-                              Ny, Nz, tvec, NIter);
+                              Ny, Nz, tvec, NIter,
+                              recon_bar_idx, iter_offset);
                       }
 
 
 	                  //writeISMRMRDImageData<float>(d, ImageTemp, Nx, Ny, Nz);
                     writeNiftiMagPhsImage<float>(filename,ImageTemp,Nx,Ny,Nz);
                     ++recon_count;
-                    PG_PROGRESS_TICK(recon_bar_idx, recon_count, fmt::format("Slice {}/{}", NSlice+1, NSliceMax+1));
                     }
 
                 }

@@ -100,7 +100,9 @@ Col<complex<T1> > reconSolve(Col<complex<T1> > data, TObj &Sg, RObj R,
 template <typename T1, typename TObj, typename RObj>
 Col<complex<T1>> reconSolve(Col<complex<T1>> data, TObj& Sg, RObj R,
                             Col<T1> kx, Col<T1> ky, Col<T1> kz, uword Nx,
-                            uword Ny, uword Nz, Col<T1> tvec, uword niter) {
+                            uword Ny, uword Nz, Col<T1> tvec, uword niter,
+                            size_t parent_bar_idx = PG_NO_PARENT_BAR,
+                            size_t parent_bar_offset = 0) {
   typedef std::complex<T1> CxT1;
 
   // Col<T1> ix, iy, iz;
@@ -113,7 +115,8 @@ Col<complex<T1>> reconSolve(Col<complex<T1>> data, TObj& Sg, RObj R,
   xinit.zeros(Nx * Ny * Nz);
 
   Col<CxT1> imageOut;
-  imageOut = solve_pwls_pcg<T1, TObj, RObj>(xinit, Sg, W, data, R, niter);
+  imageOut = solve_pwls_pcg<T1, TObj, RObj>(xinit, Sg, W, data, R, niter,
+                                            parent_bar_idx, parent_bar_offset);
 
   return imageOut;
 }
@@ -129,46 +132,46 @@ extern template void initImageSpaceCoords<double>(Col<double> &, Col<double> &,
 extern template
 Col<complex<float>>
 reconSolve(Col<complex<float>>, SENSE<float, Gnufft<float>>&, QuadPenalty<float>, Col<float>, Col<float>, Col<float>, uword,
-              uword, uword, Col<float>, uword);
+              uword, uword, Col<float>, uword, size_t, size_t);
 
 extern template
 Col<complex<float> > reconSolve<float, SENSE<float, Gdft<float> >, QuadPenalty<float>>(Col<complex<float>>, SENSE<float, Gdft<float>>&,
                                                                                            QuadPenalty<float>, Col<float>, Col<float>,
                                                                                            Col<float>, uword, uword, uword, Col<float>,
-                                                                                           uword);
+                                                                                           uword, size_t, size_t);
 
-                                                                                           extern template
+extern template
 Col<complex<float> > reconSolve<float, SENSE<float, GdftR2<float> >, QuadPenalty<float>>(Col<complex<float>>, SENSE<float, GdftR2<float>>&,
                                                                                            QuadPenalty<float>, Col<float>, Col<float>,
                                                                                            Col<float>, uword, uword, uword, Col<float>,
-                                                                                           uword);
+                                                                                           uword, size_t, size_t);
 
 extern template
 Col<complex<float>>
 reconSolve(Col<complex<float>>, pcSENSE<float>&, QuadPenalty<float>, Col<float>, Col<float>, Col<float>, uword,
-		uword, uword, Col<float>, uword);
+		uword, uword, Col<float>, uword, size_t, size_t);
 
 extern template
 Col<complex<double>>
 reconSolve(Col<complex<double>>, SENSE<double, Gnufft<double>>&, QuadPenalty<double>, Col<double>, Col<double>, Col<double>, uword,
-		uword, uword, Col<double>, uword);
+		uword, uword, Col<double>, uword, size_t, size_t);
 
 extern template
 Col<complex<double> > reconSolve<double, SENSE<double, Gdft<double> >, QuadPenalty<double>>(Col<complex<double>>, SENSE<double, Gdft<double>>&,
 		QuadPenalty<double>, Col<double>, Col<double>,
 		Col<double>, uword, uword, uword, Col<double>,
-		uword);
+		uword, size_t, size_t);
 
 extern template
 Col<complex<double> > reconSolve<double, SENSE<double, GdftR2<double> >, QuadPenalty<double>>(Col<complex<double>>, SENSE<double, GdftR2<double>>&,
 		QuadPenalty<double>, Col<double>, Col<double>,
 		Col<double>, uword, uword, uword, Col<double>,
-		uword);
+		uword, size_t, size_t);
 
 extern template
 Col<complex<double>>
 reconSolve(Col<complex<double>>, pcSENSE<double>&, QuadPenalty<double>, Col<double>, Col<double>, Col<double>, uword,
-		uword, uword, Col<double>, uword);
+		uword, uword, Col<double>, uword, size_t, size_t);
 
 /*
 extern template

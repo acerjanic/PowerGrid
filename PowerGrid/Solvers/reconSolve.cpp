@@ -74,63 +74,63 @@ template
 Col<complex<float>>
 reconSolve(Col<complex<float>>, SENSE<float, Gnufft<float>>&,
 		QuadPenalty<float>, Col<float>, Col<float>, Col<float>, uword,
-		uword, uword, Col<float>, uword);
+		uword, uword, Col<float>, uword, size_t, size_t);
 
 template  Col<complex<float>> reconSolve(Col<complex<float>>, SENSE<float, Gdft<float>>&,
                                QuadPenalty<float>, Col<float>, Col<float>,
                                Col<float>, uword, uword, uword, Col<float>,
-                               uword);
+                               uword, size_t, size_t);
 
 template  Col<complex<float>> reconSolve(Col<complex<float>>, SENSE<float, GdftR2<float>>&,
                                QuadPenalty<float>, Col<float>, Col<float>,
                                Col<float>, uword, uword, uword, Col<float>,
-                               uword);
+                               uword, size_t, size_t);
 
 template  Col<complex<float>> reconSolve(Col<complex<float>>, SENSE<float, TimeSegmentation<float,Gnufft<float>>>&,
 		QuadPenalty<float>, Col<float>, Col<float>,
 		Col<float>, uword, uword, uword, Col<float>,
-		uword);
+		uword, size_t, size_t);
 
 template  Col<complex<float>> reconSolve(Col<complex<float>>, pcSENSE<float>&,
 		QuadPenalty<float>, Col<float>, Col<float>,
 		Col<float>, uword, uword, uword, Col<float>,
-		uword);
+		uword, size_t, size_t);
 
 template  Col<complex<float>> reconSolve(Col<complex<float>>, pcSenseTimeSeg<float>&,
 		QuadPenalty<float>, Col<float>, Col<float>,
 		Col<float>, uword, uword, uword, Col<float>,
-		uword);
+		uword, size_t, size_t);
 
 template
 Col<complex<double>>
 reconSolve(Col<complex<double>>, SENSE<double, Gnufft<double>>&,
 		QuadPenalty<double>, Col<double>, Col<double>, Col<double>, uword,
-		uword, uword, Col<double>, uword);
+		uword, uword, Col<double>, uword, size_t, size_t);
 
 template  Col<complex<double>> reconSolve(Col<complex<double>>, SENSE<double, Gdft<double>>&,
 		QuadPenalty<double>, Col<double>, Col<double>,
 		Col<double>, uword, uword, uword, Col<double>,
-		uword);
+		uword, size_t, size_t);
 
 template  Col<complex<double>> reconSolve(Col<complex<double>>, SENSE<double, GdftR2<double>>&,
 		QuadPenalty<double>, Col<double>, Col<double>,
 		Col<double>, uword, uword, uword, Col<double>,
-		uword);
+		uword, size_t, size_t);
 
 template  Col<complex<double>> reconSolve(Col<complex<double>>, SENSE<double, TimeSegmentation<double,Gnufft<double>>>&,
 		QuadPenalty<double>, Col<double>, Col<double>,
 		Col<double>, uword, uword, uword, Col<double>,
-		uword);
+		uword, size_t, size_t);
 
 template  Col<complex<double>> reconSolve(Col<complex<double>>, pcSENSE<double>&,
 		QuadPenalty<double>, Col<double>, Col<double>,
 		Col<double>, uword, uword, uword, Col<double>,
-		uword);
+		uword, size_t, size_t);
 
 template  Col<complex<double>> reconSolve(Col<complex<double>>, pcSenseTimeSeg<double>&,
 		QuadPenalty<double>, Col<double>, Col<double>,
 		Col<double>, uword, uword, uword, Col<double>,
-		uword);
+		uword, size_t, size_t);
 
 
 /*
