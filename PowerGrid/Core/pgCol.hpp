@@ -17,6 +17,10 @@
 #include "accel.h"
 #endif
 
+#ifdef METAL_COMPUTE
+#include "Metal/MetalVectorOps_dispatch.hpp"
+#endif
+
 #ifdef __APPLE__
 #include "AccelerateDispatch.hpp"
 #endif
@@ -504,6 +508,7 @@ pgCol<T>& operator=(pgCol<T>&& d) {
 }
 
 pgCol<T>& operator+=(const T& A) {
+    // Metal dispatch skipped: Accelerate NEON is faster for add (295+ GB/s vs 59 GB/s)
     #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
         if (pg_accel::try_accel_add_scalar(mem, A, mem, n_elem))
@@ -520,6 +525,7 @@ pgCol<T>& operator+=(const T& A) {
 }
 
 pgCol<T>& operator-=(const T& A) {
+    // Metal dispatch skipped: Accelerate NEON is faster for sub
     #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
         if (pg_accel::try_accel_sub_scalar(mem, A, mem, n_elem))
@@ -536,6 +542,13 @@ pgCol<T>& operator-=(const T& A) {
 }
 
 pgCol<T>& operator%=(const T& A) {
+    #ifdef METAL_COMPUTE
+    // Metal wins 2.5x for complex scalar mul; real scalar mul stays on Accelerate
+    if constexpr (std::is_same<T, pgComplex<float>>::value) {
+        if (pg_metal::try_metal_mul_scalar(mem, A, mem, n_elem))
+            return *this;
+    }
+    #endif
     #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
         if (pg_accel::try_accel_mul_scalar(mem, A, mem, n_elem))
@@ -566,6 +579,7 @@ pgCol<T>& operator/=(const T& A) {
 
 template<typename X>
 pgCol<T>& operator+=(const pgCol<X> &pgA) {
+    // Metal dispatch skipped: Accelerate NEON is faster for add (295+ GB/s vs 59 GB/s)
     #ifdef __APPLE__
     if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
         if (pg_accel::try_accel_add(mem, pgA.memptr(), mem, n_elem))
@@ -583,6 +597,7 @@ pgCol<T>& operator+=(const pgCol<X> &pgA) {
 
 template<typename X>
 pgCol<T>& operator-=(const pgCol<X> &pgA) {
+    // Metal dispatch skipped: Accelerate NEON is faster for sub (288+ GB/s vs 61 GB/s)
     #ifdef __APPLE__
     if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
         if (pg_accel::try_accel_sub(mem, pgA.memptr(), mem, n_elem))
@@ -600,6 +615,13 @@ pgCol<T>& operator-=(const pgCol<X> &pgA) {
 
 template<typename X>
 pgCol<T>& operator%=(const pgCol<X> &pgA) {
+    #ifdef METAL_COMPUTE
+    // Metal wins 2.4x for complex mul; real mul stays on Accelerate (488 GB/s NEON)
+    if constexpr (std::is_same<T, pgComplex<float>>::value && std::is_same<T, X>::value) {
+        if (pg_metal::try_metal_mul(mem, pgA.memptr(), mem, n_elem))
+            return *this;
+    }
+    #endif
     #ifdef __APPLE__
     if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
         if (pg_accel::try_accel_mul(mem, pgA.memptr(), mem, n_elem))
@@ -617,6 +639,13 @@ pgCol<T>& operator%=(const pgCol<X> &pgA) {
 
 template<typename X>
 pgCol<T>& operator/=(const pgCol<X> &pgA) {
+    #ifdef METAL_COMPUTE
+    // Metal wins 4.0x for complex div
+    if constexpr (std::is_same<T, pgComplex<float>>::value && std::is_same<T, X>::value) {
+        if (pg_metal::try_metal_div(mem, pgA.memptr(), mem, n_elem))
+            return *this;
+    }
+    #endif
     #ifdef __APPLE__
     if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
         if (pg_accel::try_accel_div(mem, pgA.memptr(), mem, n_elem))
@@ -635,6 +664,7 @@ pgCol<T>& operator/=(const pgCol<X> &pgA) {
 // Operators(pgCol, scalar)
 const pgCol<T> operator+(const T& B) const {
     pgCol<T> pgC(n_elem);
+    // Metal dispatch skipped for add: Accelerate NEON is faster
     #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
         if (pg_accel::try_accel_add_scalar(mem, B, pgC.memptr(), n_elem))
@@ -652,6 +682,7 @@ const pgCol<T> operator+(const T& B) const {
 
 const pgCol<T> operator-( const T& B) const {
     pgCol<T> pgC(n_elem);
+    // Metal dispatch skipped for sub: Accelerate NEON is faster
     #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
         if (pg_accel::try_accel_sub_scalar(mem, B, pgC.memptr(), n_elem))
@@ -669,6 +700,13 @@ const pgCol<T> operator-( const T& B) const {
 
 const pgCol<T> operator%(const T& B) const {
     pgCol<T> pgC(n_elem);
+    #ifdef METAL_COMPUTE
+    // Metal wins 2.5x for complex scalar mul; real scalar mul stays on Accelerate
+    if constexpr (std::is_same<T, pgComplex<float>>::value) {
+        if (pg_metal::try_metal_mul_scalar(mem, B, pgC.memptr(), n_elem))
+            return std::move(pgC);
+    }
+    #endif
     #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
         if (pg_accel::try_accel_mul_scalar(mem, B, pgC.memptr(), n_elem))
@@ -702,6 +740,7 @@ const pgCol<T> operator/(const T& B) const {
 template<typename X>
 const pgCol<T> operator+(const pgCol<X>& pgB) const {
     pgCol<T> pgC(n_elem);
+    // Metal dispatch skipped for add: Accelerate NEON is faster
     #ifdef __APPLE__
     if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
         if (pg_accel::try_accel_add(mem, pgB.memptr(), pgC.memptr(), n_elem))
@@ -720,6 +759,7 @@ const pgCol<T> operator+(const pgCol<X>& pgB) const {
 template<typename X>
 const pgCol<T> operator-(const pgCol<X>& pgB) const {
     pgCol<T> pgC(n_elem);
+    // Metal dispatch skipped for sub: Accelerate NEON is faster
     #ifdef __APPLE__
     if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
         if (pg_accel::try_accel_sub(mem, pgB.memptr(), pgC.memptr(), n_elem))
@@ -738,6 +778,13 @@ template<typename X,
          typename std::enable_if<std::is_same<T, X>::value, int>::type = 0>
 const pgCol<T> operator%(const pgCol<X>& pgB) const {
     pgCol<T> pgC(n_elem);
+    #ifdef METAL_COMPUTE
+    // Metal wins 2.4x for complex mul; real mul stays on Accelerate (488 GB/s NEON)
+    if constexpr (std::is_same<T, pgComplex<float>>::value) {
+        if (pg_metal::try_metal_mul(mem, pgB.memptr(), pgC.memptr(), n_elem))
+            return std::move(pgC);
+    }
+    #endif
     #ifdef __APPLE__
     if constexpr (pg_accel::is_accel_type<T>::value) {
         if (pg_accel::try_accel_mul(mem, pgB.memptr(), pgC.memptr(), n_elem))
@@ -757,6 +804,13 @@ const pgCol<T> operator%(const pgCol<X>& pgB) const {
 template<typename X>
 const pgCol<T> operator/(const pgCol<X>& pgB) const {
     pgCol<T> pgC(n_elem);
+    #ifdef METAL_COMPUTE
+    // Metal wins 4.0x for complex div
+    if constexpr (std::is_same<T, pgComplex<float>>::value && std::is_same<T, X>::value) {
+        if (pg_metal::try_metal_div(mem, pgB.memptr(), pgC.memptr(), n_elem))
+            return std::move(pgC);
+    }
+    #endif
     #ifdef __APPLE__
     if constexpr (pg_accel::is_accel_type<T>::value && std::is_same<T, X>::value) {
         if (pg_accel::try_accel_div(mem, pgB.memptr(), pgC.memptr(), n_elem))
@@ -799,6 +853,7 @@ const pgComplex<T> sum(const pgCol<pgComplex<T>> &pgA) {
 
 template<typename T>
 const T sum(const pgCol<T> &pgA) {
+    // Metal dispatch skipped for sum: Accelerate vDSP_sve is faster (127 GB/s vs 14 GB/s)
     #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
         T result;
@@ -824,6 +879,7 @@ const T sum(const pgCol<T> &pgA) {
 /// Complex dot product: sum(conj(A[i]) * B[i]).
 template<typename T>
 pgComplex<T> cdot(const pgCol<pgComplex<T>>& A, const pgCol<pgComplex<T>>& B) {
+    // Metal dispatch skipped for cdot: Accelerate cblas_cdotc is faster (68 vs 42 GB/s)
     #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
         pgComplex<T> result;
@@ -844,6 +900,7 @@ pgComplex<T> cdot(const pgCol<pgComplex<T>>& A, const pgCol<pgComplex<T>>& B) {
 /// L2 norm of a complex vector: sqrt(sum(|A[i]|^2)).
 template<typename T>
 T norm(const pgCol<pgComplex<T>>& A) {
+    // Metal dispatch skipped for norm: Accelerate is faster (35 vs 27 GB/s)
     #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
         T n2;
@@ -923,6 +980,12 @@ pgCol<T> imag(const pgCol<pgComplex<T>>& A) {
 template<typename T>
 pgCol<pgComplex<T>> operator%(const pgCol<T>& W, const pgCol<pgComplex<T>>& X) {
     pgCol<pgComplex<T>> out(W.n_elem);
+    #ifdef METAL_COMPUTE
+    if constexpr (std::is_same<T, float>::value) {
+        if (pg_metal::try_metal_rvec_cmul(W.memptr(), X.memptr(), out.memptr(), W.n_elem))
+            return out;
+    }
+    #endif
     #ifdef __APPLE__
     if constexpr (std::is_same<T, float>::value) {
         if (pg_accel::try_accel_rvec_cmul(W.memptr(), X.memptr(), out.memptr(), W.n_elem))

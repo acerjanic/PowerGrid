@@ -33,6 +33,45 @@ extern const unsigned int gridding_metallib_len;
 #include <cstdio>
 #include <cstring>
 #include <cmath>
+#include <atomic>
+#include <mach/mach_time.h>
+
+// ---------------------------------------------------------------------------
+// NUFFT pipeline dispatch statistics
+// ---------------------------------------------------------------------------
+static std::atomic<uint64_t> g_nufftDispatchCount{0};
+static std::atomic<uint64_t> g_nufftWaitTicks{0};
+
+static double nufftTicksToSeconds(uint64_t ticks) {
+    static mach_timebase_info_data_t tb = [] {
+        mach_timebase_info_data_t info;
+        mach_timebase_info(&info);
+        return info;
+    }();
+    return (double)ticks * tb.numer / tb.denom / 1e9;
+}
+
+static void nufftCommitAndWait(id<MTLCommandBuffer> cmd) {
+    uint64_t t0 = mach_absolute_time();
+    [cmd commit];
+    [cmd waitUntilCompleted];
+    uint64_t t1 = mach_absolute_time();
+    g_nufftDispatchCount.fetch_add(1, std::memory_order_relaxed);
+    g_nufftWaitTicks.fetch_add(t1 - t0, std::memory_order_relaxed);
+}
+
+uint64_t metal_nufft_dispatch_count() {
+    return g_nufftDispatchCount.load(std::memory_order_relaxed);
+}
+
+double metal_nufft_wait_seconds() {
+    return nufftTicksToSeconds(g_nufftWaitTicks.load(std::memory_order_relaxed));
+}
+
+void metal_nufft_reset_stats() {
+    g_nufftDispatchCount.store(0, std::memory_order_relaxed);
+    g_nufftWaitTicks.store(0, std::memory_order_relaxed);
+}
 
 // ---------------------------------------------------------------------------
 // MSL struct mirrors — must match Metal shader structs exactly
@@ -441,8 +480,7 @@ void metal_nufft_forward(MetalNufftPipelineContext* ctx,
         (NSUInteger)ctx->gridNumElems);
 
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    nufftCommitAndWait(cmd);
 
     // 3. Forward FFT: bufGridB → bufGridA
     runFFT(ctx, ctx->fftFwdExec, ctx->bufGridB, ctx->bufGridA);
@@ -478,8 +516,7 @@ void metal_nufft_forward(MetalNufftPipelineContext* ctx,
    threadsPerThreadgroup:MTLSizeMake(tg, 1, 1)];
 
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    nufftCommitAndWait(cmd);
 
     // 5. Copy result to host
     memcpy(samplesOut, [ctx->bufSamplesOut contents], 2 * ctx->numSamples * sizeof(float));
@@ -544,8 +581,7 @@ void metal_nufft_adjoint(MetalNufftPipelineContext* ctx,
         (NSUInteger)ctx->gridNumElems);
 
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    nufftCommitAndWait(cmd);
 
     // 3. Inverse FFT: bufGridB → bufGridA (unnormalized, matching FFTW_BACKWARD)
     runFFT(ctx, ctx->fftInvExec, ctx->bufGridB, ctx->bufGridA);
@@ -578,8 +614,7 @@ void metal_nufft_adjoint(MetalNufftPipelineContext* ctx,
         (NSUInteger)ctx->imageNumElems);
 
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    nufftCommitAndWait(cmd);
 
     // 5. Copy result to host
     memcpy(imageOut, [ctx->bufImage contents], 2 * ctx->imageNumElems * sizeof(float));

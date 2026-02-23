@@ -208,6 +208,7 @@ template <typename T1>
 pgCol<pgComplex<T1>> pcSENSE<T1>::
 operator*(const pgCol<pgComplex<T1>>& d) const
 {
+    RANGE("pcSENSE::operator*(pgCol)")
 #ifdef METAL_COMPUTE
     if constexpr (std::is_same<T1, float>::value) {
         pgMat<pgComplex<T1>> outData_pg(Nd, Ns * Nc);
@@ -236,6 +237,7 @@ template <typename T1>
 pgCol<pgComplex<T1>> pcSENSE<T1>::
 operator/(const pgCol<pgComplex<T1>>& d) const
 {
+    RANGE("pcSENSE::operator/(pgCol)")
 #ifdef METAL_COMPUTE
     if constexpr (std::is_same<T1, float>::value) {
         pgMat<pgComplex<T1>> inData_pg(d, Nd, Ns * Nc);

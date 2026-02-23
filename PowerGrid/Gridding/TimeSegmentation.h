@@ -40,6 +40,7 @@ Developed by:
 #include "Core/PGIncludes.h"
 #include "Core/pgCol.hpp"
 #include "Core/pgMat.hpp"
+#include <vector>
 
 using namespace std;
 
@@ -82,6 +83,8 @@ public:
   Col<T1> timeVec;
   /// @brief Interpolation coefficient matrix, size L x n1.
   Mat<CxT1> AA;
+  /// @brief Cached conj(AA) for adjoint operator — avoids recomputing per call.
+  Mat<CxT1> conjAA;
   CxT1 i = CxT1(0., 1.);
   /// @brief Phase modulation matrices Wo (n2 x L) for forward transform.
   Mat<CxT1> Wo;
@@ -94,14 +97,15 @@ public:
   mutable Mat<complex<T1>> tempAD;
 
 #ifdef METAL_COMPUTE
-  // pgMat copies of time-segmentation matrices for Metal GPU dispatch (float only).
-  pgMat<pgComplex<T1>> AA_pg;
-  pgMat<pgComplex<T1>> Wo_pg;
-  pgMat<pgComplex<T1>> WoH_pg;
-  mutable pgMat<pgComplex<T1>> outData_pg;
-  mutable pgMat<pgComplex<T1>> outImg_pg;
-  mutable pgMat<pgComplex<T1>> tempD_pg;
-  mutable pgMat<pgComplex<T1>> tempAD_pg;
+  // Page-aligned column vectors for Metal GPU dispatch (float only).
+  // Stored as separate pgCols rather than pgMat so every column is page-aligned
+  // (16384 bytes), enabling Metal zero-copy GPU access for all element-wise ops.
+  std::vector<pgCol<pgComplex<T1>>> Wo_cols;      // L columns from Wo
+  std::vector<pgCol<pgComplex<T1>>> WoH_cols;     // L columns from WoH
+  std::vector<pgCol<pgComplex<T1>>> AA_cols;      // L columns from AA
+  std::vector<pgCol<pgComplex<T1>>> conjAA_cols;  // L columns from conj(AA)
+  mutable std::vector<pgCol<pgComplex<T1>>> tempD_cols;   // L working buffers (n2 each)
+  mutable std::vector<pgCol<pgComplex<T1>>> tempAD_cols;  // L working buffers (n1 each)
 #endif
 
   /// @brief Construct a TimeSegmentation operator.

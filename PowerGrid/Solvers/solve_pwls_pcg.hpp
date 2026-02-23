@@ -33,6 +33,7 @@ Developed by:
 #include <cstdlib>
 #include <chrono>
 #include "Core/PGLog.hpp"
+#include "Tracer.hpp"
 
 #ifdef METAL_COMPUTE
 #include "Core/pgCol.hpp"
@@ -93,6 +94,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
                                 Col<T1> const &W, Col<complex<T1>> const &yi,
                                 Robj const &R, uword niter) {
   typedef complex<T1> CxT1;
+  RANGE("solve_pwls_pcg")
 
 #ifdef METAL_COMPUTE
   if constexpr (std::is_same<T1, float>::value) {

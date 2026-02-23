@@ -182,7 +182,26 @@ if(APPLE)
 				DEPENDS ${SUPPORT_METAL_SRC}
 				COMMENT "Compiling and embedding Metal NUFFT support shaders")
 
-			add_custom_target(MetalShaders ALL DEPENDS ${METALEMBED} ${DFT_METALEMBED} ${SUPPORT_METALEMBED})
+			# Vector ops Metal shader
+		set(VECOPS_METAL_SRC  ${CMAKE_SOURCE_DIR}/PowerGrid/Metal/vectorops_metal.metal)
+		set(VECOPS_METAL_AIR  ${CMAKE_BINARY_DIR}/PowerGrid/Metal/vectorops.air)
+		set(VECOPS_METALLIB   ${CMAKE_BINARY_DIR}/PowerGrid/Metal/vectorops.metallib)
+		set(VECOPS_METALEMBED ${CMAKE_BINARY_DIR}/PowerGrid/Metal/vectorops_metallib.h)
+
+		add_custom_command(
+			OUTPUT ${VECOPS_METALEMBED}
+			COMMAND ${METAL_COMPILER} -O3 -o ${VECOPS_METAL_AIR} -c ${VECOPS_METAL_SRC}
+			COMMAND xcrun -sdk macosx metallib -o ${VECOPS_METALLIB} ${VECOPS_METAL_AIR}
+			COMMAND ${CMAKE_COMMAND}
+				-DINPUT=${VECOPS_METALLIB}
+				-DOUTPUT=${VECOPS_METALEMBED}
+				-DVAR_NAME=vectorops_metallib
+				-P ${CMAKE_SOURCE_DIR}/cmake/embed_binary.cmake
+			WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/PowerGrid/Metal
+			DEPENDS ${VECOPS_METAL_SRC}
+			COMMENT "Compiling and embedding Metal vector ops shaders")
+
+		add_custom_target(MetalShaders ALL DEPENDS ${METALEMBED} ${DFT_METALEMBED} ${SUPPORT_METALEMBED} ${VECOPS_METALEMBED})
 			include_directories(${CMAKE_BINARY_DIR}/PowerGrid/Metal)
 
 		else()
@@ -215,6 +234,11 @@ if(OPENACC_GPU)
 	add_definitions(-DUSE_NVTX)
 endif()
 
+# Enable Apple os_signpost profiling for Instruments.app
+if(APPLE)
+	add_definitions(-DUSE_SIGNPOST)
+endif()
+
 set(LIBS ${LIBS} spdlog::spdlog indicators::indicators)
 
 add_subdirectory(PowerGrid)
@@ -239,7 +263,8 @@ if(METAL_COMPUTE AND METAL_FOUND)
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/ISMRMRDWriteTests.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/Spiral3DReconTests.cpp
         ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/operatorTests.cpp
-        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/utilityTests.cpp)
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/utilityTests.cpp
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/MetalVectorOpsTests.cpp)
     target_include_directories(metal_tests PRIVATE
         ${CATCH_INCLUDE_DIR}
         ${CMAKE_SOURCE_DIR}/PowerGrid
@@ -261,6 +286,28 @@ if(METAL_COMPUTE AND METAL_FOUND)
     target_compile_options(metal_bench PRIVATE -fno-lto)
     target_link_options(metal_bench PRIVATE -fno-lto)
     add_dependencies(metal_bench MetalShaders)
+
+    # Standalone profiling binary for Instruments.app tracing
+    add_executable(metal_profile
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/ProfileRecon3D.cpp)
+    target_include_directories(metal_profile PRIVATE
+        ${CMAKE_SOURCE_DIR}/PowerGrid
+        ${CMAKE_SOURCE_DIR}/Support/ArmaExtensions)
+    target_link_libraries(metal_profile PGCommon ${LIBS})
+    target_compile_options(metal_profile PRIVATE -fno-lto)
+    target_link_options(metal_profile PRIVATE -fno-lto)
+    add_dependencies(metal_profile MetalShaders)
+
+    # Vector ops benchmark: Accelerate vs Metal-memcpy vs Metal-zerocopy
+    add_executable(metal_vecops_bench
+        ${CMAKE_SOURCE_DIR}/PowerGrid/Tests/MetalVectorOpsBenchmarks.cpp)
+    target_include_directories(metal_vecops_bench PRIVATE
+        ${CMAKE_SOURCE_DIR}/PowerGrid
+        ${CMAKE_SOURCE_DIR}/Support/ArmaExtensions)
+    target_link_libraries(metal_vecops_bench PGCommon ${LIBS})
+    target_compile_options(metal_vecops_bench PRIVATE -fno-lto)
+    target_link_options(metal_vecops_bench PRIVATE -fno-lto)
+    add_dependencies(metal_vecops_bench MetalShaders)
 endif()
 
 # ---------------------------------------------------------------------------

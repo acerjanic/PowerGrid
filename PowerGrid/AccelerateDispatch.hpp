@@ -95,39 +95,41 @@ inline bool try_accel_sub(const pgComplex<float>* A, const pgComplex<float>* B,
 inline bool try_accel_mul(const pgComplex<float>* A, const pgComplex<float>* B,
                            pgComplex<float>* C, size_t n) {
     if (n < kMinAccelSize) return false;
-    // Complex multiply using split-complex vDSP_zvmul.
-    // Interleaved → split, multiply, split → interleaved.
-    // vDSP_ctoz / vDSP_ztoc handle the conversion with stride.
-    DSPSplitComplex scA, scB, scC;
-    // Use stride-2 views into the interleaved arrays.
-    // vDSP_zvmul with stride works on split-complex, so we need temp buffers.
-    // For performance, use a stack buffer for small N, heap for large.
-    const size_t stackThreshold = 16384; // 64KB on stack (4 * 16K floats)
-    float stackBuf[stackThreshold * 4] __attribute__((aligned(16)));
+    // Complex multiply: (a+bi)(c+di) = (ac-bd) + (ad+bc)i
+    // Read inputs with stride-2, compute into contiguous temp buffers,
+    // then interleave to output once.  Safe when C aliases A or B.
+    const float* Af = reinterpret_cast<const float*>(A);
+    const float* Bf = reinterpret_cast<const float*>(B);
+
+    // 3 temp buffers: t_re (real result), t_im (imag result), t_tmp (scratch)
+    const size_t stackThreshold = 10922;
+    float stackBuf[stackThreshold * 3] __attribute__((aligned(16)));
     float* heap = nullptr;
-    float* buf;
+    float* t_re, *t_im, *t_tmp;
     if (n <= stackThreshold) {
-        buf = stackBuf;
+        t_re = stackBuf;
+        t_im = stackBuf + n;
+        t_tmp = stackBuf + 2 * n;
     } else {
-        heap = (float*)malloc(4 * n * sizeof(float));
-        buf = heap;
+        heap = (float*)malloc(3 * n * sizeof(float));
+        t_re = heap;
+        t_im = heap + n;
+        t_tmp = heap + 2 * n;
     }
-    scA.realp = buf;
-    scA.imagp = buf + n;
-    scB.realp = buf + 2 * n;
-    scB.imagp = buf + 3 * n;
 
-    // Deinterleave
-    vDSP_ctoz((const DSPComplex*)A, 2, &scA, 1, (vDSP_Length)n);
-    vDSP_ctoz((const DSPComplex*)B, 2, &scB, 1, (vDSP_Length)n);
+    // Real: ac - bd
+    vDSP_vmul(Af, 2, Bf, 2, t_re, 1, (vDSP_Length)n);           // t_re = ac
+    vDSP_vmul(Af + 1, 2, Bf + 1, 2, t_tmp, 1, (vDSP_Length)n);  // t_tmp = bd
+    vDSP_vsub(t_tmp, 1, t_re, 1, t_re, 1, (vDSP_Length)n);      // t_re = ac - bd
 
-    // Can write result into scA (reuse buffer)
-    scC.realp = scA.realp;
-    scC.imagp = scA.imagp;
-    vDSP_zvmul(&scA, 1, &scB, 1, &scC, 1, (vDSP_Length)n, 1); // 1 = no conjugate
+    // Imag: ad + bc
+    vDSP_vmul(Af, 2, Bf + 1, 2, t_im, 1, (vDSP_Length)n);       // t_im = ad
+    vDSP_vmul(Af + 1, 2, Bf, 2, t_tmp, 1, (vDSP_Length)n);      // t_tmp = bc
+    vDSP_vadd(t_im, 1, t_tmp, 1, t_im, 1, (vDSP_Length)n);      // t_im = ad + bc
 
-    // Re-interleave
-    vDSP_ztoc(&scC, 1, (DSPComplex*)C, 2, (vDSP_Length)n);
+    // Single interleave: [t_re, t_im] → interleaved C
+    DSPSplitComplex sc = {t_re, t_im};
+    vDSP_ztoc(&sc, 1, (DSPComplex*)C, 2, (vDSP_Length)n);
 
     if (heap) free(heap);
     return true;
@@ -135,28 +137,53 @@ inline bool try_accel_mul(const pgComplex<float>* A, const pgComplex<float>* B,
 inline bool try_accel_div(const pgComplex<float>* A, const pgComplex<float>* B,
                            pgComplex<float>* C, size_t n) {
     if (n < kMinAccelSize) return false;
-    // Complex division: C = A / B
-    // vDSP_zvdiv computes C = B / A (denominator first), so swap args
-    const size_t stackThreshold = 16384;
+    // Complex division: C = A / B = (a+bi)/(c+di)
+    //   Cr = (ac + bd) / (c² + d²)
+    //   Ci = (bc - ad) / (c² + d²)
+    // Read inputs with stride-2, compute into contiguous temp buffers,
+    // then interleave to output once.  Safe when C aliases A or B.
+    const float* Af = reinterpret_cast<const float*>(A);
+    const float* Bf = reinterpret_cast<const float*>(B);
+
+    // 4 temp buffers: t_re, t_im, t_tmp, denom
+    const size_t stackThreshold = 8192;
     float stackBuf[stackThreshold * 4] __attribute__((aligned(16)));
     float* heap = nullptr;
-    float* buf;
+    float* t_re, *t_im, *t_tmp, *denom;
     if (n <= stackThreshold) {
-        buf = stackBuf;
+        t_re = stackBuf;
+        t_im = stackBuf + n;
+        t_tmp = stackBuf + 2 * n;
+        denom = stackBuf + 3 * n;
     } else {
         heap = (float*)malloc(4 * n * sizeof(float));
-        buf = heap;
+        t_re = heap;
+        t_im = heap + n;
+        t_tmp = heap + 2 * n;
+        denom = heap + 3 * n;
     }
-    DSPSplitComplex scA = {buf, buf + n};
-    DSPSplitComplex scB = {buf + 2*n, buf + 3*n};
-    vDSP_ctoz((const DSPComplex*)A, 2, &scA, 1, (vDSP_Length)n);
-    vDSP_ctoz((const DSPComplex*)B, 2, &scB, 1, (vDSP_Length)n);
 
-    DSPSplitComplex scC = {scA.realp, scA.imagp};
-    // vDSP_zvdiv: C = B / A, so pass denominator (B) as first arg
-    vDSP_zvdiv(&scB, 1, &scA, 1, &scC, 1, (vDSP_Length)n);
+    // denom = c² + d²
+    vDSP_vmul(Bf, 2, Bf, 2, t_re, 1, (vDSP_Length)n);           // t_re = c²
+    vDSP_vmul(Bf + 1, 2, Bf + 1, 2, t_tmp, 1, (vDSP_Length)n);  // t_tmp = d²
+    vDSP_vadd(t_re, 1, t_tmp, 1, denom, 1, (vDSP_Length)n);     // denom = c² + d²
 
-    vDSP_ztoc(&scC, 1, (DSPComplex*)C, 2, (vDSP_Length)n);
+    // Real: (ac + bd) / denom
+    vDSP_vmul(Af, 2, Bf, 2, t_re, 1, (vDSP_Length)n);           // t_re = ac
+    vDSP_vmul(Af + 1, 2, Bf + 1, 2, t_tmp, 1, (vDSP_Length)n);  // t_tmp = bd
+    vDSP_vadd(t_re, 1, t_tmp, 1, t_re, 1, (vDSP_Length)n);      // t_re = ac + bd
+    vDSP_vdiv(denom, 1, t_re, 1, t_re, 1, (vDSP_Length)n);      // t_re = (ac+bd)/denom
+
+    // Imag: (bc - ad) / denom
+    vDSP_vmul(Af + 1, 2, Bf, 2, t_im, 1, (vDSP_Length)n);       // t_im = bc
+    vDSP_vmul(Af, 2, Bf + 1, 2, t_tmp, 1, (vDSP_Length)n);      // t_tmp = ad
+    vDSP_vsub(t_tmp, 1, t_im, 1, t_im, 1, (vDSP_Length)n);      // t_im = bc - ad
+    vDSP_vdiv(denom, 1, t_im, 1, t_im, 1, (vDSP_Length)n);      // t_im = (bc-ad)/denom
+
+    // Single interleave: [t_re, t_im] → interleaved C
+    DSPSplitComplex sc = {t_re, t_im};
+    vDSP_ztoc(&sc, 1, (DSPComplex*)C, 2, (vDSP_Length)n);
+
     if (heap) free(heap);
     return true;
 }
@@ -187,33 +214,42 @@ inline bool try_accel_mul_scalar(const pgComplex<float>* A,
                                   const pgComplex<float>& s,
                                   pgComplex<float>* C, size_t n) {
     if (n < kMinAccelSize) return false;
-    // (sr + i*si) * (ar + i*ai) = (sr*ar - si*ai) + i*(sr*ai + si*ar)
-    // Use vDSP on interleaved: multiply real parts by sr, imag parts by sr,
-    // then adjust for cross terms.
-    // Simplest correct approach: deinterleave, scale, reinterleave.
-    const size_t stackThreshold = 16384;
-    float stackBuf[stackThreshold * 2] __attribute__((aligned(16)));
-    float* heap = nullptr;
-    float* buf;
-    if (n <= stackThreshold) {
-        buf = stackBuf;
-    } else {
-        heap = (float*)malloc(2 * n * sizeof(float));
-        buf = heap;
-    }
-    DSPSplitComplex scA = {buf, buf + n};
-    vDSP_ctoz((const DSPComplex*)A, 2, &scA, 1, (vDSP_Length)n);
-
-    // Scale by complex scalar using split complex
-    DSPSplitComplex scS;
+    // (sr + si*i) * (a + b*i) = (sr*a - si*b) + (sr*b + si*a)*i
+    // Read inputs with stride-2, compute into contiguous temp buffers,
+    // then interleave to output once.  Safe when C aliases A.
+    const float* Af = reinterpret_cast<const float*>(A);
     float sr = s.real(), si = s.imag();
-    scS.realp = &sr;
-    scS.imagp = &si;
-    // vDSP_zvzsml: C = A * s (element-wise by scalar)
-    DSPSplitComplex scC = {scA.realp, scA.imagp}; // reuse buffer
-    vDSP_zvzsml(&scA, 1, &scS, &scC, 1, (vDSP_Length)n);
 
-    vDSP_ztoc(&scC, 1, (DSPComplex*)C, 2, (vDSP_Length)n);
+    // 3 temp buffers: t_re, t_im, t_tmp
+    const size_t stackThreshold = 10922;
+    float stackBuf[stackThreshold * 3] __attribute__((aligned(16)));
+    float* heap = nullptr;
+    float* t_re, *t_im, *t_tmp;
+    if (n <= stackThreshold) {
+        t_re = stackBuf;
+        t_im = stackBuf + n;
+        t_tmp = stackBuf + 2 * n;
+    } else {
+        heap = (float*)malloc(3 * n * sizeof(float));
+        t_re = heap;
+        t_im = heap + n;
+        t_tmp = heap + 2 * n;
+    }
+
+    // Real: sr*a - si*b
+    vDSP_vsmul(Af, 2, &sr, t_re, 1, (vDSP_Length)n);            // t_re = sr*a
+    vDSP_vsmul(Af + 1, 2, &si, t_tmp, 1, (vDSP_Length)n);       // t_tmp = si*b
+    vDSP_vsub(t_tmp, 1, t_re, 1, t_re, 1, (vDSP_Length)n);      // t_re = sr*a - si*b
+
+    // Imag: sr*b + si*a
+    vDSP_vsmul(Af + 1, 2, &sr, t_im, 1, (vDSP_Length)n);        // t_im = sr*b
+    vDSP_vsmul(Af, 2, &si, t_tmp, 1, (vDSP_Length)n);           // t_tmp = si*a
+    vDSP_vadd(t_im, 1, t_tmp, 1, t_im, 1, (vDSP_Length)n);      // t_im = sr*b + si*a
+
+    // Single interleave: [t_re, t_im] → interleaved C
+    DSPSplitComplex sc = {t_re, t_im};
+    vDSP_ztoc(&sc, 1, (DSPComplex*)C, 2, (vDSP_Length)n);
+
     if (heap) free(heap);
     return true;
 }
@@ -226,35 +262,48 @@ inline bool try_accel_axpy(const pgComplex<float>* A,
                             pgComplex<float>* C,
                             const pgComplex<float>& alpha, size_t n) {
     if (n < kMinAccelSize) return false;
-    // Two-step: tmp = alpha * B, then C = A + tmp
-    const size_t stackThreshold = 8192;
-    float stackBuf[stackThreshold * 6] __attribute__((aligned(16)));
-    float* heap = nullptr;
-    float* buf;
-    if (n <= stackThreshold) {
-        buf = stackBuf;
-    } else {
-        heap = (float*)malloc(6 * n * sizeof(float));
-        buf = heap;
-    }
-    DSPSplitComplex scA = {buf, buf + n};
-    DSPSplitComplex scB = {buf + 2*n, buf + 3*n};
-    DSPSplitComplex scC = {buf + 4*n, buf + 5*n};
-    vDSP_ctoz((const DSPComplex*)A, 2, &scA, 1, (vDSP_Length)n);
-    vDSP_ctoz((const DSPComplex*)B, 2, &scB, 1, (vDSP_Length)n);
-
-    // scC = alpha * scB
-    DSPSplitComplex scAlpha;
+    // C = A + alpha * B, where alpha = (ar + ai*i), all complex vectors.
+    // Compute alpha*B real/imag into contiguous temps, add A's real/imag
+    // (stride-2 gather), then interleave to C.  Safe when C aliases A or B.
+    const float* Af = reinterpret_cast<const float*>(A);
+    const float* Bf = reinterpret_cast<const float*>(B);
     float ar = alpha.real(), ai = alpha.imag();
-    scAlpha.realp = &ar;
-    scAlpha.imagp = &ai;
-    vDSP_zvzsml(&scB, 1, &scAlpha, &scC, 1, (vDSP_Length)n);
 
-    // scC = scA + scC
-    vDSP_vadd(scA.realp, 1, scC.realp, 1, scC.realp, 1, (vDSP_Length)n);
-    vDSP_vadd(scA.imagp, 1, scC.imagp, 1, scC.imagp, 1, (vDSP_Length)n);
+    // 3 temp buffers: t_re, t_im, t_tmp
+    const size_t stackThreshold = 10922;
+    float stackBuf[stackThreshold * 3] __attribute__((aligned(16)));
+    float* heap = nullptr;
+    float* t_re, *t_im, *t_tmp;
+    if (n <= stackThreshold) {
+        t_re = stackBuf;
+        t_im = stackBuf + n;
+        t_tmp = stackBuf + 2 * n;
+    } else {
+        heap = (float*)malloc(3 * n * sizeof(float));
+        t_re = heap;
+        t_im = heap + n;
+        t_tmp = heap + 2 * n;
+    }
 
-    vDSP_ztoc(&scC, 1, (DSPComplex*)C, 2, (vDSP_Length)n);
+    // Real of alpha*B: ar*Br - ai*Bi
+    vDSP_vsmul(Bf, 2, &ar, t_re, 1, (vDSP_Length)n);            // t_re = ar*Br
+    vDSP_vsmul(Bf + 1, 2, &ai, t_tmp, 1, (vDSP_Length)n);       // t_tmp = ai*Bi
+    vDSP_vsub(t_tmp, 1, t_re, 1, t_re, 1, (vDSP_Length)n);      // t_re = ar*Br - ai*Bi
+
+    // Imag of alpha*B: ar*Bi + ai*Br
+    vDSP_vsmul(Bf + 1, 2, &ar, t_im, 1, (vDSP_Length)n);        // t_im = ar*Bi
+    vDSP_vsmul(Bf, 2, &ai, t_tmp, 1, (vDSP_Length)n);           // t_tmp = ai*Br
+    vDSP_vadd(t_im, 1, t_tmp, 1, t_im, 1, (vDSP_Length)n);      // t_im = ar*Bi + ai*Br
+
+    // Add A's real and imag parts (gathered with stride-2)
+    // vDSP_vadd with stride-2 on one input, stride-1 on other
+    vDSP_vadd(Af, 2, t_re, 1, t_re, 1, (vDSP_Length)n);         // t_re += Ar
+    vDSP_vadd(Af + 1, 2, t_im, 1, t_im, 1, (vDSP_Length)n);     // t_im += Ai
+
+    // Single interleave: [t_re, t_im] → interleaved C
+    DSPSplitComplex sc = {t_re, t_im};
+    vDSP_ztoc(&sc, 1, (DSPComplex*)C, 2, (vDSP_Length)n);
+
     if (heap) free(heap);
     return true;
 }

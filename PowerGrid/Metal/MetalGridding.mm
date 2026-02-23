@@ -33,6 +33,45 @@ Developed by:
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <atomic>
+#include <mach/mach_time.h>
+
+// ---------------------------------------------------------------------------
+// Gridding dispatch statistics
+// ---------------------------------------------------------------------------
+static std::atomic<uint64_t> g_gridDispatchCount{0};
+static std::atomic<uint64_t> g_gridWaitTicks{0};
+
+static double gridTicksToSeconds(uint64_t ticks) {
+    static mach_timebase_info_data_t tb = [] {
+        mach_timebase_info_data_t info;
+        mach_timebase_info(&info);
+        return info;
+    }();
+    return (double)ticks * tb.numer / tb.denom / 1e9;
+}
+
+static void gridCommitAndWait(id<MTLCommandBuffer> cmd) {
+    uint64_t t0 = mach_absolute_time();
+    [cmd commit];
+    [cmd waitUntilCompleted];
+    uint64_t t1 = mach_absolute_time();
+    g_gridDispatchCount.fetch_add(1, std::memory_order_relaxed);
+    g_gridWaitTicks.fetch_add(t1 - t0, std::memory_order_relaxed);
+}
+
+uint64_t metal_gridding_dispatch_count() {
+    return g_gridDispatchCount.load(std::memory_order_relaxed);
+}
+
+double metal_gridding_wait_seconds() {
+    return gridTicksToSeconds(g_gridWaitTicks.load(std::memory_order_relaxed));
+}
+
+void metal_gridding_reset_stats() {
+    g_gridDispatchCount.store(0, std::memory_order_relaxed);
+    g_gridWaitTicks.store(0, std::memory_order_relaxed);
+}
 
 // ---------------------------------------------------------------------------
 // GridParamsMSL — must match the Metal struct in gridding_metal.metal exactly
@@ -258,8 +297,7 @@ static void zeroBuffer(MetalGriddingContext* ctx, id<MTLBuffer> buf, NSUInteger 
     MTLSize tg   = MTLSizeMake(tgSize, 1, 1);
     [enc dispatchThreads:grid threadsPerThreadgroup:tg];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    gridCommitAndWait(cmd);
 }
 
 // ---------------------------------------------------------------------------
@@ -310,8 +348,7 @@ void metal_gridding_adjoint_2D(MetalGriddingContext* ctx,
     MTLSize tg   = MTLSizeMake(tgSize, 1, 1);
     [enc dispatchThreads:grid threadsPerThreadgroup:tg];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    gridCommitAndWait(cmd);
 
     // Copy result (shared mem — already coherent on Apple Silicon)
     memcpy(pGridOut, [ctx->bufGrid contents], gridFloats * sizeof(float));
@@ -341,8 +378,7 @@ void metal_gridding_adjoint_3D(MetalGriddingContext* ctx,
     MTLSize tg   = MTLSizeMake(tgSize, 1, 1);
     [enc dispatchThreads:grid threadsPerThreadgroup:tg];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    gridCommitAndWait(cmd);
 
     memcpy(pGridOut, [ctx->bufGrid contents], gridFloats * sizeof(float));
 }
@@ -383,8 +419,7 @@ static void runForward(MetalGriddingContext* ctx,
     MTLSize tg   = MTLSizeMake(tgSize, 1, 1);
     [enc dispatchThreads:grid threadsPerThreadgroup:tg];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    gridCommitAndWait(cmd);
 
     memcpy(pSamplesOut, [ctx->bufSamplesOut contents], sampFloats * sizeof(float));
 }

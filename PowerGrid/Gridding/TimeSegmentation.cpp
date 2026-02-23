@@ -241,15 +241,36 @@ TimeSegmentation<T1, Tobj>::TimeSegmentation(Tobj& G, Col<T1> map_in,
         }
     }
 
+    // Cache conjugate of AA for adjoint operator (avoids recomputing per call)
+    conjAA = conj(AA);
+
 #ifdef METAL_COMPUTE
     if constexpr (std::is_same<T1, float>::value) {
-        AA_pg = pgMat<pgComplex<T1>>(AA);
-        Wo_pg = pgMat<pgComplex<T1>>(Wo);
-        WoH_pg = pgMat<pgComplex<T1>>(WoH);
-        outData_pg = pgMat<pgComplex<T1>>(n1, L);
-        outImg_pg = pgMat<pgComplex<T1>>(n2, L);
-        tempD_pg = pgMat<pgComplex<T1>>(n2, L);
-        tempAD_pg = pgMat<pgComplex<T1>>(n1, L);
+        // Extract first L columns as separate page-aligned pgCols.
+        // pgCol uses aligned_alloc(16384), so every column is page-aligned,
+        // enabling Metal zero-copy GPU dispatch for all element-wise ops.
+        Wo_cols.reserve(L);
+        WoH_cols.reserve(L);
+        AA_cols.reserve(L);
+        conjAA_cols.reserve(L);
+        tempD_cols.reserve(L);
+        tempAD_cols.reserve(L);
+        for (int ii = 0; ii < L; ii++) {
+            Wo_cols.emplace_back(n2);
+            std::memcpy(Wo_cols[ii].memptr(), reinterpret_cast<const pgComplex<T1>*>(Wo.colptr(ii)),
+                        sizeof(pgComplex<T1>) * n2);
+            WoH_cols.emplace_back(n2);
+            std::memcpy(WoH_cols[ii].memptr(), reinterpret_cast<const pgComplex<T1>*>(WoH.colptr(ii)),
+                        sizeof(pgComplex<T1>) * n2);
+            AA_cols.emplace_back(n1);
+            std::memcpy(AA_cols[ii].memptr(), reinterpret_cast<const pgComplex<T1>*>(AA.colptr(ii)),
+                        sizeof(pgComplex<T1>) * n1);
+            conjAA_cols.emplace_back(n1);
+            std::memcpy(conjAA_cols[ii].memptr(), reinterpret_cast<const pgComplex<T1>*>(conjAA.colptr(ii)),
+                        sizeof(pgComplex<T1>) * n1);
+            tempD_cols.emplace_back(n2);
+            tempAD_cols.emplace_back(n1);
+        }
     }
 #endif
     //cout << "Exiting class constructor." << endl;
@@ -294,30 +315,25 @@ operator*(const Col<complex<T1>>& d) const
 
 #ifdef METAL_COMPUTE
     if constexpr (std::is_same<T1, float>::value) {
-        // Metal path: pgCol/pgMat with GPU-dispatched element-wise ops
+        // Metal path: all operands are page-aligned pgCols → Metal zero-copy
         pgCol<pgComplex<T1>> d_pg(d);
 
-        // Copy Wo columns into tempD and weight by d
+        // Copy Wo columns into page-aligned working buffers, multiply by d
         for (unsigned int ii = 0; ii < this->L; ii++) {
-            // Copy Wo column ii into tempD, then multiply by d
-            pgCol<pgComplex<T1>> col_copy = Wo_pg.col_copy(ii);
-            col_copy %= d_pg;
-            tempD_pg.set_col(ii, col_copy);
+            std::memcpy(tempD_cols[ii].memptr(), Wo_cols[ii].memptr(),
+                        sizeof(pgComplex<T1>) * this->n2);
+            tempD_cols[ii] %= d_pg;
         }
 
-        // Forward NUFFT per segment (pgCol overload — no arma conversion)
-        for (unsigned int ii = 0; ii < this->L; ii++) {
-            pgCol<pgComplex<T1>> seg = tempD_pg.col_copy(ii);
-            outData_pg.set_col(ii, (*G) * seg);
+        // NUFFT forward + AA weighting + accumulate
+        pgCol<pgComplex<T1>> result = (*G) * tempD_cols[0];
+        result %= AA_cols[0];
+        for (unsigned int ii = 1; ii < this->L; ii++) {
+            pgCol<pgComplex<T1>> seg_out = (*G) * tempD_cols[ii];
+            seg_out %= AA_cols[ii];
+            result += seg_out;
         }
-
-        // Weight by interpolation coefficients
-        for (unsigned int ii = 0; ii < this->L; ii++) {
-            outData_pg.col(ii) %= AA_pg.col(ii);
-        }
-
-        pgCol<pgComplex<T1>> sumVec = sum(outData_pg, 1);
-        return sumVec.getArma();
+        return result.getArma();
     }
 #endif
 
@@ -349,35 +365,30 @@ operator/(const Col<complex<T1>>& d) const
 
 #ifdef METAL_COMPUTE
     if constexpr (std::is_same<T1, float>::value) {
-        // Metal path: pgCol/pgMat with GPU-dispatched element-wise ops
+        // Metal path: all operands are page-aligned pgCols → Metal zero-copy
         pgCol<pgComplex<T1>> d_pg(d);
 
-        // Conjugate AA and weight by data
-        pgMat<pgComplex<T1>> conjAA_pg = conj(AA_pg);
+        // Copy conjAA columns into page-aligned working buffers, multiply by d
         for (unsigned int ii = 0; ii < this->L; ii++) {
-            pgCol<pgComplex<T1>> col_copy = conjAA_pg.col_copy(ii);
-            col_copy %= d_pg;
-            tempAD_pg.set_col(ii, col_copy);
+            std::memcpy(tempAD_cols[ii].memptr(), conjAA_cols[ii].memptr(),
+                        sizeof(pgComplex<T1>) * this->n1);
+            tempAD_cols[ii] %= d_pg;
         }
 
-        // Adjoint NUFFT per segment (pgCol overload — no arma conversion)
-        for (unsigned int ii = 0; ii < this->L; ii++) {
-            pgCol<pgComplex<T1>> seg = tempAD_pg.col_copy(ii);
-            outImg_pg.set_col(ii, (*G) / seg);
+        // Adjoint NUFFT + WoH weighting + accumulate
+        pgCol<pgComplex<T1>> result = (*G) / tempAD_cols[0];
+        result %= WoH_cols[0];
+        for (unsigned int ii = 1; ii < this->L; ii++) {
+            pgCol<pgComplex<T1>> seg_out = (*G) / tempAD_cols[ii];
+            seg_out %= WoH_cols[ii];
+            result += seg_out;
         }
-
-        // Weight by conjugate field map
-        for (unsigned int ii = 0; ii < this->L; ii++) {
-            outImg_pg.col(ii) %= WoH_pg.col(ii);
-        }
-
-        pgCol<pgComplex<T1>> sumVec = sum(outImg_pg, 1);
-        return sumVec.getArma();
+        return result.getArma();
     }
 #endif
 
     // Armadillo path (double, or non-Metal builds)
-    tempAD = conj(AA);
+    tempAD = conjAA;
 
     for (unsigned int ii = 0; ii < this->L; ii++) {
         tempAD.col(ii) %= d;
@@ -399,26 +410,27 @@ template <typename T1, typename Tobj>
 pgCol<pgComplex<T1>> TimeSegmentation<T1, Tobj>::
 operator*(const pgCol<pgComplex<T1>>& d) const
 {
+    RANGE("TimeSegmentation::operator*(pgCol)")
 #ifdef METAL_COMPUTE
     if constexpr (std::is_same<T1, float>::value) {
         Tobj* G = this->obj;
 
+        // Copy Wo columns into page-aligned working buffers, multiply by d
         for (unsigned int ii = 0; ii < this->L; ii++) {
-            pgCol<pgComplex<T1>> col_copy = Wo_pg.col_copy(ii);
-            col_copy %= d;
-            tempD_pg.set_col(ii, col_copy);
+            std::memcpy(tempD_cols[ii].memptr(), Wo_cols[ii].memptr(),
+                        sizeof(pgComplex<T1>) * this->n2);
+            tempD_cols[ii] %= d;
         }
 
-        for (unsigned int ii = 0; ii < this->L; ii++) {
-            pgCol<pgComplex<T1>> seg = tempD_pg.col_copy(ii);
-            outData_pg.set_col(ii, (*G) * seg);
+        // NUFFT forward + AA weighting + accumulate (all page-aligned)
+        pgCol<pgComplex<T1>> result = (*G) * tempD_cols[0];
+        result %= AA_cols[0];
+        for (unsigned int ii = 1; ii < this->L; ii++) {
+            pgCol<pgComplex<T1>> seg_out = (*G) * tempD_cols[ii];
+            seg_out %= AA_cols[ii];
+            result += seg_out;
         }
-
-        for (unsigned int ii = 0; ii < this->L; ii++) {
-            outData_pg.col(ii) %= AA_pg.col(ii);
-        }
-
-        return sum(outData_pg, 1);
+        return result;
     }
 #endif
     // Fallback: convert to arma, call arma operator, convert back
@@ -431,27 +443,27 @@ template <typename T1, typename Tobj>
 pgCol<pgComplex<T1>> TimeSegmentation<T1, Tobj>::
 operator/(const pgCol<pgComplex<T1>>& d) const
 {
+    RANGE("TimeSegmentation::operator/(pgCol)")
 #ifdef METAL_COMPUTE
     if constexpr (std::is_same<T1, float>::value) {
         Tobj* G = this->obj;
 
-        pgMat<pgComplex<T1>> conjAA_pg = conj(AA_pg);
+        // Copy conjAA columns into page-aligned working buffers, multiply by d
         for (unsigned int ii = 0; ii < this->L; ii++) {
-            pgCol<pgComplex<T1>> col_copy = conjAA_pg.col_copy(ii);
-            col_copy %= d;
-            tempAD_pg.set_col(ii, col_copy);
+            std::memcpy(tempAD_cols[ii].memptr(), conjAA_cols[ii].memptr(),
+                        sizeof(pgComplex<T1>) * this->n1);
+            tempAD_cols[ii] %= d;
         }
 
-        for (unsigned int ii = 0; ii < this->L; ii++) {
-            pgCol<pgComplex<T1>> seg = tempAD_pg.col_copy(ii);
-            outImg_pg.set_col(ii, (*G) / seg);
+        // Adjoint NUFFT + WoH weighting + accumulate (all page-aligned)
+        pgCol<pgComplex<T1>> result = (*G) / tempAD_cols[0];
+        result %= WoH_cols[0];
+        for (unsigned int ii = 1; ii < this->L; ii++) {
+            pgCol<pgComplex<T1>> seg_out = (*G) / tempAD_cols[ii];
+            seg_out %= WoH_cols[ii];
+            result += seg_out;
         }
-
-        for (unsigned int ii = 0; ii < this->L; ii++) {
-            outImg_pg.col(ii) %= WoH_pg.col(ii);
-        }
-
-        return sum(outImg_pg, 1);
+        return result;
     }
 #endif
     // Fallback: convert to arma, call arma operator, convert back

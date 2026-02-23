@@ -32,11 +32,13 @@ if(METAL_COMPUTE)
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalGridding.mm
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalDFT.mm
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalNufftPipeline.mm
+		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalVectorOps.mm
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/fftAccelerate.cpp)
 	set_source_files_properties(
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalGridding.mm
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalDFT.mm
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalNufftPipeline.mm
+		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalVectorOps.mm
 		PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 endif()
 

@@ -80,4 +80,9 @@ void metal_nufft_forward(MetalNufftPipelineContext* ctx,
 void metal_nufft_adjoint(MetalNufftPipelineContext* ctx,
                          const float* samplesIn, float* imageOut);
 
+// Dispatch statistics
+uint64_t metal_nufft_dispatch_count();
+double metal_nufft_wait_seconds();
+void metal_nufft_reset_stats();
+
 #endif // METAL_COMPUTE

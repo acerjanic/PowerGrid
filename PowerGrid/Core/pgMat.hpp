@@ -618,12 +618,19 @@ pgMat<T> operator/(const pgMat<X>& pgB) const {
 
 template<typename T>
 const pgCol<pgComplex<T>> sum(const pgMat<pgComplex<T>> &pgA, const arma::uword dim = 0) {
-    pgCol<T> sumReal;
-    pgCol<T> sumImag;
-
-    if (dim == 0) { // Column-wise sums (default)
-        sumReal.set_size(pgA.n_cols);
-        sumImag.set_size(pgA.n_cols);
+    if (dim == 1) {
+        // Row-wise sum: reduce n_cols columns into one column of n_rows elements.
+        // Use pgCol vector addition which dispatches to Accelerate NEON (~295 GB/s)
+        // instead of a scalar loop over every element.
+        pgCol<pgComplex<T>> out = pgA.col_copy(0);
+        for (arma::uword ii = 1; ii < pgA.n_cols; ii++) {
+            out += pgA.col(ii);
+        }
+        return std::move(out);
+    } else if (dim == 0) {
+        // Column-wise sum: reduce n_rows rows into one row of n_cols elements.
+        pgCol<T> sumReal(pgA.n_cols);
+        pgCol<T> sumImag(pgA.n_cols);
         sumReal.zeros();
         sumImag.zeros();
 
@@ -649,58 +656,33 @@ const pgCol<pgComplex<T>> sum(const pgMat<pgComplex<T>> &pgA, const arma::uword 
                 sumImag.at(jj) += imag(pgA.at(jj * pgA.n_rows + ii ));
             }
         }
-    } else if (dim == 1) {
-        sumReal.set_size(pgA.n_rows);
-        sumImag.set_size(pgA.n_rows);
-        sumReal.zeros();
-        sumImag.zeros();
 
+        pgCol<pgComplex<T>> out(sumReal.n_elem);
         #ifdef _OPENACC
-        #pragma acc parallel loop present(pgA, sumReal)
+        #pragma acc parallel loop present(out, sumReal, sumImag)
         #endif
-        for(arma::uword jj = 0; jj < pgA.n_rows; jj++) {
-            #ifdef _OPENACC
-            #pragma acc loop seq
-            #endif
-            for(arma::uword ii = 0; ii < pgA.n_cols; ii++) {
-                sumReal.at(jj) += real(pgA.at(jj + pgA.n_rows * ii ));
-            }
+        for(arma::uword jj = 0; jj < sumReal.n_elem; jj++) {
+            out.at(jj) = pgComplex<T>(sumReal.at(jj),sumImag.at(jj));
         }
-        #ifdef _OPENACC
-        #pragma acc parallel loop present(pgA, sumImag)
-        #endif
-        for(arma::uword jj = 0; jj < pgA.n_rows; jj++) {
-            #ifdef _OPENACC
-            #pragma acc loop seq
-            #endif
-            for(arma::uword ii = 0; ii < pgA.n_cols; ii++) {
-                sumImag.at(jj) += imag(pgA.at(jj + pgA.n_rows * ii ));
-            }
-        }
+        return std::move(out);
     } else {
         std::cout << "pgMat::sum Error! Unrecognized dimension: dim = " << dim << std::endl;
-
+        return pgCol<pgComplex<T>>();
     }
-    pgComplex<T> J(0,1.0);
-
-    pgCol<pgComplex<T>> out(sumReal.n_elem);
-    #ifdef _OPENACC
-    #pragma acc parallel loop present(out, sumReal, sumImag)
-    #endif
-    for(arma::uword jj = 0; jj < sumReal.n_elem; jj++) {
-        out.at(jj) = pgComplex<T>(sumReal.at(jj),sumImag.at(jj));
-    }
-
-    return std::move(out);
-
 }
 
 template<typename T>
 const pgCol<T> sum(const pgMat<T> &pgA, const arma::uword dim = 0) {
-    pgCol<T> sumA;
-
-    if (dim == 0) { // Column-wise sums (default)
-        sumA.set_size(pgA.n_cols);
+    if (dim == 1) {
+        // Row-wise sum: reduce columns via pgCol vector addition (Accelerate NEON)
+        pgCol<T> out = pgA.col_copy(0);
+        for (arma::uword ii = 1; ii < pgA.n_cols; ii++) {
+            out += pgA.col(ii);
+        }
+        return std::move(out);
+    } else if (dim == 0) {
+        // Column-wise sum: reduce rows into one value per column
+        pgCol<T> sumA(pgA.n_cols);
         sumA.zeros();
         #ifdef _OPENACC
         #pragma acc parallel loop present(pgA, sumA)
@@ -713,25 +695,11 @@ const pgCol<T> sum(const pgMat<T> &pgA, const arma::uword dim = 0) {
                 sumA.at(jj) += pgA.at(jj * pgA.n_rows + ii );
             }
         }
-
-    } else if (dim == 1) { // Row-wise sums
-        sumA.set_size(pgA.n_rows);
-        sumA.zeros();
-        #ifdef _OPENACC
-        #pragma acc parallel loop present(pgA, sumA)
-        #endif
-        for(arma::uword jj = 0; jj < pgA.n_rows; jj++) {
-            #ifdef _OPENACC
-            #pragma acc loop seq
-            #endif
-            for(arma::uword ii = 0; ii < pgA.n_cols; ii++) {
-                sumA.at(jj) += pgA.at(jj + pgA.n_rows * ii );
-            }
-        }
+        return std::move(sumA);
     } else {
         std::cout << "pgMat::sum Error! Unrecognized dimension: dim = " << dim << std::endl;
+        return pgCol<T>();
     }
-    return std::move(sumA);
 }
 
 

@@ -99,14 +99,57 @@ float metal_vec_sum(MetalVectorContext* ctx, const float* A, size_t n);
 // production paths where pgCol data is already page-aligned.
 // ============================================================================
 
+// Element-wise real
 void metal_vec_add_zc(MetalVectorContext* ctx,
                       float* A, float* B, float* C, size_t n);
+void metal_vec_sub_zc(MetalVectorContext* ctx,
+                      float* A, float* B, float* C, size_t n);
+void metal_vec_mul_zc(MetalVectorContext* ctx,
+                      float* A, float* B, float* C, size_t n);
+void metal_vec_div_zc(MetalVectorContext* ctx,
+                      float* A, float* B, float* C, size_t n);
+void metal_vec_add_scalar_zc(MetalVectorContext* ctx,
+                              float* A, float scalar, float* C, size_t n);
+void metal_vec_mul_scalar_zc(MetalVectorContext* ctx,
+                              float* A, float scalar, float* C, size_t n);
+
+// Element-wise complex
+void metal_cvec_add_zc(MetalVectorContext* ctx,
+                       float* A, float* B, float* C, size_t n);
+void metal_cvec_sub_zc(MetalVectorContext* ctx,
+                       float* A, float* B, float* C, size_t n);
 void metal_cvec_mul_zc(MetalVectorContext* ctx,
                        float* A, float* B, float* C, size_t n);
+void metal_cvec_div_zc(MetalVectorContext* ctx,
+                       float* A, float* B, float* C, size_t n);
+void metal_rvec_cmul_zc(MetalVectorContext* ctx,
+                        float* W, float* X, float* C, size_t n);
+void metal_cvec_axpy_zc(MetalVectorContext* ctx,
+                        float* A, float* B, float* C,
+                        float alphaRe, float alphaIm, size_t n);
+void metal_cvec_mul_scalar_zc(MetalVectorContext* ctx,
+                               float* A, float alphaRe, float alphaIm,
+                               float* C, size_t n);
+
+// Reductions
 void metal_cvec_cdot_zc(MetalVectorContext* ctx,
                         float* A, float* B,
                         float* outRe, float* outIm, size_t n);
+float metal_cvec_norm2sq_zc(MetalVectorContext* ctx, float* A, size_t n);
 float metal_vec_sum_zc(MetalVectorContext* ctx, float* A, size_t n);
+
+// ============================================================================
+// Dispatch statistics — counts command buffer commits and cumulative GPU wait.
+// ============================================================================
+
+/// Total number of Metal command buffer commits (vector ops only, not gridding).
+uint64_t metal_vecops_dispatch_count();
+
+/// Cumulative time in seconds spent in waitUntilCompleted (vector ops only).
+double metal_vecops_wait_seconds();
+
+/// Reset both counters to zero.
+void metal_vecops_reset_stats();
 
 #endif // METAL_COMPUTE
 #endif // POWER_GRID_MetalVectorOps_h

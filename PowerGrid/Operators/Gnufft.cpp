@@ -323,6 +323,7 @@ RANGE()
 // Adjoint transform operation
 template <typename T1>
 Col<complex<T1>> Gnufft<T1>::operator/(const Col<complex<T1>> &d) const {
+  RANGE("Gnufft::operator/")
   // uword dataLength = n2;
   // Let's trim the operations to avoid data overhead and transfers
   // Basically if we know that the data points are zero, they have no impact
@@ -497,6 +498,7 @@ Col<complex<T1>> Gnufft<T1>::adjointSpatialInterp(const Col<complex<T1>> &d) con
 template <typename T1>
 pgCol<pgComplex<T1>> Gnufft<T1>::
 operator*(const pgCol<pgComplex<T1>> &d) const {
+  RANGE("Gnufft::operator*(pgCol)")
 #ifdef METAL_COMPUTE
   if constexpr (std::is_same<T1, float>::value) {
     if (pipelineCtx != nullptr) {
@@ -526,6 +528,7 @@ operator*(const pgCol<pgComplex<T1>> &d) const {
 template <typename T1>
 pgCol<pgComplex<T1>> Gnufft<T1>::
 operator/(const pgCol<pgComplex<T1>> &d) const {
+  RANGE("Gnufft::operator/(pgCol)")
 #ifdef METAL_COMPUTE
   if constexpr (std::is_same<T1, float>::value) {
     if (pipelineCtx != nullptr) {

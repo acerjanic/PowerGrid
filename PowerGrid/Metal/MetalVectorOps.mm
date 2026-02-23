@@ -32,8 +32,48 @@ Developed by:
 #include <cstdio>
 #include <cstring>
 #include <mutex>
+#include <atomic>
+#include <mach/mach_time.h>
 
 static constexpr NSUInteger kTGSize = 256;
+
+// ---------------------------------------------------------------------------
+// Dispatch statistics — atomic counters for profiling
+// ---------------------------------------------------------------------------
+static std::atomic<uint64_t> g_vecDispatchCount{0};
+static std::atomic<uint64_t> g_vecWaitTicks{0};
+
+static double ticksToSeconds(uint64_t ticks) {
+    static mach_timebase_info_data_t tb = [] {
+        mach_timebase_info_data_t info;
+        mach_timebase_info(&info);
+        return info;
+    }();
+    return (double)ticks * tb.numer / tb.denom / 1e9;
+}
+
+/// Commit and synchronously wait, accumulating dispatch stats.
+static void commitAndWait(id<MTLCommandBuffer> cmd) {
+    uint64_t t0 = mach_absolute_time();
+    [cmd commit];
+    [cmd waitUntilCompleted];
+    uint64_t t1 = mach_absolute_time();
+    g_vecDispatchCount.fetch_add(1, std::memory_order_relaxed);
+    g_vecWaitTicks.fetch_add(t1 - t0, std::memory_order_relaxed);
+}
+
+uint64_t metal_vecops_dispatch_count() {
+    return g_vecDispatchCount.load(std::memory_order_relaxed);
+}
+
+double metal_vecops_wait_seconds() {
+    return ticksToSeconds(g_vecWaitTicks.load(std::memory_order_relaxed));
+}
+
+void metal_vecops_reset_stats() {
+    g_vecDispatchCount.store(0, std::memory_order_relaxed);
+    g_vecWaitTicks.store(0, std::memory_order_relaxed);
+}
 
 // ---------------------------------------------------------------------------
 // MetalVectorContext — process-wide singleton
@@ -212,8 +252,7 @@ static void ewise3(MetalVectorContext* ctx,
     [enc dispatchThreads:MTLSizeMake(gridWidth, 1, 1)
          threadsPerThreadgroup:MTLSizeMake(tg, 1, 1)];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    commitAndWait(cmd);
 
     memcpy(C, [ctx->bufC contents], bytesC);
 }
@@ -269,8 +308,7 @@ void metal_vec_add_scalar(MetalVectorContext* ctx,
     [enc dispatchThreads:MTLSizeMake(n, 1, 1)
          threadsPerThreadgroup:MTLSizeMake(tg, 1, 1)];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    commitAndWait(cmd);
 
     memcpy(C, [ctx->bufC contents], bytes);
 }
@@ -294,8 +332,7 @@ void metal_vec_mul_scalar(MetalVectorContext* ctx,
     [enc dispatchThreads:MTLSizeMake(n, 1, 1)
          threadsPerThreadgroup:MTLSizeMake(tg, 1, 1)];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    commitAndWait(cmd);
 
     memcpy(C, [ctx->bufC contents], bytes);
 }
@@ -366,8 +403,7 @@ void metal_cvec_axpy(MetalVectorContext* ctx,
     [enc dispatchThreads:MTLSizeMake(n, 1, 1)
          threadsPerThreadgroup:MTLSizeMake(tg, 1, 1)];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    commitAndWait(cmd);
 
     memcpy(C, [ctx->bufC contents], bytes);
 }
@@ -395,8 +431,7 @@ void metal_cvec_mul_scalar(MetalVectorContext* ctx,
     [enc dispatchThreads:MTLSizeMake(n, 1, 1)
          threadsPerThreadgroup:MTLSizeMake(tg, 1, 1)];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    commitAndWait(cmd);
 
     memcpy(C, [ctx->bufC contents], bytes);
 }
@@ -427,8 +462,7 @@ float metal_vec_sum(MetalVectorContext* ctx, const float* A, size_t n)
     [enc dispatchThreadgroups:MTLSizeMake(numGroups, 1, 1)
          threadsPerThreadgroup:MTLSizeMake(kTGSize, 1, 1)];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    commitAndWait(cmd);
 
     const float* p = (const float*)[ctx->bufPartRe contents];
     float sum = 0.0f;
@@ -464,8 +498,7 @@ void metal_cvec_cdot(MetalVectorContext* ctx,
     [enc dispatchThreadgroups:MTLSizeMake(numGroups, 1, 1)
          threadsPerThreadgroup:MTLSizeMake(kTGSize, 1, 1)];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    commitAndWait(cmd);
 
     const float* pre = (const float*)[ctx->bufPartRe contents];
     const float* pim = (const float*)[ctx->bufPartIm contents];
@@ -499,8 +532,7 @@ float metal_cvec_norm2sq(MetalVectorContext* ctx, const float* A, size_t n)
     [enc dispatchThreadgroups:MTLSizeMake(numGroups, 1, 1)
          threadsPerThreadgroup:MTLSizeMake(kTGSize, 1, 1)];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    commitAndWait(cmd);
 
     const float* p = (const float*)[ctx->bufPartRe contents];
     float sum = 0.0f;
@@ -556,9 +588,44 @@ static void ewise3_zc(MetalVectorContext* ctx,
     [enc dispatchThreads:MTLSizeMake(gridWidth, 1, 1)
          threadsPerThreadgroup:MTLSizeMake(tg, 1, 1)];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    commitAndWait(cmd);
 }
+
+// ---------------------------------------------------------------------------
+// Zero-copy scalar dispatch helper: A op scalar → C (2-buffer + setBytes)
+// ---------------------------------------------------------------------------
+static void ewise2_scalar_zc(MetalVectorContext* ctx,
+                              id<MTLComputePipelineState> ps,
+                              float* A, size_t bytesA,
+                              const void* scalar, size_t scalarBytes, int scalarIndex,
+                              float* C, size_t bytesC,
+                              size_t gridWidth)
+{
+    id<MTLBuffer> bufA = wrapZeroCopy(ctx->device, A, bytesA);
+    id<MTLBuffer> bufC = wrapZeroCopy(ctx->device, C, bytesC);
+
+    if (!bufA || !bufC) {
+        fprintf(stderr, "[MetalVectorOps] zero-copy scalar buffer creation failed\n");
+        return;
+    }
+
+    id<MTLCommandBuffer>         cmd = [ctx->queue commandBuffer];
+    id<MTLComputeCommandEncoder> enc = [cmd computeCommandEncoder];
+    [enc setComputePipelineState:ps];
+    [enc setBuffer:bufA offset:0 atIndex:0];
+    [enc setBytes:scalar length:scalarBytes atIndex:scalarIndex];
+    [enc setBuffer:bufC offset:0 atIndex:2];
+
+    NSUInteger tg = MIN((NSUInteger)ps.maxTotalThreadsPerThreadgroup, kTGSize);
+    [enc dispatchThreads:MTLSizeMake(gridWidth, 1, 1)
+         threadsPerThreadgroup:MTLSizeMake(tg, 1, 1)];
+    [enc endEncoding];
+    commitAndWait(cmd);
+}
+
+// ===========================================================================
+// Zero-copy: element-wise real
+// ===========================================================================
 
 void metal_vec_add_zc(MetalVectorContext* ctx,
                       float* A, float* B, float* C, size_t n)
@@ -567,12 +634,127 @@ void metal_vec_add_zc(MetalVectorContext* ctx,
     ewise3_zc(ctx, ctx->ps_vec_add, A, bytes, B, bytes, C, bytes, n);
 }
 
+void metal_vec_sub_zc(MetalVectorContext* ctx,
+                      float* A, float* B, float* C, size_t n)
+{
+    size_t bytes = n * sizeof(float);
+    ewise3_zc(ctx, ctx->ps_vec_sub, A, bytes, B, bytes, C, bytes, n);
+}
+
+void metal_vec_mul_zc(MetalVectorContext* ctx,
+                      float* A, float* B, float* C, size_t n)
+{
+    size_t bytes = n * sizeof(float);
+    ewise3_zc(ctx, ctx->ps_vec_mul, A, bytes, B, bytes, C, bytes, n);
+}
+
+void metal_vec_div_zc(MetalVectorContext* ctx,
+                      float* A, float* B, float* C, size_t n)
+{
+    size_t bytes = n * sizeof(float);
+    ewise3_zc(ctx, ctx->ps_vec_div, A, bytes, B, bytes, C, bytes, n);
+}
+
+void metal_vec_add_scalar_zc(MetalVectorContext* ctx,
+                              float* A, float scalar, float* C, size_t n)
+{
+    size_t bytes = n * sizeof(float);
+    ewise2_scalar_zc(ctx, ctx->ps_vec_add_scalar,
+                      A, bytes, &scalar, sizeof(float), 1, C, bytes, n);
+}
+
+void metal_vec_mul_scalar_zc(MetalVectorContext* ctx,
+                              float* A, float scalar, float* C, size_t n)
+{
+    size_t bytes = n * sizeof(float);
+    ewise2_scalar_zc(ctx, ctx->ps_vec_mul_scalar,
+                      A, bytes, &scalar, sizeof(float), 1, C, bytes, n);
+}
+
+// ===========================================================================
+// Zero-copy: element-wise complex
+// ===========================================================================
+
+void metal_cvec_add_zc(MetalVectorContext* ctx,
+                       float* A, float* B, float* C, size_t n)
+{
+    size_t bytes = 2 * n * sizeof(float);
+    ewise3_zc(ctx, ctx->ps_cvec_add, A, bytes, B, bytes, C, bytes, n);
+}
+
+void metal_cvec_sub_zc(MetalVectorContext* ctx,
+                       float* A, float* B, float* C, size_t n)
+{
+    size_t bytes = 2 * n * sizeof(float);
+    ewise3_zc(ctx, ctx->ps_cvec_sub, A, bytes, B, bytes, C, bytes, n);
+}
+
 void metal_cvec_mul_zc(MetalVectorContext* ctx,
                        float* A, float* B, float* C, size_t n)
 {
     size_t bytes = 2 * n * sizeof(float);
     ewise3_zc(ctx, ctx->ps_cvec_mul, A, bytes, B, bytes, C, bytes, n);
 }
+
+void metal_cvec_div_zc(MetalVectorContext* ctx,
+                       float* A, float* B, float* C, size_t n)
+{
+    size_t bytes = 2 * n * sizeof(float);
+    ewise3_zc(ctx, ctx->ps_cvec_div, A, bytes, B, bytes, C, bytes, n);
+}
+
+void metal_rvec_cmul_zc(MetalVectorContext* ctx,
+                        float* W, float* X, float* C, size_t n)
+{
+    size_t realBytes = n * sizeof(float);
+    size_t cplxBytes = 2 * n * sizeof(float);
+    ewise3_zc(ctx, ctx->ps_rvec_cmul, W, realBytes, X, cplxBytes, C, cplxBytes, n);
+}
+
+void metal_cvec_axpy_zc(MetalVectorContext* ctx,
+                        float* A, float* B, float* C,
+                        float alphaRe, float alphaIm, size_t n)
+{
+    size_t bytes = 2 * n * sizeof(float);
+    id<MTLBuffer> bufA = wrapZeroCopy(ctx->device, A, bytes);
+    id<MTLBuffer> bufB = wrapZeroCopy(ctx->device, B, bytes);
+    id<MTLBuffer> bufC = wrapZeroCopy(ctx->device, C, bytes);
+
+    if (!bufA || !bufB || !bufC) {
+        fprintf(stderr, "[MetalVectorOps] zero-copy axpy buffer creation failed\n");
+        return;
+    }
+
+    float alpha[2] = {alphaRe, alphaIm};
+
+    id<MTLCommandBuffer>         cmd = [ctx->queue commandBuffer];
+    id<MTLComputeCommandEncoder> enc = [cmd computeCommandEncoder];
+    [enc setComputePipelineState:ctx->ps_cvec_axpy];
+    [enc setBuffer:bufA offset:0 atIndex:0];
+    [enc setBuffer:bufB offset:0 atIndex:1];
+    [enc setBuffer:bufC offset:0 atIndex:2];
+    [enc setBytes:alpha length:sizeof(float) * 2 atIndex:3];
+
+    NSUInteger tg = MIN((NSUInteger)ctx->ps_cvec_axpy.maxTotalThreadsPerThreadgroup, kTGSize);
+    [enc dispatchThreads:MTLSizeMake(n, 1, 1)
+         threadsPerThreadgroup:MTLSizeMake(tg, 1, 1)];
+    [enc endEncoding];
+    commitAndWait(cmd);
+}
+
+void metal_cvec_mul_scalar_zc(MetalVectorContext* ctx,
+                               float* A, float alphaRe, float alphaIm,
+                               float* C, size_t n)
+{
+    size_t bytes = 2 * n * sizeof(float);
+    float alpha[2] = {alphaRe, alphaIm};
+    ewise2_scalar_zc(ctx, ctx->ps_cvec_mul_scalar,
+                      A, bytes, alpha, sizeof(float) * 2, 1, C, bytes, n);
+}
+
+// ===========================================================================
+// Zero-copy: reductions
+// ===========================================================================
 
 void metal_cvec_cdot_zc(MetalVectorContext* ctx,
                         float* A, float* B,
@@ -604,8 +786,7 @@ void metal_cvec_cdot_zc(MetalVectorContext* ctx,
     [enc dispatchThreadgroups:MTLSizeMake(numGroups, 1, 1)
          threadsPerThreadgroup:MTLSizeMake(kTGSize, 1, 1)];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    commitAndWait(cmd);
 
     const float* pre = (const float*)[ctx->bufPartRe contents];
     const float* pim = (const float*)[ctx->bufPartIm contents];
@@ -616,6 +797,39 @@ void metal_cvec_cdot_zc(MetalVectorContext* ctx,
     }
     *outRe = re;
     *outIm = im;
+}
+
+float metal_cvec_norm2sq_zc(MetalVectorContext* ctx, float* A, size_t n)
+{
+    size_t bytes     = 2 * n * sizeof(float);
+    size_t numGroups = (n + kTGSize - 1) / kTGSize;
+
+    id<MTLBuffer> bufA = wrapZeroCopy(ctx->device, A, bytes);
+    growPartial(ctx, numGroups);
+
+    if (!bufA) {
+        fprintf(stderr, "[MetalVectorOps] zero-copy norm2sq buffer creation failed\n");
+        return 0.0f;
+    }
+
+    uint32_t N = (uint32_t)n;
+
+    id<MTLCommandBuffer>         cmd = [ctx->queue commandBuffer];
+    id<MTLComputeCommandEncoder> enc = [cmd computeCommandEncoder];
+    [enc setComputePipelineState:ctx->ps_reduce_norm2sq];
+    [enc setBuffer:bufA            offset:0 atIndex:0];
+    [enc setBuffer:ctx->bufPartRe  offset:0 atIndex:1];
+    [enc setBytes:&N length:sizeof(uint32_t) atIndex:2];
+
+    [enc dispatchThreadgroups:MTLSizeMake(numGroups, 1, 1)
+         threadsPerThreadgroup:MTLSizeMake(kTGSize, 1, 1)];
+    [enc endEncoding];
+    commitAndWait(cmd);
+
+    const float* p = (const float*)[ctx->bufPartRe contents];
+    float sum = 0.0f;
+    for (size_t i = 0; i < numGroups; i++) sum += p[i];
+    return sum;
 }
 
 float metal_vec_sum_zc(MetalVectorContext* ctx, float* A, size_t n)
@@ -643,8 +857,7 @@ float metal_vec_sum_zc(MetalVectorContext* ctx, float* A, size_t n)
     [enc dispatchThreadgroups:MTLSizeMake(numGroups, 1, 1)
          threadsPerThreadgroup:MTLSizeMake(kTGSize, 1, 1)];
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    commitAndWait(cmd);
 
     const float* p = (const float*)[ctx->bufPartRe contents];
     float sum = 0.0f;

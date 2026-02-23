@@ -31,6 +31,45 @@ Developed by:
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <atomic>
+#include <mach/mach_time.h>
+
+// ---------------------------------------------------------------------------
+// DFT dispatch statistics
+// ---------------------------------------------------------------------------
+static std::atomic<uint64_t> g_dftDispatchCount{0};
+static std::atomic<uint64_t> g_dftWaitTicks{0};
+
+static double dftTicksToSeconds(uint64_t ticks) {
+    static mach_timebase_info_data_t tb = [] {
+        mach_timebase_info_data_t info;
+        mach_timebase_info(&info);
+        return info;
+    }();
+    return (double)ticks * tb.numer / tb.denom / 1e9;
+}
+
+static void dftCommitAndWait(id<MTLCommandBuffer> cmd) {
+    uint64_t t0 = mach_absolute_time();
+    [cmd commit];
+    [cmd waitUntilCompleted];
+    uint64_t t1 = mach_absolute_time();
+    g_dftDispatchCount.fetch_add(1, std::memory_order_relaxed);
+    g_dftWaitTicks.fetch_add(t1 - t0, std::memory_order_relaxed);
+}
+
+uint64_t metal_dft_dispatch_count() {
+    return g_dftDispatchCount.load(std::memory_order_relaxed);
+}
+
+double metal_dft_wait_seconds() {
+    return dftTicksToSeconds(g_dftWaitTicks.load(std::memory_order_relaxed));
+}
+
+void metal_dft_reset_stats() {
+    g_dftDispatchCount.store(0, std::memory_order_relaxed);
+    g_dftWaitTicks.store(0, std::memory_order_relaxed);
+}
 
 // ---------------------------------------------------------------------------
 // DFTParamsMSL — must match the Metal struct DFTParams in dft_metal.metal
@@ -278,8 +317,7 @@ void metal_dft_forward(MetalDFTContext* ctx,
     [enc dispatchThreads:grid threadsPerThreadgroup:tg];
 
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    dftCommitAndWait(cmd);
 
     // Read back output
     memcpy(kdata_r, [ctx->bufOutR contents], num_k * sizeof(float));
@@ -331,8 +369,7 @@ void metal_dft_adjoint(MetalDFTContext* ctx,
     [enc dispatchThreads:grid threadsPerThreadgroup:tg];
 
     [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+    dftCommitAndWait(cmd);
 
     // Read back output
     memcpy(idata_r, [ctx->bufOutR contents], num_i * sizeof(float));

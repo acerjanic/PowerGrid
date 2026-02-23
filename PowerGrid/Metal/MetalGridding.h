@@ -98,4 +98,12 @@ void metal_gridding_forward_2D(MetalGriddingContext* ctx,
 void metal_gridding_forward_3D(MetalGriddingContext* ctx,
                                const float* pGridIn, float* pSamplesOut);
 
+// ============================================================================
+// Dispatch statistics — counts command buffer commits and cumulative GPU wait.
+// ============================================================================
+
+uint64_t metal_gridding_dispatch_count();
+double metal_gridding_wait_seconds();
+void metal_gridding_reset_stats();
+
 #endif // METAL_COMPUTE

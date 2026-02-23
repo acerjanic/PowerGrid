@@ -148,6 +148,7 @@ template <typename T1, typename Tobj>
 pgCol<pgComplex<T1>> SENSE<T1, Tobj>::
 operator*(const pgCol<pgComplex<T1>>& d) const
 {
+    RANGE("SENSE::operator*(pgCol)")
 #ifdef METAL_COMPUTE
     if constexpr (std::is_same<T1, float>::value) {
         for (unsigned int ii = 0; ii < this->nc; ii++) {
@@ -167,6 +168,7 @@ template <typename T1, typename Tobj>
 pgCol<pgComplex<T1>> SENSE<T1, Tobj>::
 operator/(const pgCol<pgComplex<T1>>& d) const
 {
+    RANGE("SENSE::operator/(pgCol)")
 #ifdef METAL_COMPUTE
     if constexpr (std::is_same<T1, float>::value) {
         for (unsigned int ii = 0; ii < this->nc; ii++) {
