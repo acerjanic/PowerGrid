@@ -113,7 +113,7 @@ void writeNiftiRealImage(std::string filename, Col<T1> imageData, uword Nx, uwor
   void writeNiftiMagPhsImage(std::string filename, Col<std::complex<T1>> imageData, uword Nx, uword Ny, uword Nz, uword Nslab = 1, uword N_TR = 1) {
     // Separate data into magnitude and phase to be written.
     Col<T1> magImage = abs(imageData);
-    Col<T1> phsImage = arg(imageData);
+    Col<T1> phsImage = arma::arg(imageData);
 
     std::string filenameMag = filename + "_mag";
     std::string filenamePhs = filename + "_phs";
