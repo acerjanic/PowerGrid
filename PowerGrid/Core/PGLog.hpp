@@ -36,6 +36,18 @@ Developed by:
 #include <ctime>
 #include <chrono>
 
+// POSIX headers for auto-spawning pgview
+#include <unistd.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <cstdlib>
+#include <climits>
+
+#ifdef __APPLE__
+#include <mach-o/dyld.h> // _NSGetExecutablePath
+#endif
+
 // ---------------------------------------------------------------------------
 // TUI mode flag
 // ---------------------------------------------------------------------------
@@ -143,6 +155,196 @@ protected:
 
 using jsonl_stderr_sink_mt = jsonl_stderr_sink<std::mutex>;
 
+// ---------------------------------------------------------------------------
+// Auto-spawn pgview helper
+// ---------------------------------------------------------------------------
+
+/// @brief Get the directory containing the currently running executable.
+inline std::string get_exe_dir() {
+#ifdef __APPLE__
+    uint32_t size = 0;
+    _NSGetExecutablePath(nullptr, &size);
+    std::vector<char> buf(size);
+    if (_NSGetExecutablePath(buf.data(), &size) == 0) {
+        // Resolve symlinks
+        char resolved[PATH_MAX];
+        if (realpath(buf.data(), resolved)) {
+            std::string path(resolved);
+            auto pos = path.find_last_of('/');
+            if (pos != std::string::npos)
+                return path.substr(0, pos);
+        }
+    }
+#else
+    // Linux: /proc/self/exe
+    char resolved[PATH_MAX];
+    ssize_t len = readlink("/proc/self/exe", resolved, sizeof(resolved) - 1);
+    if (len > 0) {
+        resolved[len] = '\0';
+        std::string path(resolved);
+        auto pos = path.find_last_of('/');
+        if (pos != std::string::npos)
+            return path.substr(0, pos);
+    }
+#endif
+    return "";
+}
+
+/// @brief Locate the pgview binary. Search order:
+/// 1. Same directory as the current executable (installed layout: both in bin/)
+/// 2. Relative to exe dir: ../tools/pgview/pgview (CMake build tree layout)
+/// 3. PGVIEW_PATH environment variable (explicit override)
+/// 4. PATH search
+inline std::string find_pgview() {
+    std::string exe_dir = get_exe_dir();
+
+    if (!exe_dir.empty()) {
+        // 1. Same directory (installed layout)
+        std::string candidate = exe_dir + "/pgview";
+        if (::access(candidate.c_str(), X_OK) == 0)
+            return candidate;
+
+        // 2. Build tree layout: exe is in build/apps/, pgview in build/tools/pgview/
+        candidate = exe_dir + "/../tools/pgview/pgview";
+        char resolved[PATH_MAX];
+        if (realpath(candidate.c_str(), resolved) && ::access(resolved, X_OK) == 0)
+            return resolved;
+    }
+
+    // 3. PGVIEW_PATH environment variable
+    const char* pgview_env = std::getenv("PGVIEW_PATH");
+    if (pgview_env && ::access(pgview_env, X_OK) == 0)
+        return pgview_env;
+
+    // 4. Search PATH
+    const char* path_env = std::getenv("PATH");
+    if (path_env) {
+        std::string path_str(path_env);
+        size_t start = 0;
+        while (start < path_str.size()) {
+            size_t end = path_str.find(':', start);
+            if (end == std::string::npos) end = path_str.size();
+            std::string dir = path_str.substr(start, end - start);
+            std::string candidate = dir + "/pgview";
+            if (::access(candidate.c_str(), X_OK) == 0)
+                return candidate;
+            start = end + 1;
+        }
+    }
+
+    return ""; // Not found
+}
+
+/// @brief Manages the pgview child process lifecycle.
+///
+/// Spawns pgview via fork/exec, redirects parent's stderr to a pipe
+/// feeding pgview's stdin. pgview renders TUI on stdout (the terminal).
+struct TuiProcess {
+    pid_t child_pid = -1;
+    int pipe_write_fd = -1;
+    int original_stderr_fd = -1;
+    bool active = false;
+
+    /// @brief Spawn pgview and redirect stderr to it.
+    /// @returns true on success, false if pgview not found or fork fails.
+    bool spawn(const std::string& pgview_path) {
+        if (pgview_path.empty()) return false;
+
+        // Check if stdout is a terminal (pgview needs a tty for its TUI)
+        if (!isatty(STDOUT_FILENO)) return false;
+
+        // Create a pipe: parent writes to pipe_fds[1], child reads from pipe_fds[0]
+        int pipe_fds[2];
+        if (pipe(pipe_fds) != 0) return false;
+
+        // Save the original stderr fd before redirecting
+        original_stderr_fd = dup(STDERR_FILENO);
+        if (original_stderr_fd < 0) {
+            close(pipe_fds[0]);
+            close(pipe_fds[1]);
+            return false;
+        }
+
+        // Ignore SIGPIPE so recon continues if pgview exits early
+        signal(SIGPIPE, SIG_IGN);
+
+        child_pid = fork();
+        if (child_pid < 0) {
+            // Fork failed — restore and clean up
+            close(pipe_fds[0]);
+            close(pipe_fds[1]);
+            close(original_stderr_fd);
+            original_stderr_fd = -1;
+            return false;
+        }
+
+        if (child_pid == 0) {
+            // === Child process (pgview) ===
+            // stdin = pipe read end
+            dup2(pipe_fds[0], STDIN_FILENO);
+            close(pipe_fds[0]);
+            close(pipe_fds[1]);
+
+            // Close the saved original stderr in the child
+            if (original_stderr_fd >= 0)
+                close(original_stderr_fd);
+
+            // stdout stays connected to the terminal (for TUI rendering)
+            // stderr goes to /dev/null to avoid loops
+            int devnull = open("/dev/null", O_WRONLY);
+            if (devnull >= 0) {
+                dup2(devnull, STDERR_FILENO);
+                close(devnull);
+            }
+
+            execl(pgview_path.c_str(), "pgview", nullptr);
+            // If exec fails, exit quietly
+            _exit(127);
+        }
+
+        // === Parent process (reconstruction) ===
+        close(pipe_fds[0]); // Close read end in parent
+
+        // Redirect stderr to pipe write end
+        dup2(pipe_fds[1], STDERR_FILENO);
+        close(pipe_fds[1]); // Close the extra fd, STDERR_FILENO now points to the pipe
+
+        pipe_write_fd = STDERR_FILENO; // stderr IS the pipe now
+        active = true;
+        return true;
+    }
+
+    /// @brief Close the pipe and wait for pgview to exit.
+    void wait() {
+        if (!active) return;
+
+        // Flush stderr (the pipe)
+        std::fflush(stderr);
+
+        // Restore the original stderr
+        if (original_stderr_fd >= 0) {
+            dup2(original_stderr_fd, STDERR_FILENO);
+            close(original_stderr_fd);
+            original_stderr_fd = -1;
+        }
+
+        // Wait for pgview to finish (user presses 'q')
+        if (child_pid > 0) {
+            int status = 0;
+            waitpid(child_pid, &status, 0);
+            child_pid = -1;
+        }
+
+        active = false;
+    }
+
+    /// @brief Access the singleton TuiProcess.
+    static TuiProcess& instance() {
+        static TuiProcess proc;
+        return proc;
+    }
+};
+
 } // namespace pg_detail
 
 // ---------------------------------------------------------------------------
@@ -195,10 +397,29 @@ inline void PG_LOG_INIT(const std::string& level_str = "info",
 // Lifecycle helpers (TUI mode only)
 // ---------------------------------------------------------------------------
 
-/// @brief Emit a "start" lifecycle event in TUI mode.
+/// @brief Emit a "start" lifecycle event and auto-spawn pgview in TUI mode.
+///
+/// When TUI mode is active, this function:
+/// 1. Locates the pgview binary (next to this executable, or on PATH)
+/// 2. Forks pgview as a child process
+/// 3. Redirects this process's stderr to pgview's stdin via a pipe
+/// 4. pgview renders its TUI on stdout (the terminal)
+///
+/// If pgview is not found or stdout isn't a terminal, falls back to raw
+/// JSONL output on stderr (still parseable by an external pgview).
 inline void PG_TUI_START(const std::string& app_name,
                          const std::string& version = "1.1.0") {
     if (!PG_TUI_MODE()) return;
+
+    // Try to auto-spawn pgview
+    std::string pgview_path = pg_detail::find_pgview();
+    auto& tui = pg_detail::TuiProcess::instance();
+    if (!pgview_path.empty()) {
+        tui.spawn(pgview_path);
+        // If spawn fails, we continue — JSONL still goes to stderr
+    }
+
+    // Emit the start message (goes to pipe if pgview spawned, else raw stderr)
     auto msg = fmt::format(
         R"({{"type":"start","app":"{}","version":"{}"}})",
         pg_detail::json_escape(app_name),
@@ -208,13 +429,23 @@ inline void PG_TUI_START(const std::string& app_name,
     std::fflush(stderr);
 }
 
-/// @brief Emit an "exit" lifecycle event in TUI mode.
+/// @brief Emit an "exit" lifecycle event and wait for pgview to finish.
+///
+/// After emitting the exit JSONL message, this closes the pipe to pgview
+/// and waits for the user to press 'q' in the TUI before returning.
+/// If pgview was not spawned, this is a no-op beyond the JSONL emission.
 inline void PG_TUI_EXIT(int code) {
     if (!PG_TUI_MODE()) return;
+
+    // Emit the exit message
     auto msg = fmt::format(R"({{"type":"exit","code":{}}})", code);
     msg += '\n';
     std::fwrite(msg.data(), 1, msg.size(), stderr);
     std::fflush(stderr);
+
+    // Wait for pgview to finish (user presses 'q')
+    auto& tui = pg_detail::TuiProcess::instance();
+    tui.wait();
 }
 
 // ---------------------------------------------------------------------------
