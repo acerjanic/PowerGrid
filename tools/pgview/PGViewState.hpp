@@ -74,18 +74,28 @@ struct PGViewState {
     bool finished = false;
     int exit_code = 0;
 
+    /// Session timing — set by set_start() and set_exit().
+    std::chrono::steady_clock::time_point session_start_time;
+    std::chrono::steady_clock::time_point session_end_time;
+    bool has_session_start = false;
+    bool has_session_end = false;
+
     // --- Mutated by the reader thread, read by the UI thread ---
 
     void set_start(const std::string& app, const std::string& ver) {
         std::lock_guard<std::mutex> lock(mu);
         app_name = app;
         app_version = ver;
+        session_start_time = std::chrono::steady_clock::now();
+        has_session_start = true;
     }
 
     void set_exit(int code) {
         std::lock_guard<std::mutex> lock(mu);
         finished = true;
         exit_code = code;
+        session_end_time = std::chrono::steady_clock::now();
+        has_session_end = true;
     }
 
     void add_log(const std::string& ts, const std::string& level,
@@ -146,5 +156,44 @@ struct PGViewState {
         std::lock_guard<std::mutex> lock(mu);
         if (bar_id >= bars.size()) return;
         bars[bar_id].push_metric(error_norm, penalty);
+    }
+
+    // --- Summary helpers (call with mu locked) ---
+
+    /// Total elapsed seconds from start to exit (or now if no exit yet).
+    double total_elapsed_seconds() const {
+        if (!has_session_start) return 0.0;
+        auto end = has_session_end ? session_end_time
+                                   : std::chrono::steady_clock::now();
+        return std::chrono::duration<double>(end - session_start_time).count();
+    }
+
+    /// Count completed PCG solves (each = one reconstructed image).
+    size_t num_completed_images() const {
+        size_t count = 0;
+        for (const auto& bar : bars) {
+            if (bar.completed && bar.label == "PCG")
+                ++count;
+        }
+        return count;
+    }
+
+    /// Total PCG iterations across all completed PCG bars.
+    size_t total_pcg_iterations() const {
+        size_t total = 0;
+        for (const auto& bar : bars) {
+            if (bar.label == "PCG")
+                total += bar.current;
+        }
+        return total;
+    }
+
+    /// Get the final error norm from the last completed PCG bar, or -1 if none.
+    double last_error_norm() const {
+        for (auto it = bars.rbegin(); it != bars.rend(); ++it) {
+            if (it->label == "PCG" && it->completed && !it->metrics.empty())
+                return it->metrics.back().error_norm;
+        }
+        return -1.0;
     }
 };

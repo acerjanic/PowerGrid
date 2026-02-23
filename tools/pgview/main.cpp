@@ -6,7 +6,8 @@
 ///
 /// Reads JSONL from stdin (or a saved pipe fd), renders scrolling logs and
 /// progress bars with ETA, sparklines for convergence metrics, and wall
-/// clock completion time. Press 'q' or Escape to quit.
+/// clock completion time. Auto-exits when the reconstruction finishes and
+/// prints a summary to the terminal.
 
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
@@ -14,6 +15,8 @@
 #include <ftxui/dom/elements.hpp>
 #include <atomic>
 #include <thread>
+#include <cstdio>
+#include <cmath>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -22,6 +25,82 @@
 #include "PGViewUI.hpp"
 
 using namespace ftxui;
+
+// ---------------------------------------------------------------------------
+// Summary printing (after TUI exits)
+// ---------------------------------------------------------------------------
+
+/// @brief Format a duration in seconds as human-readable string.
+static std::string format_duration(double seconds) {
+    if (seconds < 0 || std::isnan(seconds)) return "N/A";
+    if (seconds < 60.0) {
+        char buf[16];
+        std::snprintf(buf, sizeof(buf), "%.1fs", seconds);
+        return buf;
+    }
+    int total = static_cast<int>(std::round(seconds));
+    int h = total / 3600;
+    int m = (total % 3600) / 60;
+    int s = total % 60;
+    if (h > 0)
+        return std::to_string(h) + "h " + std::to_string(m) + "m " + std::to_string(s) + "s";
+    return std::to_string(m) + "m " + std::to_string(s) + "s";
+}
+
+/// @brief Print a reconstruction summary to the terminal after the TUI exits.
+static void print_summary(PGViewState& state) {
+    std::lock_guard<std::mutex> lock(state.mu);
+
+    // App name
+    std::string app = state.app_name.empty() ? "PowerGrid" : state.app_name;
+    if (!state.app_version.empty())
+        app += " v" + state.app_version;
+
+    // Status text + ANSI color
+    const char* color_start = "";
+    const char* color_end = "\033[0m";
+    std::string status;
+    if (state.has_session_end && state.exit_code == 0) {
+        color_start = "\033[32m"; // green
+        status = "completed successfully";
+    } else if (state.has_session_end) {
+        color_start = "\033[31m"; // red
+        status = "failed (exit code " + std::to_string(state.exit_code) + ")";
+    } else {
+        color_start = "\033[33m"; // yellow
+        status = "input closed unexpectedly";
+    }
+
+    // Total elapsed time
+    double elapsed = state.total_elapsed_seconds();
+    size_t images = state.num_completed_images();
+    size_t iters = state.total_pcg_iterations();
+
+    // Print
+    std::string line(50, '-');
+
+    std::printf("\n%s\n", line.c_str());
+    std::printf("  %s %s%s%s\n", app.c_str(), color_start, status.c_str(), color_end);
+    std::printf("\n");
+    std::printf("  Total time:       %s\n", format_duration(elapsed).c_str());
+
+    if (images > 0) {
+        std::printf("  Images:           %zu\n", images);
+        std::printf("  Time per image:   %s\n", format_duration(elapsed / static_cast<double>(images)).c_str());
+        std::printf("  PCG iterations:   %zu\n", iters);
+    }
+
+    double last_err = state.last_error_norm();
+    if (last_err >= 0) {
+        std::printf("  Final error norm: %.4e\n", last_err);
+    }
+
+    std::printf("%s\n\n", line.c_str());
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
 
 int main() {
     // When auto-spawned, stdin is a pipe carrying JSONL data.
@@ -43,10 +122,20 @@ int main() {
     PGViewState state;
     auto screen = ScreenInteractive::Fullscreen();
 
-    // Start the stdin reader thread, posting custom events on updates
-    // Pass data_fd so it reads JSONL from the pipe (not from stdin/terminal)
-    StdinReader reader(state, [&screen]() {
-        screen.Post(Event::Custom);
+    // Get an exit closure to call from the reader thread when reconstruction ends
+    auto exit_tui = screen.ExitLoopClosure();
+
+    // Start the stdin reader thread, posting custom events on updates.
+    // When the reconstruction finishes (exit message or pipe close),
+    // schedule the TUI to exit automatically.
+    StdinReader reader(state, [&screen, &state, exit_tui]() {
+        screen.Post(Event::Custom);  // trigger redraw
+
+        // Auto-exit when reconstruction finishes
+        std::lock_guard<std::mutex> lock(state.mu);
+        if (state.finished) {
+            screen.Post(exit_tui);
+        }
     }, data_fd);
     reader.start();
 
@@ -100,7 +189,7 @@ int main() {
         return vbox(std::move(layout)) | border;
     });
 
-    // Handle keyboard events
+    // Handle keyboard events (manual quit)
     auto component = CatchEvent(renderer, [&](Event event) {
         if (event == Event::Character('q') || event == Event::Escape) {
             screen.Exit();
@@ -111,12 +200,18 @@ int main() {
 
     screen.Loop(component);
 
+    // Close pipe fd to unblock reader thread if still running
+    // (e.g., if user pressed 'q' before the reconstruction finished)
+    if (data_fd >= 0) {
+        close(data_fd);
+        data_fd = -1;
+    }
+
     // Wait for reader thread to finish
     reader.join();
 
-    // Clean up saved pipe fd
-    if (data_fd >= 0)
-        close(data_fd);
+    // Print summary to the terminal
+    print_summary(state);
 
     return 0;
 }
