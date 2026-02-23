@@ -412,6 +412,18 @@ void getCompleteISMRMRDAcqData(ISMRMRD::Dataset *d, acqTracking *acqTrack, uword
   kzWork.zeros(nro,numAcqs);
   tvecWork.zeros(nro,numAcqs);
   acqWork.zeros(nro,nc);
+
+  // Set up progress bar for acquisition reading
+  auto acq_bar = std::make_shared<PGProgressBar>(
+      indicators::option::BarWidth{40},
+      indicators::option::Start{"["},
+      indicators::option::End{"]"},
+      indicators::option::ForegroundColor{indicators::Color::green},
+      indicators::option::ShowPercentage{true},
+      indicators::option::MaxProgress{static_cast<size_t>(numAcqs)}
+  );
+  size_t acq_bar_idx = PG_PROGRESS_ADD(acq_bar);
+
   uword curAcq = 0;
 	for (uword NPar = 0; NPar < acqTrack->NParMax; NPar++) {
 		for (uword NShot = 0; NShot < acqTrack->NShotMax; NShot++) {
@@ -424,7 +436,7 @@ void getCompleteISMRMRDAcqData(ISMRMRD::Dataset *d, acqTracking *acqTrack, uword
 
 				ISMRMRD::EncodingCounters encIdx = acq.idx();
 
-				std::cout << "Grabbing acq index #" << acqIndx << std::endl;
+				PG_PROGRESS_TICK(acq_bar_idx, fmt::format("acq #{}", acqIndx));
 
 				for (uword jj = 0; jj<nc; jj++) {
 					for (uword kk = 0; kk<nro; kk++) {
@@ -462,6 +474,7 @@ void getCompleteISMRMRDAcqData(ISMRMRD::Dataset *d, acqTracking *acqTrack, uword
 			}
 		}
 	}
+  PG_PROGRESS_DONE(acq_bar_idx);
 
   // Need to permute the dataWork.
   dataWork = permute(dataWork,D3tuple(1,3,2));

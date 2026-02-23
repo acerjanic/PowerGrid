@@ -8,6 +8,21 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project("PowerGrid" CXX)
 
+# ---------------------------------------------------------------------------
+# Install RPATH configuration
+# ---------------------------------------------------------------------------
+# Use @rpath-based install names on macOS so that executables find libPGCommon
+# relative to their own location (bin/../lib) regardless of install prefix.
+set(CMAKE_MACOSX_RPATH ON)
+set(CMAKE_INSTALL_RPATH "@loader_path/../lib")
+# On Linux, use $ORIGIN-relative rpath for the same effect.
+if(NOT APPLE)
+    set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
+endif()
+# Keep the build-tree rpath during development; replace on install.
+set(CMAKE_BUILD_WITH_INSTALL_RPATH OFF)
+set(CMAKE_INSTALL_RPATH_USE_LINK_AT_BUILDDIR TRUE)
+
 # Fetch spdlog and indicators for structured logging and progress bars
 include(FetchContent)
 

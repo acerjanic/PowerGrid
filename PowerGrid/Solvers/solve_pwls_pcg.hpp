@@ -116,6 +116,17 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
     // Metal path: pgCol with GPU-dispatched vector algebra
     PG_INFO("Starting PCG solver (Metal path): {} iterations requested", niter);
 
+    // Set up progress bar for solver iterations
+    auto pcg_bar = std::make_shared<PGProgressBar>(
+        indicators::option::BarWidth{40},
+        indicators::option::Start{"["},
+        indicators::option::End{"]"},
+        indicators::option::ForegroundColor{indicators::Color::cyan},
+        indicators::option::ShowPercentage{true},
+        indicators::option::MaxProgress{niter}
+    );
+    size_t pcg_bar_idx = PG_PROGRESS_ADD(pcg_bar);
+
     // Convert inputs to pgCol
     pgCol<pgComplex<T1>> x_pg(xInitial);
     pgCol<pgComplex<T1>> yi_pg(yi);
@@ -144,6 +155,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
 
       if (norm_grad<T1>(ngrad_pg.getArma(), yi, W) < 1e-10) {
         PG_INFO("Terminating early: zero gradient at iteration {}", ii);
+        PG_PROGRESS_DONE(pcg_bar_idx);
         return x_pg.getArma();
       }
 
@@ -174,6 +186,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       pgComplex<T1> descCheck = cdot(ddir_pg, ngrad_pg);     // Metal cvec_cdot
       if (descCheck.real() < 0) {
         PG_WARN("Descent direction is not downhill at iteration {} -- stopping", ii);
+        PG_PROGRESS_DONE(pcg_bar_idx);
         return x_pg.getArma();
       }
 
@@ -204,9 +217,11 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
           T1 n = norm(ngrad_pg);
           if (n == 0) {
             PG_INFO("Found exact solution");
+            PG_PROGRESS_DONE(pcg_bar_idx);
             return x_pg.getArma();
           } else {
             PG_WARN("inf denom (denom_re={})", denom_re);
+            PG_PROGRESS_DONE(pcg_bar_idx);
             return x_pg.getArma();
           }
         }
@@ -231,13 +246,27 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
 
       T1 errNorm = norm(yi_pg - Ax_pg);
       PG_DEBUG("PCG iteration {}/{}: error norm = {}", ii + 1, niter, errNorm);
+      PG_PROGRESS_TICK(pcg_bar_idx, fmt::format("iter {}/{} err={:.4e}", ii + 1, niter, errNorm));
     }
+    PG_PROGRESS_DONE(pcg_bar_idx);
     return x_pg.getArma();
   }
 #endif
 
   // Armadillo path (double, or non-Metal builds)
   PG_INFO("Starting PCG solver: {} iterations requested", niter);
+
+  // Set up progress bar for solver iterations
+  auto pcg_bar = std::make_shared<PGProgressBar>(
+      indicators::option::BarWidth{40},
+      indicators::option::Start{"["},
+      indicators::option::End{"]"},
+      indicators::option::ForegroundColor{indicators::Color::cyan},
+      indicators::option::ShowPercentage{true},
+      indicators::option::MaxProgress{niter}
+  );
+  size_t pcg_bar_idx = PG_PROGRESS_ADD(pcg_bar);
+
   Col<CxT1> Ax = A * xInitial;
   if (Ax.has_nan())
     PG_WARN("Ax has NaN after initial forward projection");
@@ -270,6 +299,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
 
     if (norm_grad<T1>(ngrad, yi, W) < 1e-10) {
       PG_INFO("Terminating early: zero gradient at iteration {}", ii);
+      PG_PROGRESS_DONE(pcg_bar_idx);
       return x;
     }
     ngrad -= R.Gradient(x);
@@ -295,6 +325,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
     // Check if descent direction
     if (real(cdot(ddir, ngrad)) < 0) {
       PG_WARN("Descent direction is not downhill at iteration {} -- stopping", ii);
+      PG_PROGRESS_DONE(pcg_bar_idx);
       return x;
     }
 
@@ -318,9 +349,11 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       if (std::abs(denom) < 1e-20 || std::isinf(std::abs(denom)) || std::isnan(std::abs(denom))) {
         if (norm(ngrad, 2) == 0) {
           PG_INFO("Found exact solution");
+          PG_PROGRESS_DONE(pcg_bar_idx);
           return x;
         } else {
           PG_WARN("inf denom (denom={})", std::abs(denom));
+          PG_PROGRESS_DONE(pcg_bar_idx);
           return x;
         }
       }
@@ -339,9 +372,12 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
     // Update
     Ax += step * Adir;
     x += (step * ddir);
-    PG_DEBUG("PCG iteration {}/{}: error norm = {}", ii + 1, niter, norm(yi - Ax, 2));
+    T1 errNorm = norm(yi - Ax, 2);
+    PG_DEBUG("PCG iteration {}/{}: error norm = {}", ii + 1, niter, errNorm);
+    PG_PROGRESS_TICK(pcg_bar_idx, fmt::format("iter {}/{} err={:.4e}", ii + 1, niter, errNorm));
 
   }
+  PG_PROGRESS_DONE(pcg_bar_idx);
   return x;
 }
 
