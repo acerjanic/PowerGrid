@@ -37,6 +37,21 @@ Developed by:
 
 #ifdef METAL_COMPUTE
 #include "Core/pgCol.hpp"
+
+// Detect whether TObj supports pgCol operator* and operator/ overloads.
+// Operators that only have arma::Col overloads (e.g. LRobj) will fall through
+// to the arma-only PCG path even when METAL_COMPUTE is enabled.
+namespace detail {
+template<typename, typename, typename = void>
+struct has_pgcol_ops : std::false_type {};
+
+template<typename TObj, typename T1>
+struct has_pgcol_ops<TObj, T1,
+    std::void_t<
+        decltype(std::declval<const TObj&>() * std::declval<const pgCol<pgComplex<T1>>&>()),
+        decltype(std::declval<const TObj&>() / std::declval<const pgCol<pgComplex<T1>>&>())
+    >> : std::true_type {};
+} // namespace detail
 #endif
 
 using namespace arma;
@@ -97,7 +112,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
   RANGE("solve_pwls_pcg")
 
 #ifdef METAL_COMPUTE
-  if constexpr (std::is_same<T1, float>::value) {
+  if constexpr (std::is_same<T1, float>::value && detail::has_pgcol_ops<Tobj, T1>::value) {
     // Metal path: pgCol with GPU-dispatched vector algebra
     PG_INFO("Starting PCG solver (Metal path): {} iterations requested", niter);
 
