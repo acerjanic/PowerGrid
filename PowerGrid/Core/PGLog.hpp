@@ -721,39 +721,42 @@ struct ImagePlane {
     std::vector<float> pixels;  // Row-major, [0, 1] normalized
 };
 
-/// @brief Box-filter downsample a 2D float array to target_size × target_size.
+/// @brief Box-filter downsample (or nearest-neighbor upscale) a 2D float array.
 ///
-/// @param src     Source pixels in row-major order.
-/// @param src_w   Source width.
-/// @param src_h   Source height.
-/// @param target  Target size (both width and height).
-/// @returns       Downsampled array of target × target floats.
+/// Supports non-square targets to preserve aspect ratio.
+///
+/// @param src       Source pixels in row-major order.
+/// @param src_w     Source width.
+/// @param src_h     Source height.
+/// @param target_w  Target width.
+/// @param target_h  Target height.
+/// @returns         Downsampled array of target_w × target_h floats.
 inline std::vector<float> box_downsample(const std::vector<float>& src,
                                           size_t src_w, size_t src_h,
-                                          size_t target) {
-    std::vector<float> dst(target * target, 0.0f);
+                                          size_t target_w, size_t target_h) {
+    std::vector<float> dst(target_w * target_h, 0.0f);
     if (src_w == 0 || src_h == 0) return dst;
 
-    // If source is smaller than target, just do nearest-neighbor upscale
-    if (src_w <= target && src_h <= target) {
-        for (size_t ty = 0; ty < target; ty++) {
-            size_t sy = ty * src_h / target;
-            for (size_t tx = 0; tx < target; tx++) {
-                size_t sx = tx * src_w / target;
-                dst[ty * target + tx] = src[sy * src_w + sx];
+    // If source is smaller than target in both dims, nearest-neighbor upscale
+    if (src_w <= target_w && src_h <= target_h) {
+        for (size_t ty = 0; ty < target_h; ty++) {
+            size_t sy = ty * src_h / target_h;
+            for (size_t tx = 0; tx < target_w; tx++) {
+                size_t sx = tx * src_w / target_w;
+                dst[ty * target_w + tx] = src[sy * src_w + sx];
             }
         }
         return dst;
     }
 
     // Box filter: average all source pixels that map to each target pixel
-    for (size_t ty = 0; ty < target; ty++) {
-        size_t sy0 = ty * src_h / target;
-        size_t sy1 = (ty + 1) * src_h / target;
+    for (size_t ty = 0; ty < target_h; ty++) {
+        size_t sy0 = ty * src_h / target_h;
+        size_t sy1 = (ty + 1) * src_h / target_h;
         if (sy1 == sy0) sy1 = sy0 + 1;
-        for (size_t tx = 0; tx < target; tx++) {
-            size_t sx0 = tx * src_w / target;
-            size_t sx1 = (tx + 1) * src_w / target;
+        for (size_t tx = 0; tx < target_w; tx++) {
+            size_t sx0 = tx * src_w / target_w;
+            size_t sx1 = (tx + 1) * src_w / target_w;
             if (sx1 == sx0) sx1 = sx0 + 1;
             float sum = 0.0f;
             size_t count = 0;
@@ -763,10 +766,28 @@ inline std::vector<float> box_downsample(const std::vector<float>& src,
                     count++;
                 }
             }
-            dst[ty * target + tx] = (count > 0) ? sum / static_cast<float>(count) : 0.0f;
+            dst[ty * target_w + tx] = (count > 0) ? sum / static_cast<float>(count) : 0.0f;
         }
     }
     return dst;
+}
+
+/// @brief Compute aspect-ratio-preserving target dimensions.
+///
+/// Fits src_w × src_h into max_dim × max_dim while preserving aspect ratio.
+/// The longer dimension gets max_dim; the shorter is scaled proportionally.
+inline std::pair<size_t, size_t> fit_aspect(size_t src_w, size_t src_h,
+                                             size_t max_dim) {
+    if (src_w == 0 || src_h == 0) return {max_dim, max_dim};
+    if (src_w >= src_h) {
+        size_t tw = max_dim;
+        size_t th = std::max(size_t(1), src_h * max_dim / src_w);
+        return {tw, th};
+    } else {
+        size_t th = max_dim;
+        size_t tw = std::max(size_t(1), src_w * max_dim / src_h);
+        return {tw, th};
+    }
 }
 
 /// @brief Extract preview planes from a complex image vector.
@@ -777,20 +798,20 @@ inline std::vector<float> box_downsample(const std::vector<float>& src,
 ///   - "Coronal"  — y = Ny/2, showing Nx × Nz
 ///   - "Sagittal" — x = Nx/2, showing Ny × Nz
 ///
-/// Each plane is box-filter downsampled to preview_size × preview_size and
-/// normalized to [0, 1] using a global max across all planes.
+/// Each plane is box-filter downsampled to fit within preview_max_dim while
+/// preserving aspect ratio, then normalized to [0, 1] using a global max.
 ///
-/// @tparam T1        Floating-point precision (float or double).
-/// @param x_data     Pointer to complex image data (column-major, Nx×Ny×Nz).
-/// @param n_elem     Number of complex elements.
-/// @param Nx, Ny, Nz Image dimensions.
-/// @param preview_size  Target preview dimension (default 64).
-/// @returns          Vector of ImagePlane structs.
+/// @tparam T1           Floating-point precision (float or double).
+/// @param x_data        Pointer to complex image data (column-major, Nx×Ny×Nz).
+/// @param n_elem        Number of complex elements.
+/// @param Nx, Ny, Nz    Image dimensions.
+/// @param preview_max_dim  Maximum preview dimension (default 128).
+/// @returns             Vector of ImagePlane structs.
 template <typename T1>
 inline std::vector<ImagePlane> extract_preview_planes(
         const std::complex<T1>* x_data, size_t n_elem,
         size_t Nx, size_t Ny, size_t Nz,
-        size_t preview_size = 64) {
+        size_t preview_max_dim = 128) {
 
     std::vector<ImagePlane> planes;
     if (Nx == 0 || Ny == 0) return planes;
@@ -810,8 +831,9 @@ inline std::vector<ImagePlane> extract_preview_planes(
             for (size_t ix = 0; ix < Nx; ix++)
                 slice[iy * Nx + ix] = mag(x_data[ix + iy * Nx]);
 
-        auto ds = box_downsample(slice, Nx, Ny, preview_size);
-        planes.push_back({"Image", preview_size, preview_size, std::move(ds)});
+        auto [tw, th] = fit_aspect(Nx, Ny, preview_max_dim);
+        auto ds = box_downsample(slice, Nx, Ny, tw, th);
+        planes.push_back({"Image", tw, th, std::move(ds)});
     } else {
         // 3D: extract three orthogonal slices
 
@@ -836,13 +858,17 @@ inline std::vector<ImagePlane> extract_preview_planes(
             for (size_t iy = 0; iy < Ny; iy++)
                 sagittal[iz * Ny + iy] = mag(x_data[xc + iy * Nx + iz * Nx * Ny]);
 
-        auto ds_ax = box_downsample(axial, Nx, Ny, preview_size);
-        auto ds_co = box_downsample(coronal, Nx, Nz, preview_size);
-        auto ds_sa = box_downsample(sagittal, Ny, Nz, preview_size);
+        auto [tw_ax, th_ax] = fit_aspect(Nx, Ny, preview_max_dim);
+        auto [tw_co, th_co] = fit_aspect(Nx, Nz, preview_max_dim);
+        auto [tw_sa, th_sa] = fit_aspect(Ny, Nz, preview_max_dim);
 
-        planes.push_back({"Axial", preview_size, preview_size, std::move(ds_ax)});
-        planes.push_back({"Coronal", preview_size, preview_size, std::move(ds_co)});
-        planes.push_back({"Sagittal", preview_size, preview_size, std::move(ds_sa)});
+        auto ds_ax = box_downsample(axial, Nx, Ny, tw_ax, th_ax);
+        auto ds_co = box_downsample(coronal, Nx, Nz, tw_co, th_co);
+        auto ds_sa = box_downsample(sagittal, Ny, Nz, tw_sa, th_sa);
+
+        planes.push_back({"Axial", tw_ax, th_ax, std::move(ds_ax)});
+        planes.push_back({"Coronal", tw_co, th_co, std::move(ds_co)});
+        planes.push_back({"Sagittal", tw_sa, th_sa, std::move(ds_sa)});
     }
 
     // Normalize all planes to [0, 1] using global max for consistent windowing

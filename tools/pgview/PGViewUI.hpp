@@ -208,6 +208,14 @@ inline Element RenderSinglePlane(const ImagePlaneView& plane) {
 
 /// @brief Render the complete image preview section.
 ///
+/// Each plane is rendered at its native data resolution (set by the sender's
+/// preview_max_dim, default 128).  FTXUI handles clipping if the terminal
+/// is too narrow.
+///
+/// DrawBlock coordinate mapping:
+///   - x:  1 canvas pixel = 1 terminal column
+///   - y:  2 canvas pixels = 1 terminal row  (half-block ▄)
+///
 /// For 2D (1 plane): single image panel.
 /// For 3D (3 planes): MPR layout — axial + coronal side by side, sagittal below.
 ///
