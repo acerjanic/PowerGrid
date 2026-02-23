@@ -3,10 +3,11 @@
 //
 
 #include "acqTracking.h"
+#include "Core/PGLog.hpp"
 
 acqTracking::acqTracking(ISMRMRD::Dataset *dataSet, ISMRMRD::IsmrmrdHeader &hdr) {
 
-	std::cout << "Entering acqTracking constructor." << std::endl;
+	PG_DEBUG("Entering acqTracking constructor");
 	d = dataSet;
 
 	uword numAcq = d->getNumberOfAcquisitions();

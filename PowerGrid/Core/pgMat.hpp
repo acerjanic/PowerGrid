@@ -9,6 +9,7 @@
 #include "PGIncludes.h"
 #include "pgComplex.hpp"
 #include "pgCol.hpp"
+#include <spdlog/fmt/fmt.h>
 
 #ifdef _OPENACC
 #include "openacc.h"
@@ -666,7 +667,7 @@ const pgCol<pgComplex<T>> sum(const pgMat<pgComplex<T>> &pgA, const arma::uword 
         }
         return std::move(out);
     } else {
-        std::cout << "pgMat::sum Error! Unrecognized dimension: dim = " << dim << std::endl;
+        fmt::print(stderr, "pgMat::sum Error! Unrecognized dimension: dim = {}\n", dim);
         return pgCol<pgComplex<T>>();
     }
 }
@@ -697,7 +698,7 @@ const pgCol<T> sum(const pgMat<T> &pgA, const arma::uword dim = 0) {
         }
         return std::move(sumA);
     } else {
-        std::cout << "pgMat::sum Error! Unrecognized dimension: dim = " << dim << std::endl;
+        fmt::print(stderr, "pgMat::sum Error! Unrecognized dimension: dim = {}\n", dim);
         return pgCol<T>();
     }
 }

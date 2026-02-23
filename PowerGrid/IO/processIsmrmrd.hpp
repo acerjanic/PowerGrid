@@ -30,6 +30,7 @@ Developed by:
 #define POWERGRID_PROCESSISMRMRD_HPP
 
 #include "Core/PowerGrid.h"
+#include "Core/PGLog.hpp"
 
 using namespace arma;
 typedef std::tuple<std::size_t,std::size_t,std::size_t> D3tuple;
@@ -45,16 +46,15 @@ typedef std::tuple<std::size_t,std::size_t,std::size_t> D3tuple;
 /// @param acqTrack       Output: pointer to the newly created acqTracking object.
 void openISMRMRDData(std::string inputDataFile, ISMRMRD::Dataset *&d, ISMRMRD::IsmrmrdHeader &hdr, acqTracking *&acqTrack) {
 	RANGE()
-    std::cout << "trying to create an ISMRMD::Dataset object" << std::endl;
+    PG_DEBUG("Creating ISMRMRD::Dataset object");
     d = new ISMRMRD::Dataset(inputDataFile.c_str(), "dataset", false);
-    //std::cout << "address of the  ISMRMD::Dataset object = " << d << std::endl;
     std::string xml;
-    std::cout << "trying to read the header from the ISMRMD::Dataset object" << std::endl;
+    PG_DEBUG("Reading header from ISMRMRD::Dataset object");
     d->readHeader(xml);
-    std::cout << "read the header from the ISMRMD::Dataset object" << std::endl;
+    PG_DEBUG("Read header from ISMRMRD::Dataset object");
     //ISMRMRD::IsmrmrdHeader hdr;
     ISMRMRD::deserialize(xml.c_str(), hdr);
-    std::cout << "trying to deserialze the xml header from the string" << std::endl;
+    PG_DEBUG("Deserialized XML header");
 
 	//Intitalize the acqTracking object to handle bookkeeping for the file
 	acqTrack = new acqTracking(d,hdr);
@@ -74,10 +74,10 @@ void closeISMRMRDData( ISMRMRD::Dataset *&d, ISMRMRD::IsmrmrdHeader &hdr, acqTra
 template<typename T1>
 arma::Col<T1> convertFromNDArrayToArma(ISMRMRD::NDArray<T1> &inArray) {
 	RANGE()
-    std::cout << "Converting NDArray to Arma Column" << std::endl;
+    PG_DEBUG("Converting NDArray to Arma Column");
     arma::Col<T1> temp;
     arma::uword numElems = inArray.getNumberOfElements();
-    std::cout << "Num Elements to be converted = " << numElems << std::endl;
+    PG_DEBUG("Num elements to be converted = {}", numElems);
     T1 *auxData = NULL;
     auxData = inArray.getDataPtr();
     temp = arma::Col<T1>(auxData, numElems, false, false);
@@ -107,12 +107,11 @@ arma::Col<T1> getISMRMRDSenseMap(ISMRMRD::Dataset *d) {
     const std::string senseMap = "SENSEMap";
     arma::Col<std::complex<double>> sen_temp;
     arma::Col<T1> sen;
-    std::cout << "About to get number of NDArrays (SENSEMap)" << std::endl;
+    PG_DEBUG("Reading NDArrays (SENSEMap)");
     if (d->getNumberOfNDArrays(senseMap) > 1) {
-        //Throw error here
-        std::cout << "OH NO!!!! SEGV APPROACHING!" << std::endl;
+        PG_ERROR("Multiple SENSEMap NDArrays found — expected exactly 1");
     }
-    std::cout << "Got number of NDArrays (SENSEMap)" << std::endl;
+    PG_DEBUG("Got number of NDArrays (SENSEMap)");
     ISMRMRD::NDArray<std::complex<double>> tempArray;
     d->readNDArray(senseMap, 0, tempArray);
     sen_temp = convertFromNDArrayToArma(tempArray);
@@ -127,12 +126,11 @@ arma::Col<T1> getISMRMRDPhaseMaps(ISMRMRD::Dataset *d) {
 	const std::string phaseMaps = "PhaseMaps";
 	arma::Col<double> pMaps_temp;
 	arma::Col<T1> pMaps;
-	std::cout << "About to get number of NDArrays (PhaseMaps)" << std::endl;
+	PG_DEBUG("Reading NDArrays (PhaseMaps)");
 	if (d->getNumberOfNDArrays(phaseMaps) > 1) {
-		//Throw error here
-		std::cout << "OH NO!!!! SEGV APPROACHING!" << std::endl;
+		PG_ERROR("Multiple PhaseMaps NDArrays found — expected exactly 1");
 	}
-	std::cout << "Got number of NDArrays (PhaseMaps)" << std::endl;
+	PG_DEBUG("Got number of NDArrays (PhaseMaps)");
 	ISMRMRD::NDArray<double> tempArray;
 	d->readNDArray(phaseMaps, 0, tempArray);
 	pMaps_temp = convertFromNDArrayToArma(tempArray);
@@ -163,9 +161,9 @@ arma::Col<T1> getISMRMRDCompletePhaseMap(ISMRMRD::Dataset *d, uword NSlice, uwor
 	arma::Col<T1> pMaps = getISMRMRDPhaseMaps<T1>(d);
 
 	std::string xml;
-	std::cout << "trying to read the header from the ISMRMD::Dataset object" << std::endl;
+	PG_DEBUG("Reading header from ISMRMRD::Dataset object");
 	d->readHeader(xml);
-	std::cout << "read the header from the ISMRMD::Dataset object" << std::endl;
+	PG_DEBUG("Read header from ISMRMRD::Dataset object");
 	ISMRMRD::IsmrmrdHeader hdr;
 	ISMRMRD::deserialize(xml.c_str(), hdr);
 
@@ -180,24 +178,17 @@ arma::Col<T1> getISMRMRDCompletePhaseMap(ISMRMRD::Dataset *d, uword NSlice, uwor
 	uword NShotMax  = hdr.encoding[0].encodingLimits.kspace_encoding_step_1->maximum + 1;
 	uword NParMax   = hdr.encoding[0].encodingLimits.kspace_encoding_step_2->maximum + 1;
 
-    std::cout << "NSliceMax = " << NSliceMax << std::endl;
-    std::cout << "NSetMax = " << NSetMax << std::endl;
-    std::cout << "NRepMax = " << NRepMax << std::endl;
-    std::cout << "NAvgMax = " << NAvgMax << std::endl;
-    std::cout << "NEchoMax = " << NEchoMax << std::endl;
-    std::cout << "NPhaseMax = " << NPhaseMax << std::endl;
-    std::cout << "NSegMax = " << NSegMax << std::endl;
+	PG_DEBUG("NSliceMax={}, NSetMax={}, NRepMax={}, NAvgMax={}, NEchoMax={}, NPhaseMax={}, NSegMax={}",
+	         NSliceMax, NSetMax, NRepMax, NAvgMax, NEchoMax, NPhaseMax, NSegMax);
 
 	uword PMapSize   = imageSize*(NShotMax)*(NParMax);
 	uword startIndex = PMapSize*NSlice + PMapSize*NSliceMax*NAvg + PMapSize*NSliceMax*NAvgMax*NPhase + PMapSize*NSliceMax*NAvgMax*NPhaseMax*NEcho + PMapSize*NSliceMax*NAvgMax*NPhaseMax*NEchoMax*NRep + PMapSize*NSliceMax*NAvgMax*NPhaseMax*NEchoMax*NRepMax*NSeg;
 
-	std::cout << "PMap slicing startIndex = " << startIndex << std::endl;
+	PG_DEBUG("PMap slicing: startIndex={}", startIndex);
 
 	uword endIndex = PMapSize*NSlice + PMapSize*NSliceMax*NAvg + PMapSize*NSliceMax*NAvgMax*NPhase + PMapSize*NSliceMax*NAvgMax*NPhaseMax*NEcho + PMapSize*NSliceMax*NAvgMax*NPhaseMax*NEchoMax*NRep + PMapSize*NSliceMax*NAvgMax*NPhaseMax*NEchoMax*NRepMax*NSeg + PMapSize - 1;
 
-	std::cout << "PMap slicing endIndex = " << endIndex << std::endl;
-  std::cout << "pMaps length = " << pMaps.n_rows << std::endl;
-  std::cout << "PMapSize length = " << PMapSize << std::endl;
+	PG_DEBUG("PMap slicing: endIndex={}, pMaps.n_rows={}, PMapSize={}", endIndex, pMaps.n_rows, PMapSize);
 
 	arma::Col<T1> pMapOut = pMaps.subvec(startIndex, endIndex);
 
@@ -211,9 +202,9 @@ arma::Col<T1> getISMRMRDCompleteSENSEMap(ISMRMRD::Dataset *d, arma::Col<T1> &SEN
 	//arma::Col<T1> SENSEMaps = getISMRMRDSenseMap<T1>(d);
 
 	std::string xml;
-	std::cout << "trying to read the header from the ISMRMD::Dataset object" << std::endl;
+	PG_DEBUG("Reading header from ISMRMRD::Dataset object");
 	d->readHeader(xml);
-	std::cout << "read the header from the ISMRMD::Dataset object" << std::endl;
+	PG_DEBUG("Read header from ISMRMRD::Dataset object");
 	ISMRMRD::IsmrmrdHeader hdr;
 	ISMRMRD::deserialize(xml.c_str(), hdr);
 
@@ -229,12 +220,11 @@ arma::Col<T1> getISMRMRDCompleteSENSEMap(ISMRMRD::Dataset *d, arma::Col<T1> &SEN
 	uword SENSEMapSize   = imageSize*nCoils;
 	uword startIndex = SENSEMapSize*NSlice;
 
-	std::cout << "SENSEMap slicing startIndex = " << startIndex << std::endl;
+	PG_DEBUG("SENSEMap slicing: startIndex={}", startIndex);
 
 	uword endIndex = SENSEMapSize*(NSlice+1) - 1;
 
-	std::cout << "SENSEMap slicing endIndex = " << endIndex << std::endl;
-	std::cout << "SENSEMap number of rows = " << SENSEMaps.n_rows << std::endl;
+	PG_DEBUG("SENSEMap slicing: endIndex={}, n_rows={}", endIndex, SENSEMaps.n_rows);
 	arma::Col<T1> SENSEMapOut = SENSEMaps.subvec(startIndex, endIndex);
 
 	return SENSEMapOut;
@@ -247,9 +237,9 @@ arma::Col<T1> getISMRMRDCompleteFieldMap(ISMRMRD::Dataset *d, arma::Col<T1> &Fie
 	//arma::Col<T1> FieldMaps = getISMRMRDFieldMap<T1>(d);
 
 	std::string xml;
-	std::cout << "trying to read the header from the ISMRMD::Dataset object" << std::endl;
+	PG_DEBUG("Reading header from ISMRMRD::Dataset object");
 	d->readHeader(xml);
-	std::cout << "read the header from the ISMRMD::Dataset object" << std::endl;
+	PG_DEBUG("Read header from ISMRMRD::Dataset object");
 	ISMRMRD::IsmrmrdHeader hdr;
 	ISMRMRD::deserialize(xml.c_str(), hdr);
 
@@ -264,11 +254,11 @@ arma::Col<T1> getISMRMRDCompleteFieldMap(ISMRMRD::Dataset *d, arma::Col<T1> &Fie
 
 	uword startIndex = imageSize*NSlice;
 
-	std::cout << "FieldMap slicing startIndex = " << startIndex << std::endl;
+	PG_DEBUG("FieldMap slicing: startIndex={}", startIndex);
 
 	uword endIndex = imageSize*(NSlice+1) - 1;
 
-	std::cout << "FieldMap slicing endIndex = " << endIndex << std::endl;
+	PG_DEBUG("FieldMap slicing: endIndex={}", endIndex);
 
 	arma::Col<T1> FieldMapOut = FieldMaps.subvec(startIndex, endIndex);
 
@@ -281,12 +271,12 @@ template<typename T1>
 void processISMRMRDInput(std::string inputDataFile, ISMRMRD::Dataset *&d, ISMRMRD::IsmrmrdHeader &hdr,
                          arma::Col<T1> &FM, arma::Col<std::complex<T1>> &sen, acqTracking *&acqTrack) {
 	RANGE()
-    std::cout << "About to open ISMRMRD file for input" << std::endl;
+    PG_INFO("Opening ISMRMRD file: {}", inputDataFile);
 	openISMRMRDData(inputDataFile, d, hdr, acqTrack);
-    std::cout << "Opened ISMRMRD file for input " << std::endl;
-    std::cout << "About to get the Field map" << std::endl;
+    PG_INFO("Opened ISMRMRD file for input");
+    PG_INFO("Reading field map");
     FM = getISMRMRDFieldMap<T1>(d);
-    std::cout << "About to get the SENSE map" << std::endl;
+    PG_INFO("Reading SENSE map");
     sen = getISMRMRDSenseMap<std::complex<T1>>(d);
 
     return;
@@ -382,7 +372,7 @@ void getCompleteISMRMRDAcqData(ISMRMRD::Dataset *d, acqTracking *acqTrack, uword
 	uword numAcqTotal = d->getNumberOfAcquisitions();
 	bool firstData = true;
 	ISMRMRD::Acquisition acq;
-	std::cout << "Num of acquisitions in dataset = " << numAcqTotal << std::endl;
+	PG_INFO("Num of acquisitions in dataset = {}", numAcqTotal);
 	int acqIndx = -1;
 	int numAcqs = 0;
   	int nro = -1, nc = -1;

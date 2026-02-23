@@ -24,6 +24,7 @@ Developed by:
 
  *****************************************************************************/
 #include "directRecon.h"
+#include "Core/PGLog.hpp"
 
 template<typename T>
 Col<T> calc3DDensityCompensation(Col<T> kx, Col<T> ky, Col<T> kz, uword Ninplane, uword Nz) {
@@ -114,11 +115,8 @@ Col<complex<T>> gridCoilImages(uword Ninplane, uword Nz, ISMRMRD::Dataset *d, IS
 	    getCompleteISMRMRDAcqData<T>(d, acqTrack, NSlice, NRep, NAvg, NEcho, NPhase, data, kx, ky,
 		    kz, tvec);
 
-	    std::cout << "Number of elements in kx = " << kx.n_rows << std::endl;
-	    std::cout << "Number of elements in ky = " << ky.n_rows << std::endl;
-	    std::cout << "Number of elements in kz = " << kz.n_rows << std::endl;
-	    std::cout << "Number of rows in data = " << data.n_rows << std::endl;
-	    std::cout << "Number of columns in data = " << data.n_cols << std::endl;
+	    PG_DEBUG("kx.n_rows={}, ky.n_rows={}, kz.n_rows={}, data.n_rows={}, data.n_cols={}",
+	             kx.n_rows, ky.n_rows, kz.n_rows, data.n_rows, data.n_cols);
                    
 	    Gnufft<T> G(kx.n_rows, (T) 2.0, Ninplane, Ninplane, Nz, kx, ky, kz, ix, iy, iz);
 

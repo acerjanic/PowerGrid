@@ -23,6 +23,7 @@
 
 *****************************************************************************/
 #include "pcSenseTimeSeg.h"
+#include "Core/PGLog.hpp"
 
 template <typename T1>
 pcSenseTimeSeg<T1>::~pcSenseTimeSeg()
@@ -46,10 +47,7 @@ pcSenseTimeSeg<T1>::pcSenseTimeSeg(Col<T1> kx, Col<T1> ky, Col<T1> kz, uword nx,
     Nc = nc;
     Ns = ShotPhaseMap.n_elem / Ni;
     Nd = kx.n_elem / Ns;
-    std::cout << "Nd = " << Nd << std::endl;
-    std::cout << "Ns = " << Ns << std::endl;
-    std::cout << "Nc = " << Nc << std::endl;
-    std::cout << "Ni = " << Ni << std::endl;
+    PG_INFO("pcSenseTimeSeg: Nd={}, Ns={}, Nc={}, Ni={}", Nd, Ns, Nc, Ni);
     SMap = reshape(SENSEmap, Ni, Nc);
     PMap = reshape(ShotPhaseMap, Ni, Ns);
     FMap = FieldMap;
@@ -117,10 +115,10 @@ pcSenseTimeSeg<T1>::pcSenseTimeSeg(Col<T1> kx, Col<T1> ky, Col<T1> kz, uword nx,
 
     //Check for NaN in the precomputed shot specific sense maps;
     if(shotSpecificSenseMap.has_nan())
-        std::cout << "WARNING : shotSpecificSenseMap has NAN!! " << std::endl;
+        PG_WARN("shotSpecificSenseMap has NaN!");
 
     if(conjShotSpecificSenseMap.has_nan())
-        std::cout << "WARNING : conjShotSpecificSenseMap has NAN!! " << std::endl;
+        PG_WARN("conjShotSpecificSenseMap has NaN!");
 
 #ifdef METAL_COMPUTE
     if constexpr (std::is_same<T1, float>::value) {
@@ -148,7 +146,7 @@ Col<complex<T1> > pcSenseTimeSeg<T1>::operator*(const Col<complex<T1> >& d) cons
     }
     
     if (outData.has_nan())
-        std::cout << "Warning:: Output of operator* in pcSenseTimeSeg is about to return NaN" << std::endl;
+        PG_WARN("Output of operator* in pcSenseTimeSeg contains NaN");
     // equivalent to returning col(output) in MATLAB with IRT
     return vectorise(outData);
 }
@@ -172,7 +170,7 @@ Col<complex<T1> > pcSenseTimeSeg<T1>::operator/(const Col<complex<T1> >& d) cons
 
     // equivalent to returning col(output) in MATLAB with IRT
     if (outData.has_nan())
-        std::cout << "Warning:: Output of operator/ in pcSenseTimeSeg is about to return NaN" << std::endl;
+        PG_WARN("Output of operator/ in pcSenseTimeSeg contains NaN");
     return vectorise(outData);
 }
 

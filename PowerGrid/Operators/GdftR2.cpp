@@ -26,6 +26,7 @@ Developed by:
 
  *****************************************************************************/
 #include "GdftR2.h"
+#include "Core/PGLog.hpp"
 
 #ifdef METAL_COMPUTE
 #include "Metal/MetalDFT.h"
@@ -114,9 +115,7 @@ Col<T1> GdftR2<T1>::Cd(const Col<T1> &d, uword dim) const {
                 kk = 1;
                 break;
         default:
-                std::cout << "Warning differences along dimension greater than 3! "
-                        "Undefined case!"
-                     << std::endl;
+                PG_WARN("Differences along dimension greater than 3 — undefined case!");
         }
 
         //Centered differences
