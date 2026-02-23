@@ -118,11 +118,14 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
 
     // Set up progress bar for solver iterations
     auto pcg_bar = std::make_shared<PGProgressBar>(
-        indicators::option::BarWidth{40},
+        indicators::option::BarWidth{30},
+        indicators::option::PrefixText{"PCG   "},
         indicators::option::Start{"["},
         indicators::option::End{"]"},
         indicators::option::ForegroundColor{indicators::Color::cyan},
         indicators::option::ShowPercentage{true},
+        indicators::option::ShowElapsedTime{true},
+        indicators::option::ShowRemainingTime{true},
         indicators::option::MaxProgress{niter}
     );
     size_t pcg_bar_idx = PG_PROGRESS_ADD(pcg_bar);
@@ -258,11 +261,14 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
 
   // Set up progress bar for solver iterations
   auto pcg_bar = std::make_shared<PGProgressBar>(
-      indicators::option::BarWidth{40},
+      indicators::option::BarWidth{30},
+      indicators::option::PrefixText{"PCG   "},
       indicators::option::Start{"["},
       indicators::option::End{"]"},
       indicators::option::ForegroundColor{indicators::Color::cyan},
       indicators::option::ShowPercentage{true},
+      indicators::option::ShowElapsedTime{true},
+      indicators::option::ShowRemainingTime{true},
       indicators::option::MaxProgress{niter}
   );
   size_t pcg_bar_idx = PG_PROGRESS_ADD(pcg_bar);

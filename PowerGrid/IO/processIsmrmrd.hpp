@@ -405,11 +405,14 @@ void getCompleteISMRMRDAcqData(ISMRMRD::Dataset *d, acqTracking *acqTrack, uword
 
   // Set up progress bar for acquisition reading
   auto acq_bar = std::make_shared<PGProgressBar>(
-      indicators::option::BarWidth{40},
+      indicators::option::BarWidth{30},
+      indicators::option::PrefixText{"Read  "},
       indicators::option::Start{"["},
       indicators::option::End{"]"},
       indicators::option::ForegroundColor{indicators::Color::green},
       indicators::option::ShowPercentage{true},
+      indicators::option::ShowElapsedTime{true},
+      indicators::option::ShowRemainingTime{true},
       indicators::option::MaxProgress{static_cast<size_t>(numAcqs)}
   );
   size_t acq_bar_idx = PG_PROGRESS_ADD(acq_bar);

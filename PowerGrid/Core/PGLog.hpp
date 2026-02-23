@@ -19,6 +19,7 @@ Developed by:
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/fmt/fmt.h>
 #include <indicators/block_progress_bar.hpp>
+#include <indicators/dynamic_progress.hpp>
 #include <indicators/cursor_control.hpp>
 #include <indicators/color.hpp>
 
@@ -54,28 +55,55 @@ inline void PG_LOG_INIT(const std::string& level_str = "info",
 #define PG_ERROR(...) SPDLOG_ERROR(__VA_ARGS__)
 
 // ---------------------------------------------------------------------------
-// Progress bars
+// Progress bars — stacked multi-bar display via DynamicProgress
 // ---------------------------------------------------------------------------
 
 using PGProgressBar = indicators::BlockProgressBar;
 
-inline std::vector<std::shared_ptr<PGProgressBar>>& PG_BARS() {
-    static std::vector<std::shared_ptr<PGProgressBar>> bars;
-    return bars;
+/// @brief Singleton manager for stacked progress bar display.
+///
+/// Owns all progress bars and feeds them into an indicators::DynamicProgress
+/// container that handles multi-line cursor movement and redraws.
+/// Completed bars are automatically hidden to keep the display clean.
+struct PGProgressManager {
+    /// Owns the bars so they outlive the DynamicProgress reference wrappers.
+    std::vector<std::shared_ptr<PGProgressBar>> owned_bars;
+    /// Stacked display container — references bars in owned_bars.
+    indicators::DynamicProgress<PGProgressBar> display;
+
+    PGProgressManager() {
+        display.set_option(indicators::option::HideBarWhenComplete{true});
+    }
+
+    /// Register a new bar with the stacked display. Returns its index.
+    size_t add(std::shared_ptr<PGProgressBar> bar) {
+        owned_bars.push_back(bar);
+        return display.push_back(*bar);
+    }
+};
+
+/// Access the singleton progress manager.
+inline PGProgressManager& PG_PROGRESS() {
+    static PGProgressManager mgr;
+    return mgr;
 }
 
+/// Register a new progress bar. Returns an index for TICK/DONE calls.
 inline size_t PG_PROGRESS_ADD(std::shared_ptr<PGProgressBar> bar) {
-    PG_BARS().push_back(bar);
-    return PG_BARS().size() - 1;
+    return PG_PROGRESS().add(bar);
 }
 
+/// Advance bar at @p idx by one tick, optionally updating the postfix text.
 inline void PG_PROGRESS_TICK(size_t idx, const std::string& postfix = "") {
-    auto& bar = *PG_BARS()[idx];
+    auto& display = PG_PROGRESS().display;
+    auto& bar = display[idx]; // triggers redraw of all active bars
     if (!postfix.empty())
         bar.set_option(indicators::option::PostfixText{postfix});
     bar.tick();
 }
 
+/// Mark bar at @p idx as completed (it will be hidden from the display).
 inline void PG_PROGRESS_DONE(size_t idx) {
-    PG_BARS()[idx]->mark_as_completed();
+    auto& display = PG_PROGRESS().display;
+    display[idx].mark_as_completed();
 }

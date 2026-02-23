@@ -172,9 +172,24 @@ int main(int argc, char **argv) {
 
   PG_INFO("Starting reconstruction loop");
 
+  // Outer progress bar for overall reconstruction across all slices/reps/etc.
+  size_t totalRecons = (size_t)(NSliceMax+1) * (NPhaseMax+1) * (NEchoMax+1) * (NAvgMax+1) * (NRepMax+1);
+  auto recon_bar = std::make_shared<PGProgressBar>(
+      indicators::option::BarWidth{30},
+      indicators::option::PrefixText{"Recon "},
+      indicators::option::Start{"["},
+      indicators::option::End{"]"},
+      indicators::option::ForegroundColor{indicators::Color::yellow},
+      indicators::option::ShowPercentage{true},
+      indicators::option::ShowElapsedTime{true},
+      indicators::option::ShowRemainingTime{true},
+      indicators::option::MaxProgress{totalRecons}
+  );
+  size_t recon_bar_idx = PG_PROGRESS_ADD(recon_bar);
+
   std::string baseFilename = "img";
 
-  
+
   std::string filename;
   if (!outputImageFilePath.empty() && *outputImageFilePath.rbegin() != '/') {
     	outputImageFilePath += '/';
@@ -254,13 +269,14 @@ int main(int argc, char **argv) {
 
 	                  //writeISMRMRDImageData<float>(d, ImageTemp, Nx, Ny, Nz);
                     writeNiftiMagPhsImage<float>(filename,ImageTemp,Nx,Ny,Nz);
+                    PG_PROGRESS_TICK(recon_bar_idx, fmt::format("Slice {}/{}", NSlice+1, NSliceMax+1));
                     }
 
                 }
             }
         }
     }
-
+  PG_PROGRESS_DONE(recon_bar_idx);
 
   // Close ISMRMRD::Dataset, hdr, and acqTrack
 	closeISMRMRDData(d,hdr,acqTrack);
