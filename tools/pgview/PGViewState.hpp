@@ -13,6 +13,20 @@ struct LogEntry {
     std::string message;
 };
 
+/// @brief A single image plane for display in the TUI.
+struct ImagePlaneView {
+    std::string label;   // "Image", "Axial", "Coronal", "Sagittal"
+    size_t nx = 0, ny = 0;
+    std::vector<float> pixels; // Row-major, [0, 1] normalized magnitudes
+};
+
+/// @brief A complete image frame (one or more planes) for TUI preview.
+struct ImageFrame {
+    size_t bar_id = 0;
+    size_t iter = 0;
+    std::vector<ImagePlaneView> planes;  // 1 plane (2D) or 3 planes (3D MPR)
+};
+
 /// @brief Per-bar convergence metric sample.
 struct MetricSample {
     double error_norm = 0.0;
@@ -73,6 +87,10 @@ struct PGViewState {
     /// Set when the child process sends "exit" or stdin closes.
     bool finished = false;
     int exit_code = 0;
+
+    /// Latest image preview for TUI display.
+    ImageFrame latest_image;
+    bool has_image = false;
 
     /// Session timing — set by set_start() and set_exit().
     std::chrono::steady_clock::time_point session_start_time;
@@ -156,6 +174,12 @@ struct PGViewState {
         std::lock_guard<std::mutex> lock(mu);
         if (bar_id >= bars.size()) return;
         bars[bar_id].push_metric(error_norm, penalty);
+    }
+
+    void set_image(size_t bar_id, size_t iter, std::vector<ImagePlaneView> planes) {
+        std::lock_guard<std::mutex> lock(mu);
+        latest_image = {bar_id, iter, std::move(planes)};
+        has_image = true;
     }
 
     // --- Summary helpers (call with mu locked) ---

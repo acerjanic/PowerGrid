@@ -689,3 +689,239 @@ inline void PG_METRICS(size_t bar_id, size_t iter,
                        double error_norm, double penalty) {
     PG_PROGRESS().metrics(bar_id, iter, error_norm, penalty);
 }
+
+// ---------------------------------------------------------------------------
+// Image preview for TUI — live reconstruction magnitude display
+// ---------------------------------------------------------------------------
+
+namespace pg_detail {
+
+/// @brief Base64 encode a byte buffer (no line wrapping).
+inline std::string base64_encode(const uint8_t* data, size_t len) {
+    static const char table[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string out;
+    out.reserve(((len + 2) / 3) * 4);
+    for (size_t i = 0; i < len; i += 3) {
+        uint32_t n = static_cast<uint32_t>(data[i]) << 16;
+        if (i + 1 < len) n |= static_cast<uint32_t>(data[i + 1]) << 8;
+        if (i + 2 < len) n |= static_cast<uint32_t>(data[i + 2]);
+        out += table[(n >> 18) & 0x3F];
+        out += table[(n >> 12) & 0x3F];
+        out += (i + 1 < len) ? table[(n >> 6) & 0x3F] : '=';
+        out += (i + 2 < len) ? table[n & 0x3F] : '=';
+    }
+    return out;
+}
+
+/// @brief A single image plane for preview (sender side).
+struct ImagePlane {
+    std::string label;  // "Image", "Axial", "Coronal", "Sagittal"
+    size_t nx, ny;
+    std::vector<float> pixels;  // Row-major, [0, 1] normalized
+};
+
+/// @brief Box-filter downsample a 2D float array to target_size × target_size.
+///
+/// @param src     Source pixels in row-major order.
+/// @param src_w   Source width.
+/// @param src_h   Source height.
+/// @param target  Target size (both width and height).
+/// @returns       Downsampled array of target × target floats.
+inline std::vector<float> box_downsample(const std::vector<float>& src,
+                                          size_t src_w, size_t src_h,
+                                          size_t target) {
+    std::vector<float> dst(target * target, 0.0f);
+    if (src_w == 0 || src_h == 0) return dst;
+
+    // If source is smaller than target, just do nearest-neighbor upscale
+    if (src_w <= target && src_h <= target) {
+        for (size_t ty = 0; ty < target; ty++) {
+            size_t sy = ty * src_h / target;
+            for (size_t tx = 0; tx < target; tx++) {
+                size_t sx = tx * src_w / target;
+                dst[ty * target + tx] = src[sy * src_w + sx];
+            }
+        }
+        return dst;
+    }
+
+    // Box filter: average all source pixels that map to each target pixel
+    for (size_t ty = 0; ty < target; ty++) {
+        size_t sy0 = ty * src_h / target;
+        size_t sy1 = (ty + 1) * src_h / target;
+        if (sy1 == sy0) sy1 = sy0 + 1;
+        for (size_t tx = 0; tx < target; tx++) {
+            size_t sx0 = tx * src_w / target;
+            size_t sx1 = (tx + 1) * src_w / target;
+            if (sx1 == sx0) sx1 = sx0 + 1;
+            float sum = 0.0f;
+            size_t count = 0;
+            for (size_t sy = sy0; sy < sy1 && sy < src_h; sy++) {
+                for (size_t sx = sx0; sx < sx1 && sx < src_w; sx++) {
+                    sum += src[sy * src_w + sx];
+                    count++;
+                }
+            }
+            dst[ty * target + tx] = (count > 0) ? sum / static_cast<float>(count) : 0.0f;
+        }
+    }
+    return dst;
+}
+
+/// @brief Extract preview planes from a complex image vector.
+///
+/// For 2D (Nz==1): returns 1 plane ("Image") — the full Nx×Ny magnitude.
+/// For 3D (Nz>1):  returns 3 planes for MPR display:
+///   - "Axial"    — z = Nz/2, showing Nx × Ny
+///   - "Coronal"  — y = Ny/2, showing Nx × Nz
+///   - "Sagittal" — x = Nx/2, showing Ny × Nz
+///
+/// Each plane is box-filter downsampled to preview_size × preview_size and
+/// normalized to [0, 1] using a global max across all planes.
+///
+/// @tparam T1        Floating-point precision (float or double).
+/// @param x_data     Pointer to complex image data (column-major, Nx×Ny×Nz).
+/// @param n_elem     Number of complex elements.
+/// @param Nx, Ny, Nz Image dimensions.
+/// @param preview_size  Target preview dimension (default 64).
+/// @returns          Vector of ImagePlane structs.
+template <typename T1>
+inline std::vector<ImagePlane> extract_preview_planes(
+        const std::complex<T1>* x_data, size_t n_elem,
+        size_t Nx, size_t Ny, size_t Nz,
+        size_t preview_size = 64) {
+
+    std::vector<ImagePlane> planes;
+    if (Nx == 0 || Ny == 0) return planes;
+
+    // Armadillo uses column-major storage:
+    // For a 3D volume stored as Nx*Ny*Nz column vector,
+    // element (ix, iy, iz) = x_data[ix + iy*Nx + iz*Nx*Ny]
+
+    auto mag = [](std::complex<T1> c) -> float {
+        return static_cast<float>(std::abs(c));
+    };
+
+    if (Nz <= 1) {
+        // 2D: single plane
+        std::vector<float> slice(Nx * Ny);
+        for (size_t iy = 0; iy < Ny; iy++)
+            for (size_t ix = 0; ix < Nx; ix++)
+                slice[iy * Nx + ix] = mag(x_data[ix + iy * Nx]);
+
+        auto ds = box_downsample(slice, Nx, Ny, preview_size);
+        planes.push_back({"Image", preview_size, preview_size, std::move(ds)});
+    } else {
+        // 3D: extract three orthogonal slices
+
+        // Axial — z = Nz/2, shows Nx × Ny
+        size_t zc = Nz / 2;
+        std::vector<float> axial(Nx * Ny);
+        for (size_t iy = 0; iy < Ny; iy++)
+            for (size_t ix = 0; ix < Nx; ix++)
+                axial[iy * Nx + ix] = mag(x_data[ix + iy * Nx + zc * Nx * Ny]);
+
+        // Coronal — y = Ny/2, shows Nx × Nz (rows=Nz, cols=Nx)
+        size_t yc = Ny / 2;
+        std::vector<float> coronal(Nx * Nz);
+        for (size_t iz = 0; iz < Nz; iz++)
+            for (size_t ix = 0; ix < Nx; ix++)
+                coronal[iz * Nx + ix] = mag(x_data[ix + yc * Nx + iz * Nx * Ny]);
+
+        // Sagittal — x = Nx/2, shows Ny × Nz (rows=Nz, cols=Ny)
+        size_t xc = Nx / 2;
+        std::vector<float> sagittal(Ny * Nz);
+        for (size_t iz = 0; iz < Nz; iz++)
+            for (size_t iy = 0; iy < Ny; iy++)
+                sagittal[iz * Ny + iy] = mag(x_data[xc + iy * Nx + iz * Nx * Ny]);
+
+        auto ds_ax = box_downsample(axial, Nx, Ny, preview_size);
+        auto ds_co = box_downsample(coronal, Nx, Nz, preview_size);
+        auto ds_sa = box_downsample(sagittal, Ny, Nz, preview_size);
+
+        planes.push_back({"Axial", preview_size, preview_size, std::move(ds_ax)});
+        planes.push_back({"Coronal", preview_size, preview_size, std::move(ds_co)});
+        planes.push_back({"Sagittal", preview_size, preview_size, std::move(ds_sa)});
+    }
+
+    // Normalize all planes to [0, 1] using global max for consistent windowing
+    float global_max = 0.0f;
+    for (const auto& p : planes)
+        for (float v : p.pixels)
+            if (v > global_max) global_max = v;
+
+    if (global_max > 0.0f) {
+        float inv_max = 1.0f / global_max;
+        for (auto& p : planes)
+            for (float& v : p.pixels)
+                v *= inv_max;
+    }
+
+    return planes;
+}
+
+} // namespace pg_detail (continued)
+
+// ---------------------------------------------------------------------------
+// Image preview context — set by app, read by solver
+// ---------------------------------------------------------------------------
+
+/// @brief Singleton storing image dimensions for preview extraction.
+///
+/// The solver template doesn't know Nx/Ny/Nz directly. The app sets these
+/// before calling reconSolve, and the solver reads them for preview extraction.
+struct PGImagePreviewContext {
+    size_t Nx = 0, Ny = 0, Nz = 1;
+    static PGImagePreviewContext& instance() {
+        static PGImagePreviewContext ctx;
+        return ctx;
+    }
+};
+
+/// @brief Set the image dimensions for preview extraction.
+///
+/// Call this in the app before entering the solver loop.
+inline void PG_SET_IMAGE_DIMS(size_t nx, size_t ny, size_t nz = 1) {
+    auto& ctx = PGImagePreviewContext::instance();
+    ctx.Nx = nx;
+    ctx.Ny = ny;
+    ctx.Nz = nz;
+}
+
+/// @brief Emit an image preview for display in pgview.
+///
+/// In TUI mode: base64-encodes each plane and emits JSONL with a "planes" array.
+/// In classic mode: no-op (images aren't displayable on a scrolling terminal).
+///
+/// @param bar_id  Bar index from PG_PROGRESS_ADD.
+/// @param iter    Current iteration number (1-based).
+/// @param planes  Vector of image planes to send.
+inline void PG_IMAGE_PREVIEW(size_t bar_id, size_t iter,
+                              const std::vector<pg_detail::ImagePlane>& planes) {
+    if (!PG_TUI_MODE() || planes.empty()) return;
+
+    auto& mgr = PG_PROGRESS();
+    std::lock_guard<std::mutex> lock(mgr.mu);
+    mgr.ensure_tui_or_fallback();
+    if (!PG_TUI_MODE()) return;
+
+    // Build JSONL with planes array
+    std::string msg = fmt::format(
+        R"({{"type":"image_preview","bar_id":{},"iter":{},"planes":[)", bar_id, iter);
+
+    for (size_t i = 0; i < planes.size(); i++) {
+        const auto& p = planes[i];
+        std::string b64 = pg_detail::base64_encode(
+            reinterpret_cast<const uint8_t*>(p.pixels.data()),
+            p.pixels.size() * sizeof(float));
+        if (i > 0) msg += ',';
+        msg += fmt::format(
+            R"({{"label":"{}","nx":{},"ny":{},"data":"{}"}})",
+            pg_detail::json_escape(p.label), p.nx, p.ny, b64);
+    }
+    msg += "]}\n";
+
+    std::fwrite(msg.data(), 1, msg.size(), stderr);
+    std::fflush(stderr);
+}

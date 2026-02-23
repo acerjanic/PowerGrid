@@ -6,8 +6,10 @@
 #include <functional>
 #include <cstdio>
 #include <unistd.h>
+#include <cstring>
 #include <nlohmann/json.hpp>
 #include "PGViewState.hpp"
+#include "Base64.hpp"
 
 using json = nlohmann::json;
 
@@ -70,14 +72,19 @@ private:
         FILE* fp = fdopen(data_fd_, "r");
         if (!fp) return;
 
-        char buf[8192];
-        while (fgets(buf, sizeof(buf), fp)) {
-            std::string line(buf);
+        // Use POSIX getline() for dynamic buffering — image_preview
+        // messages can be 20KB+ (base64-encoded image data).
+        char* linebuf = nullptr;
+        size_t linecap = 0;
+        ssize_t len;
+        while ((len = ::getline(&linebuf, &linecap, fp)) > 0) {
+            std::string line(linebuf, static_cast<size_t>(len));
             // Strip trailing newline
             while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
                 line.pop_back();
             process_line(line);
         }
+        free(linebuf);
         // Don't fclose — main.cpp owns the fd and will close it
     }
 
@@ -136,6 +143,28 @@ private:
                 j.value("error_norm", 0.0),
                 j.value("penalty", 0.0)
             );
+        } else if (type == "image_preview") {
+            size_t bar_id = j.value("bar_id", 0u);
+            size_t iter = j.value("iter", 0u);
+            std::vector<ImagePlaneView> planes;
+            if (j.contains("planes") && j["planes"].is_array()) {
+                for (const auto& p : j["planes"]) {
+                    ImagePlaneView plane;
+                    plane.label = p.value("label", "");
+                    plane.nx = p.value("nx", 0u);
+                    plane.ny = p.value("ny", 0u);
+                    std::string b64 = p.value("data", "");
+                    auto raw = base64_decode(b64);
+                    size_t expected = plane.nx * plane.ny * sizeof(float);
+                    if (raw.size() == expected && plane.nx > 0 && plane.ny > 0) {
+                        plane.pixels.resize(plane.nx * plane.ny);
+                        std::memcpy(plane.pixels.data(), raw.data(), expected);
+                        planes.push_back(std::move(plane));
+                    }
+                }
+            }
+            if (!planes.empty())
+                state_.set_image(bar_id, iter, std::move(planes));
         } else if (type == "start") {
             state_.set_start(
                 j.value("app", "PowerGrid"),

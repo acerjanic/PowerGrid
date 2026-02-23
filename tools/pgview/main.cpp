@@ -184,7 +184,17 @@ int main() {
             layout.push_back(separator());
         }
 
-        layout.push_back(log_section);
+        // Bottom pane: logs + image preview side by side (if image available)
+        Element image_section = RenderImagePreview(state);
+        if (state.has_image) {
+            layout.push_back(hbox({
+                log_section,
+                separator(),
+                image_section,
+            }));
+        } else {
+            layout.push_back(log_section);
+        }
 
         return vbox(std::move(layout)) | border;
     });

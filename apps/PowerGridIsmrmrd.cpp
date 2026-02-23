@@ -149,6 +149,8 @@ int main(int argc, char **argv) {
   Col<float> ix, iy, iz;
   initImageSpaceCoords(ix, iy, iz, Nx, Ny, Nz);
 
+  // Set image dimensions for TUI preview (used by PCG solver)
+  PG_SET_IMAGE_DIMS(static_cast<size_t>(Nx), static_cast<size_t>(Ny), static_cast<size_t>(Nz));
 
   // Check and abort if we have more than one encoding space (No Navigators for
   // now).

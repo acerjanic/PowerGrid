@@ -257,6 +257,16 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       PG_DEBUG("PCG iteration {}/{}: error norm = {}, penalty = {}", ii + 1, niter, errNorm, penaltyVal);
       PG_PROGRESS_TICK(pcg_bar_idx, static_cast<size_t>(ii + 1), fmt::format("iter {}/{} err={:.4e}", ii + 1, niter, errNorm));
       PG_METRICS(pcg_bar_idx, static_cast<size_t>(ii + 1), static_cast<double>(errNorm), static_cast<double>(penaltyVal));
+      // Emit image preview for TUI display
+      {
+          auto& imgCtx = PGImagePreviewContext::instance();
+          if (imgCtx.Nx > 0 && PG_TUI_MODE()) {
+              auto preview_planes = pg_detail::extract_preview_planes(
+                  x_pg.getArma().memptr(), x_pg.getArma().n_elem,
+                  imgCtx.Nx, imgCtx.Ny, imgCtx.Nz);
+              PG_IMAGE_PREVIEW(pcg_bar_idx, static_cast<size_t>(ii + 1), preview_planes);
+          }
+      }
       if (parent_bar_idx != PG_NO_PARENT_BAR)
         PG_PROGRESS_TICK(parent_bar_idx, parent_bar_offset + static_cast<size_t>(ii + 1));
     }
@@ -392,6 +402,16 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
     PG_DEBUG("PCG iteration {}/{}: error norm = {}, penalty = {}", ii + 1, niter, errNorm, penaltyVal);
     PG_PROGRESS_TICK(pcg_bar_idx, static_cast<size_t>(ii + 1), fmt::format("iter {}/{} err={:.4e}", ii + 1, niter, errNorm));
     PG_METRICS(pcg_bar_idx, static_cast<size_t>(ii + 1), static_cast<double>(errNorm), static_cast<double>(penaltyVal));
+    // Emit image preview for TUI display
+    {
+        auto& imgCtx = PGImagePreviewContext::instance();
+        if (imgCtx.Nx > 0 && PG_TUI_MODE()) {
+            auto preview_planes = pg_detail::extract_preview_planes(
+                x.memptr(), x.n_elem,
+                imgCtx.Nx, imgCtx.Ny, imgCtx.Nz);
+            PG_IMAGE_PREVIEW(pcg_bar_idx, static_cast<size_t>(ii + 1), preview_planes);
+        }
+    }
     if (parent_bar_idx != PG_NO_PARENT_BAR)
       PG_PROGRESS_TICK(parent_bar_idx, parent_bar_offset + static_cast<size_t>(ii + 1));
 

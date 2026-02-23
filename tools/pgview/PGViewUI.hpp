@@ -1,11 +1,13 @@
 #pragma once
 
 #include <ftxui/dom/elements.hpp>
+#include <ftxui/dom/canvas.hpp>
 #include <ftxui/screen/color.hpp>
 #include <string>
 #include <vector>
 #include <deque>
 #include <cmath>
+#include <algorithm>
 #include <ctime>
 #include <chrono>
 #include "PGViewState.hpp"
@@ -172,4 +174,71 @@ inline Element RenderLogs(const PGViewState& state, size_t max_visible = 200) {
     }
 
     return vbox(std::move(log_lines)) | vscroll_indicator | frame | flex;
+}
+
+// ---------------------------------------------------------------------------
+// Image preview rendering
+// ---------------------------------------------------------------------------
+
+/// @brief Render a single image plane as a labeled FTXUI Canvas element.
+///
+/// Uses DrawBlock (half-block characters) for 2:1 vertical sub-pixel resolution.
+/// Each pixel is mapped to a grayscale color via Color(gray, gray, gray).
+inline Element RenderSinglePlane(const ImagePlaneView& plane) {
+    if (plane.pixels.empty() || plane.nx == 0 || plane.ny == 0)
+        return text("");
+
+    int canvas_w = static_cast<int>(plane.nx);
+    int canvas_h = static_cast<int>(plane.ny);
+
+    Canvas c(canvas_w, canvas_h);
+    for (int y = 0; y < canvas_h; y++) {
+        for (int x = 0; x < canvas_w; x++) {
+            float v = plane.pixels[static_cast<size_t>(y) * plane.nx + static_cast<size_t>(x)];
+            uint8_t gray = static_cast<uint8_t>(std::clamp(v, 0.0f, 1.0f) * 255.0f);
+            c.DrawBlock(x, y, true, Color(gray, gray, gray));
+        }
+    }
+
+    return vbox({
+        text(plane.label) | bold | hcenter,
+        canvas(c),
+    }) | border;
+}
+
+/// @brief Render the complete image preview section.
+///
+/// For 2D (1 plane): single image panel.
+/// For 3D (3 planes): MPR layout — axial + coronal side by side, sagittal below.
+///
+/// Must be called with state.mu locked.
+inline Element RenderImagePreview(const PGViewState& state) {
+    if (!state.has_image || state.latest_image.planes.empty())
+        return text("");
+
+    const auto& img = state.latest_image;
+    std::string iter_label = "iter " + std::to_string(img.iter);
+
+    if (img.planes.size() == 1) {
+        // 2D: single image with iter label
+        return vbox({
+            RenderSinglePlane(img.planes[0]),
+            text(iter_label) | dim | hcenter,
+        });
+    }
+
+    // 3D MPR: 2 across + 1 below
+    // Top row: Axial + Coronal side by side
+    // Bottom row: Sagittal + iter label
+    Elements top_row;
+    for (size_t i = 0; i < std::min(img.planes.size(), size_t(2)); i++)
+        top_row.push_back(RenderSinglePlane(img.planes[i]));
+
+    Elements layout;
+    layout.push_back(hbox(std::move(top_row)));
+    if (img.planes.size() >= 3)
+        layout.push_back(RenderSinglePlane(img.planes[2]));
+    layout.push_back(text(iter_label) | dim | hcenter);
+
+    return vbox(std::move(layout));
 }
