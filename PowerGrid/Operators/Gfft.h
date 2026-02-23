@@ -42,7 +42,7 @@ Developed by:
 #include "Gridding/gridding.h"
 #include "openacc.h"
 #elif defined(METAL_COMPUTE) // Apple Metal path: vDSP FFT
-#include "Metal/fftAccelerate.h"
+#include "FFT/fftAccelerate.h"
 #include "FFT/fftCPU.h"    // fallback for non-pow2 sizes
 #include "Gridding/gridding.h"
 #else // CPU Version

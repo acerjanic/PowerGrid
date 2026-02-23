@@ -33,7 +33,7 @@ Developed by:
 #include <cstdlib>
 #include <chrono>
 #include "Core/PGLog.hpp"
-#include "Tracer.hpp"
+#include "Core/Tracer.hpp"
 
 #ifdef METAL_COMPUTE
 #include "Core/pgCol.hpp"

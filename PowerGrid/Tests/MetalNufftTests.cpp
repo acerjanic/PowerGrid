@@ -32,7 +32,7 @@ Developed by:
 #ifdef METAL_COMPUTE
 
 #include "../Core/PGIncludes.h"
-#include "../Metal/fftAccelerate.h"
+#include "../FFT/fftAccelerate.h"
 #include "../Metal/MetalGridding.h"
 #include "../Operators/Gnufft.h"
 #include "../Gridding/griddingSupport.h"

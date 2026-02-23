@@ -40,8 +40,8 @@
 #include "ismrmrd/version.h"
 #include "IO/acqTracking.h"
 //namespace PowerGrid {
-#include "Solvers/Robject.h"
-#include "Solvers/TVPenalty.h"
+#include "Penalties/Robject.h"
+#include "Penalties/TVPenalty.h"
 
 #include "Operators/Gdft.h"
 #include "Operators/Gfft.h"
@@ -54,7 +54,7 @@
 #include "Operators/SENSE.h"
 #include "Gridding/TimeSegmentation.h"
 #include "FFT/fftGPU.h"
-#include "IO/fftshift.hpp"
+#include "FFT/fftshift.hpp"
 #include "FFT/ftCpu.h"
 #include "Gridding/gridding.h"
 #include "Gridding/griddingSupport.h"

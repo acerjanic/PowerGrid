@@ -28,8 +28,8 @@ Developed by:
 #define PowerGrid_R_lowRank_h
 
 #include "../PowerGrid/Core/PGIncludes.h"
-#include "../PowerGrid/Solvers/QuadPenalty.h"
-#include "../PowerGrid/Solvers/TVPenalty.h"
+#include "../PowerGrid/Penalties/QuadPenalty.h"
+#include "../PowerGrid/Penalties/TVPenalty.h"
 
 using namespace arma;
 using namespace std;

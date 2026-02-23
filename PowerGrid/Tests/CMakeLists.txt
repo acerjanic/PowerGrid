@@ -46,8 +46,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../Support/ArmaExtensions)
 set(UTILITY_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/../Gridding/griddingSupport.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../FFT/fftCPU.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Solvers/Robject.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Solvers/QuadPenalty.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Penalties/Robject.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Penalties/QuadPenalty.cpp
 )
 
 # Operator sources needed for encoding operator tests

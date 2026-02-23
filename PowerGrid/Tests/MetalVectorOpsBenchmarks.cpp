@@ -34,7 +34,7 @@ Developed by:
 #include "Core/pgCol.hpp"
 #include "Core/pgComplex.hpp"
 #include "Metal/MetalVectorOps.h"
-#include "AccelerateDispatch.hpp"
+#include "Core/AccelerateDispatch.hpp"
 
 #include <Accelerate/Accelerate.h>
 

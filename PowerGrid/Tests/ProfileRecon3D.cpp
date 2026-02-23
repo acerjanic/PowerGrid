@@ -8,7 +8,7 @@
 
 #include "Core/PGIncludes.h"
 #include "Operators/pcSenseTimeSeg.h"
-#include "Solvers/QuadPenalty.h"
+#include "Penalties/QuadPenalty.h"
 #include "Solvers/solve_pwls_pcg.hpp"
 
 #include "Tests/Helpers/SyntheticPhantom3D.hpp"

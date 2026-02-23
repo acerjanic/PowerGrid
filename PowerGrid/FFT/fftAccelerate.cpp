@@ -22,7 +22,7 @@ Developed by:
 #ifdef METAL_COMPUTE
 
 #include "fftAccelerate.h"
-#include "FFT/fftCPU.h"     // for fallback to FFTW
+#include "fftCPU.h"     // for fallback to FFTW
 
 #include <Accelerate/Accelerate.h>
 #include <cmath>

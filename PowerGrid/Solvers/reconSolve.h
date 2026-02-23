@@ -37,8 +37,8 @@
 #include "Operators/SENSE.h"
 #include "Operators/pcSENSE.h"
 #include "Gridding/TimeSegmentation.h"
-#include "QuadPenalty.h"
-#include "TVPenalty.h"
+#include "Penalties/QuadPenalty.h"
+#include "Penalties/TVPenalty.h"
 #include "solve_pwls_pcg.hpp"
 
 //#ifdef PowerGridMPI

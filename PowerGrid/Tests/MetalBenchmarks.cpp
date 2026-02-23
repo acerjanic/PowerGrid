@@ -35,13 +35,13 @@ Developed by:
 
 #include "Core/PGIncludes.h"
 #include "Operators/Gnufft.h"
-#include "Metal/fftAccelerate.h"
+#include "FFT/fftAccelerate.h"
 #include "FFT/fftCPU.h"
 #include "Core/pgCol.hpp"
 #include "Core/pgComplex.hpp"
 
 #include <Accelerate/Accelerate.h>
-#include "AccelerateDispatch.hpp"
+#include "Core/AccelerateDispatch.hpp"
 
 using namespace arma;
 using Clock = std::chrono::high_resolution_clock;

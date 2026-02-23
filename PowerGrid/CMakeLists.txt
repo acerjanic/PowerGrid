@@ -1,15 +1,17 @@
 #Define files to be compiled
 set(PG_FILES
+	# Penalties
+	${PROJECT_SOURCE_DIR}/PowerGrid/Penalties/Robject.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/Penalties/QuadPenalty.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/Penalties/TVPenalty.cpp
 	# Solvers
-	${PROJECT_SOURCE_DIR}/PowerGrid/Solvers/Robject.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/Solvers/QuadPenalty.cpp
-	${PROJECT_SOURCE_DIR}/PowerGrid/Solvers/TVPenalty.cpp
 	${PROJECT_SOURCE_DIR}/PowerGrid/Solvers/reconSolve.cpp
 	# FFT
 	${PROJECT_SOURCE_DIR}/PowerGrid/FFT/fftCPU.cpp
 	${PROJECT_SOURCE_DIR}/PowerGrid/FFT/fftGPU.cpp
 	${PROJECT_SOURCE_DIR}/PowerGrid/FFT/ftCpu.cpp
 	${PROJECT_SOURCE_DIR}/PowerGrid/FFT/ftCpuWithGrads.cpp
+	${PROJECT_SOURCE_DIR}/PowerGrid/FFT/fftAccelerate.cpp
 	# Operators
 	${PROJECT_SOURCE_DIR}/PowerGrid/Operators/Gdft.cpp
 	${PROJECT_SOURCE_DIR}/PowerGrid/Operators/GdftR2.cpp
@@ -32,8 +34,7 @@ if(METAL_COMPUTE)
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalGridding.mm
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalDFT.mm
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalNufftPipeline.mm
-		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalVectorOps.mm
-		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/fftAccelerate.cpp)
+		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalVectorOps.mm)
 	set_source_files_properties(
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalGridding.mm
 		${PROJECT_SOURCE_DIR}/PowerGrid/Metal/MetalDFT.mm

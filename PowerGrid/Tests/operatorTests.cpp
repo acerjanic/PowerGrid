@@ -4,7 +4,7 @@
 #include "../Operators/Gdft.h"
 #include "../Operators/Gnufft.h"
 #include "../Operators/SENSE.h"
-#include "../Solvers/QuadPenalty.h"
+#include "../Penalties/QuadPenalty.h"
 #include "../Solvers/solve_pwls_pcg.hpp"
 
 #include <cmath>

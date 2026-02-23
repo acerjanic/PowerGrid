@@ -19,7 +19,7 @@ Developed by:
 #include "../Operators/Gdft.h"
 #include "../Operators/GdftR2.h"
 #include "../Operators/pcSENSE.h"
-#include "../Solvers/QuadPenalty.h"
+#include "../Penalties/QuadPenalty.h"
 #include "../Solvers/solve_pwls_pcg.hpp"
 
 #include "Helpers/SyntheticPhantom.hpp"

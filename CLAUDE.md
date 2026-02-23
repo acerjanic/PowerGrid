@@ -24,11 +24,14 @@ PowerGrid/
     ├── Core/                        # Core data structures and includes
     │   ├── PowerGrid.h              # Public aggregate header
     │   ├── PGIncludes.h             # Internal includes, precision macros
+    │   ├── PGLog.hpp                # Structured logging and progress bars
     │   ├── pgComplex.hpp            # Custom complex<T> for GPU
     │   ├── pgCol.hpp                # GPU-aware column vector (OpenACC/Metal)
     │   ├── pgMat.hpp                # GPU-aware matrix (OpenACC/Metal)
     │   ├── pgSubview_Col.hpp        # Column subview
-    │   └── griddingTypes.h          # Gridding type definitions
+    │   ├── griddingTypes.h          # Gridding type definitions
+    │   ├── AccelerateDispatch.hpp   # Apple Accelerate/vDSP dispatch for pgCol
+    │   └── Tracer.hpp               # NVTX/Instruments performance tracing
     ├── Operators/                    # Encoding operators
     │   ├── Gnufft.h/.cpp            # NUFFT gridding operator
     │   ├── Gdft.h/.cpp              # Field-corrected DFT operator
@@ -37,12 +40,13 @@ PowerGrid/
     │   ├── SENSE.h/.cpp             # Multi-coil SENSE operator
     │   ├── pcSENSE.h/.cpp           # Phase-corrected SENSE
     │   └── pcSenseTimeSeg.h/.cpp    # pcSENSE + time segmentation
+    ├── Penalties/                    # Regularization penalties
+    │   ├── Robject.h/.cpp           # Abstract regularization base
+    │   ├── QuadPenalty.h/.cpp       # L2 quadratic regularization
+    │   └── TVPenalty.h/.cpp         # Total Variation regularization
     ├── Solvers/                      # Reconstruction solvers
     │   ├── solve_pwls_pcg.hpp       # PWLS conjugate gradient solver
     │   ├── solve_grad_desc.hpp      # Gradient descent solver
-    │   ├── Robject.h/.cpp           # Abstract regularization base
-    │   ├── QuadPenalty.h/.cpp       # L2 quadratic regularization
-    │   ├── TVPenalty.h/.cpp         # Total Variation regularization
     │   └── reconSolve.h/.cpp        # Reconstruction helper functions
     ├── Gridding/                     # Gridding and time segmentation
     │   ├── gridding.h/.cpp          # Core KB gridding algorithm
@@ -51,10 +55,11 @@ PowerGrid/
     ├── FFT/                          # FFT implementations
     │   ├── fftCPU.h/.cpp            # FFTW wrapper
     │   ├── fftGPU.h/.cpp            # cuFFT wrapper
+    │   ├── fftAccelerate.h/.cpp     # Apple vDSP/Accelerate FFT wrapper
+    │   ├── fftshift.hpp             # FFT shift utilities
     │   ├── ftCpu.h/.cpp             # CPU DFT implementation
     │   └── ftCpuWithGrads.h/.cpp    # DFT with gradient support
     ├── IO/                           # I/O and data processing
-    │   ├── fftshift.hpp             # FFT shift utilities
     │   ├── processIsmrmrd.hpp       # ISMRMRD data processing
     │   ├── processNIFTI.hpp         # NIfTI data processing
     │   ├── acqTracking.h/.cpp       # Acquisition tracking
@@ -63,7 +68,6 @@ PowerGrid/
     │   ├── MetalNufftPipeline.h/.mm # Full GPU NUFFT pipeline
     │   ├── MetalVectorOps.h/.mm     # Metal vector algebra
     │   └── *.metal                  # Metal compute shaders
-    ├── Tracer.hpp                   # NVTX performance tracing
     └── Tests/                       # Unit tests (Catch2)
 ```
 
@@ -108,7 +112,7 @@ All encoding operators follow a convention:
 
 ## Regularization (IRT Pattern)
 
-All regularization operators inherit from `Robject<T>`:
+All regularization operators (in `Penalties/`) inherit from `Robject<T>`:
 - `QuadPenalty<T>`: L2 quadratic penalty
 - `TVPenalty<T>`: Smooth TV penalty
 

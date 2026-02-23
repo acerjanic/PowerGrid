@@ -3,7 +3,7 @@
 #include "../Core/PGIncludes.h"
 #include "../Gridding/griddingSupport.h"
 #include "../FFT/fftCPU.h"
-#include "../Solvers/QuadPenalty.h"
+#include "../Penalties/QuadPenalty.h"
 
 #include <complex>
 #include <cmath>

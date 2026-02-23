@@ -19,7 +19,7 @@ Developed by:
 #include "../Operators/Gnufft.h"
 #include "../Operators/SENSE.h"
 #include "../Gridding/TimeSegmentation.h"
-#include "../Solvers/QuadPenalty.h"
+#include "../Penalties/QuadPenalty.h"
 #include "../Solvers/solve_pwls_pcg.hpp"
 
 #include "Helpers/SyntheticPhantom.hpp"
