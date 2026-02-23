@@ -314,6 +314,30 @@ struct TuiProcess {
         return true;
     }
 
+    /// @brief Non-blocking check whether pgview is still running.
+    ///
+    /// If pgview has exited, restores the original stderr fd and marks
+    /// this process as inactive. Returns true if pgview is still alive.
+    bool check_alive() {
+        if (!active || child_pid <= 0) return false;
+
+        int status = 0;
+        pid_t result = waitpid(child_pid, &status, WNOHANG);
+        if (result == child_pid) {
+            // pgview has exited — restore original stderr
+            clearerr(stderr);
+            if (original_stderr_fd >= 0) {
+                dup2(original_stderr_fd, STDERR_FILENO);
+                close(original_stderr_fd);
+                original_stderr_fd = -1;
+            }
+            child_pid = -1;
+            active = false;
+            return false;
+        }
+        return true; // Still running
+    }
+
     /// @brief Close the pipe and wait for pgview to exit.
     void wait() {
         if (!active) return;
@@ -397,6 +421,30 @@ inline void PG_LOG_INIT(const std::string& level_str = "info",
 // Lifecycle helpers (TUI mode only)
 // ---------------------------------------------------------------------------
 
+/// @brief Reinitialise the spdlog logger for classic (non-TUI) mode.
+///
+/// Called when pgview fails to spawn, to swap the JSONL sink for a colored
+/// stderr sink so the user sees human-readable output instead of raw JSON.
+inline void PG_LOG_REINIT_CLASSIC(const std::string& log_path = "powergrid.log") {
+    PG_TUI_MODE(false, true);
+
+    auto level = spdlog::get("powergrid")
+                     ? spdlog::get("powergrid")->level()
+                     : spdlog::level::info;
+
+    auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
+        log_path, 10UL * 1024UL * 1024UL, 3);
+    file_sink->set_level(spdlog::level::debug);
+
+    auto stderr_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
+    stderr_sink->set_level(level);
+
+    std::vector<spdlog::sink_ptr> sinks = {stderr_sink, file_sink};
+    auto logger = std::make_shared<spdlog::logger>("powergrid", sinks.begin(), sinks.end());
+    logger->set_level(spdlog::level::debug);
+    spdlog::set_default_logger(logger);
+}
+
 /// @brief Emit a "start" lifecycle event and auto-spawn pgview in TUI mode.
 ///
 /// When TUI mode is active, this function:
@@ -405,8 +453,8 @@ inline void PG_LOG_INIT(const std::string& level_str = "info",
 /// 3. Redirects this process's stderr to pgview's stdin via a pipe
 /// 4. pgview renders its TUI on stdout (the terminal)
 ///
-/// If pgview is not found or stdout isn't a terminal, falls back to raw
-/// JSONL output on stderr (still parseable by an external pgview).
+/// If pgview is not found or stdout isn't a terminal, automatically falls
+/// back to classic spdlog+indicators mode (human-readable colored output).
 inline void PG_TUI_START(const std::string& app_name,
                          const std::string& version = "1.1.0") {
     if (!PG_TUI_MODE()) return;
@@ -414,38 +462,46 @@ inline void PG_TUI_START(const std::string& app_name,
     // Try to auto-spawn pgview
     std::string pgview_path = pg_detail::find_pgview();
     auto& tui = pg_detail::TuiProcess::instance();
+    bool spawned = false;
     if (!pgview_path.empty()) {
-        tui.spawn(pgview_path);
-        // If spawn fails, we continue — JSONL still goes to stderr
+        spawned = tui.spawn(pgview_path);
     }
 
-    // Emit the start message (goes to pipe if pgview spawned, else raw stderr)
-    auto msg = fmt::format(
-        R"({{"type":"start","app":"{}","version":"{}"}})",
-        pg_detail::json_escape(app_name),
-        pg_detail::json_escape(version));
-    msg += '\n';
-    std::fwrite(msg.data(), 1, msg.size(), stderr);
-    std::fflush(stderr);
+    if (spawned) {
+        // pgview is running — emit JSONL start message through the pipe
+        auto msg = fmt::format(
+            R"({{"type":"start","app":"{}","version":"{}"}})",
+            pg_detail::json_escape(app_name),
+            pg_detail::json_escape(version));
+        msg += '\n';
+        std::fwrite(msg.data(), 1, msg.size(), stderr);
+        std::fflush(stderr);
+    } else {
+        // pgview not available — fall back to classic spdlog+indicators
+        PG_LOG_REINIT_CLASSIC();
+        PG_INFO("Starting {} v{}", app_name, version);
+    }
 }
 
 /// @brief Emit an "exit" lifecycle event and wait for pgview to finish.
 ///
-/// After emitting the exit JSONL message, this closes the pipe to pgview
-/// and waits for the user to press 'q' in the TUI before returning.
-/// If pgview was not spawned, this is a no-op beyond the JSONL emission.
+/// If pgview is still running, emits the exit JSONL message, closes the
+/// pipe, and waits for the user to press 'q' in the TUI before returning.
+/// If pgview already died (fell back to classic mode), just logs the exit.
 inline void PG_TUI_EXIT(int code) {
-    if (!PG_TUI_MODE()) return;
-
-    // Emit the exit message
-    auto msg = fmt::format(R"({{"type":"exit","code":{}}})", code);
-    msg += '\n';
-    std::fwrite(msg.data(), 1, msg.size(), stderr);
-    std::fflush(stderr);
-
-    // Wait for pgview to finish (user presses 'q')
     auto& tui = pg_detail::TuiProcess::instance();
-    tui.wait();
+
+    if (PG_TUI_MODE() && tui.active) {
+        // pgview is running — emit JSONL exit and wait
+        auto msg = fmt::format(R"({{"type":"exit","code":{}}})", code);
+        msg += '\n';
+        std::fwrite(msg.data(), 1, msg.size(), stderr);
+        std::fflush(stderr);
+        tui.wait();
+    } else {
+        // Classic mode or pgview already died
+        PG_INFO("Reconstruction finished (exit code {})", code);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -458,14 +514,19 @@ using PGProgressBar = indicators::BlockProgressBar;
 ///
 /// In TUI mode: emits JSONL progress messages, does not use indicators display.
 /// In classic mode: delegates to indicators::DynamicProgress for ANSI rendering.
+///
+/// If pgview dies mid-run, automatically switches to classic mode and
+/// re-registers all active bars with the indicators display.
 struct PGProgressManager {
     /// Owns the bars so they outlive the DynamicProgress reference wrappers.
     std::vector<std::shared_ptr<PGProgressBar>> owned_bars;
+    /// Whether each bar has been registered with indicators::DynamicProgress.
+    std::vector<bool> registered_with_display;
     /// Stacked display container — references bars in owned_bars.
     /// Only used in classic (non-TUI) mode.
     indicators::DynamicProgress<PGProgressBar> display;
-    /// Mutex for thread-safe JSONL output.
-    std::mutex jsonl_mutex;
+    /// Mutex for thread-safe output.
+    std::mutex mu;
     /// Next progress bar ID for JSONL messages.
     size_t next_id = 0;
 
@@ -473,17 +534,44 @@ struct PGProgressManager {
         display.set_option(indicators::option::HideBarWhenComplete{true});
     }
 
+    /// Check if pgview is still alive; if not, switch to classic mode.
+    /// Must be called with mu held.
+    void ensure_tui_or_fallback() {
+        if (!PG_TUI_MODE()) return; // Already in classic mode
+
+        auto& tui = pg_detail::TuiProcess::instance();
+        if (!tui.active) return; // pgview was never spawned
+
+        if (!tui.check_alive()) {
+            // pgview has died — stderr is restored by check_alive()
+            // Switch spdlog to classic mode
+            PG_LOG_REINIT_CLASSIC();
+            PG_INFO("pgview exited, switching to classic output");
+
+            // Re-register all active (non-completed) bars with indicators
+            for (size_t i = 0; i < owned_bars.size(); ++i) {
+                if (!registered_with_display[i]) {
+                    display.push_back(*owned_bars[i]);
+                    registered_with_display[i] = true;
+                }
+            }
+        }
+    }
+
     /// Register a new bar. In TUI mode, emits JSONL "add" and returns an index.
     /// In classic mode, adds to indicators::DynamicProgress.
     size_t add(std::shared_ptr<PGProgressBar> bar,
                const std::string& label,
                size_t max_progress) {
+        std::lock_guard<std::mutex> lock(mu);
+        ensure_tui_or_fallback();
+
         size_t id = next_id++;
         owned_bars.push_back(bar);
 
         if (PG_TUI_MODE()) {
+            registered_with_display.push_back(false);
             // Emit JSONL add message
-            std::lock_guard<std::mutex> lock(jsonl_mutex);
             auto msg = fmt::format(
                 R"({{"type":"progress","action":"add","id":{},"label":"{}","max":{}}})",
                 id,
@@ -495,14 +583,17 @@ struct PGProgressManager {
         } else {
             // Classic mode: register with indicators display
             display.push_back(*bar);
+            registered_with_display.push_back(true);
         }
         return id;
     }
 
     /// Tick a bar. In TUI mode, emits JSONL "tick".
     void tick(size_t idx, size_t current, const std::string& postfix = "") {
+        std::lock_guard<std::mutex> lock(mu);
+        ensure_tui_or_fallback();
+
         if (PG_TUI_MODE()) {
-            std::lock_guard<std::mutex> lock(jsonl_mutex);
             auto msg = fmt::format(
                 R"({{"type":"progress","action":"tick","id":{},"current":{},"postfix":"{}"}})",
                 idx, current,
@@ -511,37 +602,49 @@ struct PGProgressManager {
             std::fwrite(msg.data(), 1, msg.size(), stderr);
             std::fflush(stderr);
         } else {
-            auto& bar = display[idx];
-            if (!postfix.empty())
-                bar.set_option(indicators::option::PostfixText{postfix});
-            bar.tick();
+            if (idx < owned_bars.size()) {
+                auto& bar = display[idx];
+                if (!postfix.empty())
+                    bar.set_option(indicators::option::PostfixText{postfix});
+                bar.tick();
+            }
         }
     }
 
     /// Mark a bar as completed.
     void done(size_t idx) {
+        std::lock_guard<std::mutex> lock(mu);
+        ensure_tui_or_fallback();
+
         if (PG_TUI_MODE()) {
-            std::lock_guard<std::mutex> lock(jsonl_mutex);
             auto msg = fmt::format(
                 R"({{"type":"progress","action":"done","id":{}}})", idx);
             msg += '\n';
             std::fwrite(msg.data(), 1, msg.size(), stderr);
             std::fflush(stderr);
         } else {
-            display[idx].mark_as_completed();
+            if (idx < owned_bars.size())
+                display[idx].mark_as_completed();
         }
     }
 
-    /// Emit metrics (TUI mode only).
+    /// Emit metrics for convergence monitoring.
+    /// In TUI mode: emits JSONL. In classic mode: logs a readable summary.
     void metrics(size_t bar_id, size_t iter, double error_norm, double penalty) {
-        if (!PG_TUI_MODE()) return;
-        std::lock_guard<std::mutex> lock(jsonl_mutex);
-        auto msg = fmt::format(
-            R"({{"type":"metrics","bar_id":{},"iter":{},"error_norm":{:.6e},"penalty":{:.6e}}})",
-            bar_id, iter, error_norm, penalty);
-        msg += '\n';
-        std::fwrite(msg.data(), 1, msg.size(), stderr);
-        std::fflush(stderr);
+        std::lock_guard<std::mutex> lock(mu);
+        ensure_tui_or_fallback();
+
+        if (PG_TUI_MODE()) {
+            auto msg = fmt::format(
+                R"({{"type":"metrics","bar_id":{},"iter":{},"error_norm":{:.6e},"penalty":{:.6e}}})",
+                bar_id, iter, error_norm, penalty);
+            msg += '\n';
+            std::fwrite(msg.data(), 1, msg.size(), stderr);
+            std::fflush(stderr);
+        } else {
+            // Classic mode: log metrics as readable text
+            SPDLOG_INFO("iter {:3d}  err={:.4e}  penalty={:.4e}", iter, error_norm, penalty);
+        }
     }
 };
 

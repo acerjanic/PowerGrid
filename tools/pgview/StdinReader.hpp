@@ -4,26 +4,33 @@
 #include <string>
 #include <thread>
 #include <functional>
+#include <cstdio>
+#include <unistd.h>
 #include <nlohmann/json.hpp>
 #include "PGViewState.hpp"
 
 using json = nlohmann::json;
 
-/// @brief Background thread that reads JSONL from stdin and updates PGViewState.
+/// @brief Background thread that reads JSONL and updates PGViewState.
+///
+/// When data_fd >= 0 (auto-spawn mode), reads from that file descriptor
+/// (the pipe from the reconstruction process). When data_fd < 0 (manual
+/// pipe mode), reads from std::cin (which is stdin).
 ///
 /// Non-JSON lines are treated as raw log messages (graceful fallback).
 /// Calls `on_update()` after each state mutation to trigger UI redraw.
 class StdinReader {
 public:
-    StdinReader(PGViewState& state, std::function<void()> on_update)
-        : state_(state), on_update_(std::move(on_update)) {}
+    /// @param data_fd  File descriptor to read JSONL from. If < 0, uses std::cin.
+    StdinReader(PGViewState& state, std::function<void()> on_update, int data_fd = -1)
+        : state_(state), on_update_(std::move(on_update)), data_fd_(data_fd) {}
 
     /// Start the reader thread. Non-blocking.
     void start() {
         thread_ = std::thread([this]() { run(); });
     }
 
-    /// Wait for the reader thread to finish (stdin closed).
+    /// Wait for the reader thread to finish (input closed).
     void join() {
         if (thread_.joinable())
             thread_.join();
@@ -31,34 +38,67 @@ public:
 
 private:
     void run() {
-        std::string line;
-        while (std::getline(std::cin, line)) {
-            if (line.empty()) continue;
-
-            // Try to parse as JSON
-            if (line.front() == '{') {
-                try {
-                    auto j = json::parse(line);
-                    process_json(j);
-                    on_update_();
-                    continue;
-                } catch (...) {
-                    // Fall through to raw log
-                }
-            }
-
-            // Not valid JSON — treat as raw log line
-            state_.add_raw_log(line);
-            on_update_();
+        if (data_fd_ >= 0) {
+            // Read from the pipe fd (auto-spawn mode)
+            run_from_fd();
+        } else {
+            // Read from std::cin (manual pipe mode)
+            run_from_cin();
         }
 
-        // stdin closed — mark finished if not already done via "exit" message
+        // Input closed — mark finished if not already done via "exit" message
         {
             std::lock_guard<std::mutex> lock(state_.mu);
             if (!state_.finished) {
                 state_.finished = true;
             }
         }
+        on_update_();
+    }
+
+    /// Read JSONL lines from std::cin (stdin).
+    void run_from_cin() {
+        std::string line;
+        while (std::getline(std::cin, line)) {
+            process_line(line);
+        }
+    }
+
+    /// Read JSONL lines from a raw file descriptor.
+    void run_from_fd() {
+        // Wrap fd in a FILE* for buffered line reading
+        FILE* fp = fdopen(data_fd_, "r");
+        if (!fp) return;
+
+        char buf[8192];
+        while (fgets(buf, sizeof(buf), fp)) {
+            std::string line(buf);
+            // Strip trailing newline
+            while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
+                line.pop_back();
+            process_line(line);
+        }
+        // Don't fclose — main.cpp owns the fd and will close it
+    }
+
+    /// Process a single line of input (JSON or raw text).
+    void process_line(const std::string& line) {
+        if (line.empty()) return;
+
+        // Try to parse as JSON
+        if (line.front() == '{') {
+            try {
+                auto j = json::parse(line);
+                process_json(j);
+                on_update_();
+                return;
+            } catch (...) {
+                // Fall through to raw log
+            }
+        }
+
+        // Not valid JSON — treat as raw log line
+        state_.add_raw_log(line);
         on_update_();
     }
 
@@ -108,5 +148,6 @@ private:
 
     PGViewState& state_;
     std::function<void()> on_update_;
+    int data_fd_;
     std::thread thread_;
 };
