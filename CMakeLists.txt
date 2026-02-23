@@ -355,3 +355,11 @@ target_include_directories(cpu_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/Support/ArmaExtensions)
 target_link_libraries(cpu_tests PGCommon ${LIBS})
 
+# ---------------------------------------------------------------------------
+# pgview TUI viewer for reconstruction monitoring
+# ---------------------------------------------------------------------------
+option(BUILD_PGVIEW "Build the pgview TUI viewer" ON)
+if(BUILD_PGVIEW)
+    add_subdirectory(tools/pgview)
+endif()
+

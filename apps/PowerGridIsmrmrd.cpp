@@ -60,7 +60,8 @@ int main(int argc, char **argv) {
           ("Beta,B", po::value<double>(&beta), "Spatial regularization penalty weight")
           ("CGIterations,n", po::value<uword>(&NIter), "Number of preconditioned conjugate gradient interations for main solver")
           ("Dims2Penalize,D", po::value<uword>(&dims2penalize), "Dimensions to apply regularization to (2 or 3).")
-          ("log-level", po::value<std::string>()->default_value("info"), "Log level (trace, debug, info, warn, error)");
+          ("log-level", po::value<std::string>()->default_value("info"), "Log level (trace, debug, info, warn, error)")
+          ("no-tui", po::bool_switch()->default_value(false), "Disable JSONL/TUI output, use classic spdlog+indicators");
 
 
   po::variables_map vm;
@@ -112,7 +113,8 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  PG_LOG_INIT(vm["log-level"].as<std::string>());
+  PG_LOG_INIT(vm["log-level"].as<std::string>(), "powergrid.log", vm["no-tui"].as<bool>());
+  PG_TUI_START("PowerGridIsmrmrd");
 
   ISMRMRD::Dataset *d;
   ISMRMRD::IsmrmrdHeader hdr;
@@ -185,7 +187,8 @@ int main(int argc, char **argv) {
       indicators::option::ShowRemainingTime{true},
       indicators::option::MaxProgress{totalRecons}
   );
-  size_t recon_bar_idx = PG_PROGRESS_ADD(recon_bar);
+  size_t recon_bar_idx = PG_PROGRESS_ADD(recon_bar, "Recon", totalRecons);
+  size_t recon_count = 0;
 
   std::string baseFilename = "img";
 
@@ -269,7 +272,8 @@ int main(int argc, char **argv) {
 
 	                  //writeISMRMRDImageData<float>(d, ImageTemp, Nx, Ny, Nz);
                     writeNiftiMagPhsImage<float>(filename,ImageTemp,Nx,Ny,Nz);
-                    PG_PROGRESS_TICK(recon_bar_idx, fmt::format("Slice {}/{}", NSlice+1, NSliceMax+1));
+                    ++recon_count;
+                    PG_PROGRESS_TICK(recon_bar_idx, recon_count, fmt::format("Slice {}/{}", NSlice+1, NSliceMax+1));
                     }
 
                 }
@@ -281,5 +285,6 @@ int main(int argc, char **argv) {
   // Close ISMRMRD::Dataset, hdr, and acqTrack
 	closeISMRMRDData(d,hdr,acqTrack);
 
+  PG_TUI_EXIT(0);
   return 0;
 }

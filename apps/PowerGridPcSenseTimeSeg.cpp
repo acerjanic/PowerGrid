@@ -63,7 +63,8 @@ int main(int argc, char **argv)
 			("Dims2Penalize,D", po::value<uword>(&dims2penalize), "Dimensions to apply regularization to (2 or 3)")
 			("CGIterations,n", po::value<uword>(&NIter),
 					"Number of preconditioned conjugate gradient interations for main solver")
-			("log-level", po::value<std::string>()->default_value("info"), "Log level (trace, debug, info, warn, error)");
+			("log-level", po::value<std::string>()->default_value("info"), "Log level (trace, debug, info, warn, error)")
+		("no-tui", po::bool_switch()->default_value(false), "Disable JSONL/TUI output, use classic spdlog+indicators");
 
 	po::variables_map vm;
 
@@ -84,7 +85,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	PG_LOG_INIT(vm["log-level"].as<std::string>());
+	PG_LOG_INIT(vm["log-level"].as<std::string>(), "powergrid.log", vm["no-tui"].as<bool>());
+	PG_TUI_START("PowerGridPcSenseTimeSeg");
 
 	arma::Col<float> FM;
 	arma::Col<std::complex<float>> sen;
@@ -211,5 +213,6 @@ int main(int argc, char **argv)
   // Close ISMRMRD::Dataset
   delete d;
 
+  PG_TUI_EXIT(0);
   return 0;
 }

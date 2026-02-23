@@ -10,13 +10,18 @@ Developed by:
 */
 
 /// @file PGLog.hpp
-/// @brief Structured logging facade and shared terminal progress display for PowerGrid.
+/// @brief Structured logging facade, JSONL output for TUI, and progress bar display.
+///
+/// Default mode: TUI/JSONL — log messages and progress updates are emitted as
+/// single-line JSON objects on stderr, suitable for piping to `pgview`.
+/// Pass `no_tui=true` to PG_LOG_INIT to fall back to classic spdlog+indicators.
 
 #pragma once
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/sinks/base_sink.h>
 #include <spdlog/fmt/fmt.h>
 #include <indicators/block_progress_bar.hpp>
 #include <indicators/dynamic_progress.hpp>
@@ -26,24 +31,156 @@ Developed by:
 #include <memory>
 #include <string>
 #include <vector>
+#include <mutex>
+#include <cstdio>
+#include <ctime>
+#include <chrono>
 
 // ---------------------------------------------------------------------------
-// Logging
+// TUI mode flag
 // ---------------------------------------------------------------------------
 
-/// @brief Initialise the PowerGrid logger with two sinks.
+/// @brief Query or set the TUI/JSONL output mode.
+///
+/// Default is true (TUI/JSONL enabled). Call with `false` to disable before
+/// PG_LOG_INIT, or let PG_LOG_INIT set it via the `no_tui` parameter.
+inline bool& PG_TUI_MODE(bool set_value = true, bool do_set = false) {
+    static bool mode = true; // default: TUI/JSONL enabled
+    if (do_set)
+        mode = set_value;
+    return mode;
+}
+
+// ---------------------------------------------------------------------------
+// JSONL stderr sink for spdlog
+// ---------------------------------------------------------------------------
+
+namespace pg_detail {
+
+/// @brief Escape a string for JSON output (handles ", \, newlines, tabs).
+inline std::string json_escape(const std::string& s) {
+    std::string out;
+    out.reserve(s.size() + 8);
+    for (char c : s) {
+        switch (c) {
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n";  break;
+            case '\r': out += "\\r";  break;
+            case '\t': out += "\\t";  break;
+            default:   out += c;      break;
+        }
+    }
+    return out;
+}
+
+/// @brief Get the spdlog level name as a lowercase string.
+inline const char* level_name(spdlog::level::level_enum lvl) {
+    switch (lvl) {
+        case spdlog::level::trace:    return "trace";
+        case spdlog::level::debug:    return "debug";
+        case spdlog::level::info:     return "info";
+        case spdlog::level::warn:     return "warn";
+        case spdlog::level::err:      return "error";
+        case spdlog::level::critical: return "critical";
+        default:                      return "unknown";
+    }
+}
+
+/// @brief Format current time as ISO 8601 with milliseconds.
+inline std::string iso8601_now() {
+    auto now = std::chrono::system_clock::now();
+    auto tt = std::chrono::system_clock::to_time_t(now);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()) % 1000;
+    struct tm utc;
+    gmtime_r(&tt, &utc);
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
+                  utc.tm_year + 1900, utc.tm_mon + 1, utc.tm_mday,
+                  utc.tm_hour, utc.tm_min, utc.tm_sec,
+                  static_cast<int>(ms.count()));
+    return buf;
+}
+
+/// @brief spdlog sink that writes JSONL log messages to stderr.
+///
+/// Each log message becomes a single-line JSON object:
+/// {"type":"log","ts":"...","level":"info","file":"...","line":N,"msg":"..."}
+template <typename Mutex>
+class jsonl_stderr_sink : public spdlog::sinks::base_sink<Mutex> {
+protected:
+    void sink_it_(const spdlog::details::log_msg& msg) override {
+        // Extract source file basename
+        std::string file = "unknown";
+        int line = 0;
+        if (!msg.source.empty()) {
+            file = msg.source.filename;
+            line = msg.source.line;
+            // Extract basename only
+            auto pos = file.find_last_of("/\\");
+            if (pos != std::string::npos)
+                file = file.substr(pos + 1);
+        }
+
+        std::string payload = fmt::format(
+            R"({{"type":"log","ts":"{}","level":"{}","file":"{}","line":{},"msg":"{}"}})",
+            iso8601_now(),
+            level_name(msg.level),
+            json_escape(file),
+            line,
+            json_escape(std::string(msg.payload.data(), msg.payload.size()))
+        );
+        payload += '\n';
+        std::fwrite(payload.data(), 1, payload.size(), stderr);
+        std::fflush(stderr);
+    }
+
+    void flush_() override {
+        std::fflush(stderr);
+    }
+};
+
+using jsonl_stderr_sink_mt = jsonl_stderr_sink<std::mutex>;
+
+} // namespace pg_detail
+
+// ---------------------------------------------------------------------------
+// Logging initialisation
+// ---------------------------------------------------------------------------
+
+/// @brief Initialise the PowerGrid logger.
+///
+/// @param level_str  Log level string ("debug", "info", "warn", "error").
+/// @param log_path   Path to the rotating log file (always human-readable).
+/// @param no_tui     If true, disable JSONL and use classic spdlog+indicators.
 inline void PG_LOG_INIT(const std::string& level_str = "info",
-                        const std::string& log_path  = "powergrid.log") {
+                        const std::string& log_path  = "powergrid.log",
+                        bool no_tui = false) {
+    // Set the TUI mode flag
+    PG_TUI_MODE(!no_tui, true);
+
     auto level = spdlog::level::from_str(level_str);
 
-    auto stderr_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
-    stderr_sink->set_level(level);
-
+    // File sink — always human-readable
     auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
         log_path, 10UL * 1024UL * 1024UL, 3);
     file_sink->set_level(spdlog::level::debug);
 
-    std::vector<spdlog::sink_ptr> sinks{stderr_sink, file_sink};
+    std::vector<spdlog::sink_ptr> sinks;
+
+    if (PG_TUI_MODE()) {
+        // TUI mode: JSONL on stderr
+        auto jsonl_sink = std::make_shared<pg_detail::jsonl_stderr_sink_mt>();
+        jsonl_sink->set_level(level);
+        sinks = {jsonl_sink, file_sink};
+    } else {
+        // Classic mode: colored stderr
+        auto stderr_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
+        stderr_sink->set_level(level);
+        sinks = {stderr_sink, file_sink};
+    }
+
     auto logger = std::make_shared<spdlog::logger>("powergrid", sinks.begin(), sinks.end());
     logger->set_level(spdlog::level::debug);
     spdlog::set_default_logger(logger);
@@ -55,30 +192,125 @@ inline void PG_LOG_INIT(const std::string& level_str = "info",
 #define PG_ERROR(...) SPDLOG_ERROR(__VA_ARGS__)
 
 // ---------------------------------------------------------------------------
-// Progress bars — stacked multi-bar display via DynamicProgress
+// Lifecycle helpers (TUI mode only)
+// ---------------------------------------------------------------------------
+
+/// @brief Emit a "start" lifecycle event in TUI mode.
+inline void PG_TUI_START(const std::string& app_name,
+                         const std::string& version = "1.1.0") {
+    if (!PG_TUI_MODE()) return;
+    auto msg = fmt::format(
+        R"({{"type":"start","app":"{}","version":"{}"}})",
+        pg_detail::json_escape(app_name),
+        pg_detail::json_escape(version));
+    msg += '\n';
+    std::fwrite(msg.data(), 1, msg.size(), stderr);
+    std::fflush(stderr);
+}
+
+/// @brief Emit an "exit" lifecycle event in TUI mode.
+inline void PG_TUI_EXIT(int code) {
+    if (!PG_TUI_MODE()) return;
+    auto msg = fmt::format(R"({{"type":"exit","code":{}}})", code);
+    msg += '\n';
+    std::fwrite(msg.data(), 1, msg.size(), stderr);
+    std::fflush(stderr);
+}
+
+// ---------------------------------------------------------------------------
+// Progress bars — dual mode: JSONL (TUI) or indicators (classic)
 // ---------------------------------------------------------------------------
 
 using PGProgressBar = indicators::BlockProgressBar;
 
 /// @brief Singleton manager for stacked progress bar display.
 ///
-/// Owns all progress bars and feeds them into an indicators::DynamicProgress
-/// container that handles multi-line cursor movement and redraws.
-/// Completed bars are automatically hidden to keep the display clean.
+/// In TUI mode: emits JSONL progress messages, does not use indicators display.
+/// In classic mode: delegates to indicators::DynamicProgress for ANSI rendering.
 struct PGProgressManager {
     /// Owns the bars so they outlive the DynamicProgress reference wrappers.
     std::vector<std::shared_ptr<PGProgressBar>> owned_bars;
     /// Stacked display container — references bars in owned_bars.
+    /// Only used in classic (non-TUI) mode.
     indicators::DynamicProgress<PGProgressBar> display;
+    /// Mutex for thread-safe JSONL output.
+    std::mutex jsonl_mutex;
+    /// Next progress bar ID for JSONL messages.
+    size_t next_id = 0;
 
     PGProgressManager() {
         display.set_option(indicators::option::HideBarWhenComplete{true});
     }
 
-    /// Register a new bar with the stacked display. Returns its index.
-    size_t add(std::shared_ptr<PGProgressBar> bar) {
+    /// Register a new bar. In TUI mode, emits JSONL "add" and returns an index.
+    /// In classic mode, adds to indicators::DynamicProgress.
+    size_t add(std::shared_ptr<PGProgressBar> bar,
+               const std::string& label,
+               size_t max_progress) {
+        size_t id = next_id++;
         owned_bars.push_back(bar);
-        return display.push_back(*bar);
+
+        if (PG_TUI_MODE()) {
+            // Emit JSONL add message
+            std::lock_guard<std::mutex> lock(jsonl_mutex);
+            auto msg = fmt::format(
+                R"({{"type":"progress","action":"add","id":{},"label":"{}","max":{}}})",
+                id,
+                pg_detail::json_escape(label),
+                max_progress);
+            msg += '\n';
+            std::fwrite(msg.data(), 1, msg.size(), stderr);
+            std::fflush(stderr);
+        } else {
+            // Classic mode: register with indicators display
+            display.push_back(*bar);
+        }
+        return id;
+    }
+
+    /// Tick a bar. In TUI mode, emits JSONL "tick".
+    void tick(size_t idx, size_t current, const std::string& postfix = "") {
+        if (PG_TUI_MODE()) {
+            std::lock_guard<std::mutex> lock(jsonl_mutex);
+            auto msg = fmt::format(
+                R"({{"type":"progress","action":"tick","id":{},"current":{},"postfix":"{}"}})",
+                idx, current,
+                pg_detail::json_escape(postfix));
+            msg += '\n';
+            std::fwrite(msg.data(), 1, msg.size(), stderr);
+            std::fflush(stderr);
+        } else {
+            auto& bar = display[idx];
+            if (!postfix.empty())
+                bar.set_option(indicators::option::PostfixText{postfix});
+            bar.tick();
+        }
+    }
+
+    /// Mark a bar as completed.
+    void done(size_t idx) {
+        if (PG_TUI_MODE()) {
+            std::lock_guard<std::mutex> lock(jsonl_mutex);
+            auto msg = fmt::format(
+                R"({{"type":"progress","action":"done","id":{}}})", idx);
+            msg += '\n';
+            std::fwrite(msg.data(), 1, msg.size(), stderr);
+            std::fflush(stderr);
+        } else {
+            display[idx].mark_as_completed();
+        }
+    }
+
+    /// Emit metrics (TUI mode only).
+    void metrics(size_t bar_id, size_t iter, double error_norm, double penalty) {
+        if (!PG_TUI_MODE()) return;
+        std::lock_guard<std::mutex> lock(jsonl_mutex);
+        auto msg = fmt::format(
+            R"({{"type":"metrics","bar_id":{},"iter":{},"error_norm":{:.6e},"penalty":{:.6e}}})",
+            bar_id, iter, error_norm, penalty);
+        msg += '\n';
+        std::fwrite(msg.data(), 1, msg.size(), stderr);
+        std::fflush(stderr);
     }
 };
 
@@ -88,22 +320,38 @@ inline PGProgressManager& PG_PROGRESS() {
     return mgr;
 }
 
-/// Register a new progress bar. Returns an index for TICK/DONE calls.
-inline size_t PG_PROGRESS_ADD(std::shared_ptr<PGProgressBar> bar) {
-    return PG_PROGRESS().add(bar);
+/// @brief Register a new progress bar with label and max count.
+///
+/// In TUI mode, emits a JSONL "add" message. In classic mode, adds to indicators.
+/// Returns an index for use with PG_PROGRESS_TICK / PG_PROGRESS_DONE.
+inline size_t PG_PROGRESS_ADD(std::shared_ptr<PGProgressBar> bar,
+                              const std::string& label = "",
+                              size_t max_progress = 0) {
+    return PG_PROGRESS().add(bar, label, max_progress);
 }
 
-/// Advance bar at @p idx by one tick, optionally updating the postfix text.
-inline void PG_PROGRESS_TICK(size_t idx, const std::string& postfix = "") {
-    auto& display = PG_PROGRESS().display;
-    auto& bar = display[idx]; // triggers redraw of all active bars
-    if (!postfix.empty())
-        bar.set_option(indicators::option::PostfixText{postfix});
-    bar.tick();
+/// @brief Advance bar at @p idx, reporting current absolute count.
+///
+/// @param idx      Bar index from PG_PROGRESS_ADD.
+/// @param current  Absolute progress count (1-based, for ETA computation).
+/// @param postfix  Optional postfix text.
+inline void PG_PROGRESS_TICK(size_t idx, size_t current,
+                             const std::string& postfix = "") {
+    PG_PROGRESS().tick(idx, current, postfix);
 }
 
-/// Mark bar at @p idx as completed (it will be hidden from the display).
+/// @brief Mark bar at @p idx as completed (hidden in classic mode, "done" in TUI).
 inline void PG_PROGRESS_DONE(size_t idx) {
-    auto& display = PG_PROGRESS().display;
-    display[idx].mark_as_completed();
+    PG_PROGRESS().done(idx);
+}
+
+/// @brief Emit convergence metrics for a progress bar (TUI mode only).
+///
+/// @param bar_id      Bar index from PG_PROGRESS_ADD.
+/// @param iter        Current iteration number (1-based).
+/// @param error_norm  Data-fidelity error norm (||yi - Ax||).
+/// @param penalty     Roughness penalty value (R.Penalty(x)).
+inline void PG_METRICS(size_t bar_id, size_t iter,
+                       double error_norm, double penalty) {
+    PG_PROGRESS().metrics(bar_id, iter, error_norm, penalty);
 }

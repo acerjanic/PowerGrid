@@ -415,7 +415,7 @@ void getCompleteISMRMRDAcqData(ISMRMRD::Dataset *d, acqTracking *acqTrack, uword
       indicators::option::ShowRemainingTime{true},
       indicators::option::MaxProgress{static_cast<size_t>(numAcqs)}
   );
-  size_t acq_bar_idx = PG_PROGRESS_ADD(acq_bar);
+  size_t acq_bar_idx = PG_PROGRESS_ADD(acq_bar, "Read", static_cast<size_t>(numAcqs));
 
   uword curAcq = 0;
 	for (uword NPar = 0; NPar < acqTrack->NParMax; NPar++) {
@@ -429,7 +429,7 @@ void getCompleteISMRMRDAcqData(ISMRMRD::Dataset *d, acqTracking *acqTrack, uword
 
 				ISMRMRD::EncodingCounters encIdx = acq.idx();
 
-				PG_PROGRESS_TICK(acq_bar_idx, fmt::format("acq #{}", acqIndx));
+				PG_PROGRESS_TICK(acq_bar_idx, curAcq + 1, fmt::format("acq #{}", acqIndx));
 
 				for (uword jj = 0; jj<nc; jj++) {
 					for (uword kk = 0; kk<nro; kk++) {

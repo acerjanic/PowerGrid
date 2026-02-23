@@ -20,11 +20,19 @@ PowerGrid/
 ├── Support/                         # External headers (Catch2, ArmaExtensions)
 ├── cmake/Modules/                   # Custom CMake find scripts
 ├── docker/                          # Dockerfiles (pg, pg-hpcsdk, powergrid-dev)
+├── tools/                           # Standalone tools
+│   └── pgview/                      # TUI viewer for reconstruction monitoring
+│       ├── CMakeLists.txt           # Fetches FTXUI + nlohmann/json
+│       ├── main.cpp                 # Entry point: fullscreen TUI, stdin reader
+│       ├── PGViewState.hpp          # Thread-safe shared state
+│       ├── StdinReader.hpp          # JSONL parser thread
+│       ├── Sparkline.hpp            # Unicode sparkline renderer
+│       └── PGViewUI.hpp             # FTXUI render functions
 └── PowerGrid/                       # Main source
     ├── Core/                        # Core data structures and includes
     │   ├── PowerGrid.h              # Public aggregate header
     │   ├── PGIncludes.h             # Internal includes, precision macros
-    │   ├── PGLog.hpp                # Structured logging and progress bars
+    │   ├── PGLog.hpp                # Structured logging, progress bars, JSONL/TUI output
     │   ├── pgComplex.hpp            # Custom complex<T> for GPU
     │   ├── pgCol.hpp                # GPU-aware column vector (OpenACC/Metal)
     │   ├── pgMat.hpp                # GPU-aware matrix (OpenACC/Metal)
@@ -133,11 +141,13 @@ All regularization operators (in `Penalties/`) inherit from `Robject<T>`:
 | `-DMPISupport=ON` | Build MPI-distributed variants |
 | `-DMETAL_COMPUTE=ON` | Enable Apple Metal GPU backend |
 | `-DENABLE_DOUBLE_PRECISION=ON` | Switch to double precision |
+| `-DBUILD_PGVIEW=ON` | Build the pgview TUI viewer (default ON) |
 
 ### Main Build Targets
 
 - **`PGCommon`** — shared library with all algorithms
 - **`PowerGridIsmrmrd`**, **`PowerGridPcSense`**, etc. — reconstruction executables
+- **`pgview`** — TUI viewer for monitoring reconstruction progress
 - **`metal_tests`** — Metal GPU test suite (Catch2)
 - **`cpu_tests`** — CPU-only test suite (Catch2)
 - **`tests`** — Docker/standalone test suite (Catch2)
@@ -148,6 +158,8 @@ All regularization operators (in `Penalties/`) inherit from `Robject<T>`:
 |---------|---------|
 | Armadillo (~9.2) | MATLAB-like linear algebra |
 | ISMRMRD (v1.4) | HDF5-based MRI data format |
+| FTXUI (v6.1.9) | TUI framework for pgview |
+| nlohmann/json (v3.11.3) | JSONL parsing for pgview |
 | FFTW3 | CPU FFT |
 | CUDA 12.6 / cuFFT | GPU FFT (OpenACC path) |
 | Boost (>= 1.43) | Program options, MPI bindings |
@@ -170,6 +182,33 @@ All regularization operators (in `Penalties/`) inherit from `Robject<T>`:
 - `SyntheticReconTests.cpp` — 2D synthetic reconstruction tests
 - `Spiral3DReconTests.cpp` — 3D spiral reconstruction tests
 - `MetalNufftTests.cpp` — Metal NUFFT pipeline tests
+
+---
+
+## TUI Monitoring (pgview)
+
+Reconstruction executables output structured JSONL by default. Pipe to `pgview` for a live TUI display:
+
+```bash
+PowerGridIsmrmrd [args] 2>&1 | pgview
+```
+
+For headless/remote operation, disable JSONL and use classic spdlog+indicators:
+
+```bash
+PowerGridIsmrmrd [args] --no-tui
+```
+
+**JSONL protocol:** Single-line JSON objects on stderr with `"type"` field:
+- `log` — log messages with timestamp, level, file, line, message
+- `progress` — bar add/tick/done with label, max, current count
+- `metrics` — per-iteration error norm and penalty values (PCG solver)
+- `start`/`exit` — lifecycle events
+
+**pgview features:**
+- Scrolling log area with color-coded severity
+- Progress bars with percentage, ETA (time remaining), and wall clock completion time
+- Sparkline convergence plots (error norm + roughness penalty) using Unicode block characters
 
 ---
 

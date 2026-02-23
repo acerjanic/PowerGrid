@@ -128,7 +128,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
         indicators::option::ShowRemainingTime{true},
         indicators::option::MaxProgress{niter}
     );
-    size_t pcg_bar_idx = PG_PROGRESS_ADD(pcg_bar);
+    size_t pcg_bar_idx = PG_PROGRESS_ADD(pcg_bar, "PCG", static_cast<size_t>(niter));
 
     // Convert inputs to pgCol
     pgCol<pgComplex<T1>> x_pg(xInitial);
@@ -248,8 +248,10 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       x_pg += ddir_pg % step_pg;                             // Metal cvec_mul_scalar + add
 
       T1 errNorm = norm(yi_pg - Ax_pg);
-      PG_DEBUG("PCG iteration {}/{}: error norm = {}", ii + 1, niter, errNorm);
-      PG_PROGRESS_TICK(pcg_bar_idx, fmt::format("iter {}/{} err={:.4e}", ii + 1, niter, errNorm));
+      T1 penaltyVal = R.Penalty(x_pg.getArma());
+      PG_DEBUG("PCG iteration {}/{}: error norm = {}, penalty = {}", ii + 1, niter, errNorm, penaltyVal);
+      PG_PROGRESS_TICK(pcg_bar_idx, static_cast<size_t>(ii + 1), fmt::format("iter {}/{} err={:.4e}", ii + 1, niter, errNorm));
+      PG_METRICS(pcg_bar_idx, static_cast<size_t>(ii + 1), static_cast<double>(errNorm), static_cast<double>(penaltyVal));
     }
     PG_PROGRESS_DONE(pcg_bar_idx);
     return x_pg.getArma();
@@ -271,7 +273,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       indicators::option::ShowRemainingTime{true},
       indicators::option::MaxProgress{niter}
   );
-  size_t pcg_bar_idx = PG_PROGRESS_ADD(pcg_bar);
+  size_t pcg_bar_idx = PG_PROGRESS_ADD(pcg_bar, "PCG", static_cast<size_t>(niter));
 
   Col<CxT1> Ax = A * xInitial;
   if (Ax.has_nan())
@@ -379,8 +381,10 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
     Ax += step * Adir;
     x += (step * ddir);
     T1 errNorm = norm(yi - Ax, 2);
-    PG_DEBUG("PCG iteration {}/{}: error norm = {}", ii + 1, niter, errNorm);
-    PG_PROGRESS_TICK(pcg_bar_idx, fmt::format("iter {}/{} err={:.4e}", ii + 1, niter, errNorm));
+    T1 penaltyVal = R.Penalty(x);
+    PG_DEBUG("PCG iteration {}/{}: error norm = {}, penalty = {}", ii + 1, niter, errNorm, penaltyVal);
+    PG_PROGRESS_TICK(pcg_bar_idx, static_cast<size_t>(ii + 1), fmt::format("iter {}/{} err={:.4e}", ii + 1, niter, errNorm));
+    PG_METRICS(pcg_bar_idx, static_cast<size_t>(ii + 1), static_cast<double>(errNorm), static_cast<double>(penaltyVal));
 
   }
   PG_PROGRESS_DONE(pcg_bar_idx);
