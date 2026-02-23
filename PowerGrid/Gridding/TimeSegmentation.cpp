@@ -290,7 +290,7 @@ inline Col<complex<T1>> TimeSegmentation<T1, Tobj>::
         data.zeros();
         data(span(0, d.n_rows - 1)) = d;
     }
-    data.eval();
+    (void)data.eval();
     // Now we can do an FF without any additional
     // zero padding or trimming
     T1* cplxRawData = reinterpret_cast<T1*>(data.memptr());

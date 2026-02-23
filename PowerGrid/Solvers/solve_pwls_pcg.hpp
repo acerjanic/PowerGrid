@@ -83,7 +83,7 @@ inline complex<T1> dot_double(const Col<complex<T1>>& A,
 template <typename T1>
 inline T1 norm_grad(const Col<complex<T1>> &g, const Col<complex<T1>> &yi,
                     const Col<T1> &W) {
-  T1 normGrad = conv_to<T1>::from(norm(g) / real(trans(yi) * (W % yi)));
+  T1 normGrad = as_scalar(norm(g) / real(trans(yi) * (W % yi)));
   return normGrad;
 }
 
