@@ -32,10 +32,10 @@ Developed by:
 #include <chrono>
 
 // Include synthetic data generators
-#include "../PowerGrid/Tests/SyntheticPhantom.hpp"
-#include "../PowerGrid/Tests/SyntheticCoils.hpp"
-#include "../PowerGrid/Tests/SyntheticTrajectory.hpp"
-#include "../PowerGrid/Tests/SyntheticFieldMap.hpp"
+#include "../PowerGrid/Tests/Helpers/SyntheticPhantom.hpp"
+#include "../PowerGrid/Tests/Helpers/SyntheticCoils.hpp"
+#include "../PowerGrid/Tests/Helpers/SyntheticTrajectory.hpp"
+#include "../PowerGrid/Tests/Helpers/SyntheticFieldMap.hpp"
 
 namespace po = boost::program_options;
 using namespace arma;
