@@ -2,6 +2,7 @@
 
 #include <ftxui/dom/elements.hpp>
 #include <ftxui/dom/canvas.hpp>
+#include <ftxui/dom/node.hpp>
 #include <ftxui/screen/color.hpp>
 #include <string>
 #include <vector>
@@ -12,6 +13,7 @@
 #include <chrono>
 #include "PGViewState.hpp"
 #include "Sparkline.hpp"
+#include "GraphicsProtocol.hpp"
 
 using namespace ftxui;
 
@@ -180,14 +182,92 @@ inline Element RenderLogs(const PGViewState& state, size_t max_visible = 200) {
 // Image preview rendering
 // ---------------------------------------------------------------------------
 
+// Forward declaration for the overlay-aware variant
+class ImagePlaceholderNode;
+
+/// @brief Custom FTXUI Node that reserves space for an inline terminal image.
+///
+/// During Render(), it fills the area with spaces and records the absolute
+/// terminal position so the ImageOverlay thread can emit escape sequences
+/// at the correct coordinates.
+class ImagePlaceholderNode : public ftxui::Node {
+public:
+    ImagePlaceholderNode(int cols, int rows,
+                         const ImagePlaneView& plane,
+                         ImageOverlay* overlay)
+        : cols_(cols), rows_(rows), plane_(plane), overlay_(overlay) {}
+
+    void ComputeRequirement() override {
+        requirement_.min_x = cols_;
+        requirement_.min_y = rows_;
+    }
+
+    void SetBox(ftxui::Box box) override {
+        Node::SetBox(box);
+        // Record the position for the overlay thread.
+        // Box uses 0-based coordinates; terminal escape sequences use 1-based.
+        region_.term_row = box.y_min + 1;
+        region_.term_col = box.x_min + 1;
+        region_.cols = box.x_max - box.x_min + 1;
+        region_.rows = box.y_max - box.y_min + 1;
+        region_.pixels = plane_.pixels.data();
+        region_.px_w = plane_.nx;
+        region_.px_h = plane_.ny;
+    }
+
+    void Render(ftxui::Screen& screen) override {
+        // Fill the area with spaces to claim it from FTXUI
+        for (int y = box_.y_min; y <= box_.y_max; ++y) {
+            for (int x = box_.x_min; x <= box_.x_max; ++x) {
+                if (x >= 0 && x < screen.dimx() && y >= 0 && y < screen.dimy()) {
+                    screen.PixelAt(x, y).character = " ";
+                }
+            }
+        }
+    }
+
+    /// Get the recorded image region for the overlay thread.
+    const ImageRegion& region() const { return region_; }
+
+private:
+    int cols_, rows_;
+    const ImagePlaneView& plane_;
+    ImageOverlay* overlay_;
+    ImageRegion region_;
+};
+
 /// @brief Render a single image plane as a labeled FTXUI Canvas element.
 ///
-/// Uses DrawBlock (half-block characters) for 2:1 vertical sub-pixel resolution.
-/// Each pixel is mapped to a grayscale color via Color(gray, gray, gray).
-inline Element RenderSinglePlane(const ImagePlaneView& plane) {
+/// When proto == None, uses DrawBlock (half-block characters) for 2:1 vertical
+/// sub-pixel resolution. When a graphics protocol is available, creates a
+/// placeholder node and registers the region with the overlay thread.
+///
+/// @param plane    The image plane data.
+/// @param proto    The detected graphics protocol (None = Canvas fallback).
+/// @param overlay  Pointer to the overlay thread (nullptr if proto == None).
+/// @param[out] regions  Collects ImageRegion entries for the overlay thread.
+inline Element RenderSinglePlane(const ImagePlaneView& plane,
+                                  GraphicsProto proto = GraphicsProto::None,
+                                  std::vector<std::shared_ptr<ImagePlaceholderNode>>* placeholders = nullptr) {
     if (plane.pixels.empty() || plane.nx == 0 || plane.ny == 0)
         return text("");
 
+    if (proto != GraphicsProto::None && placeholders) {
+        // Graphics protocol path: placeholder node
+        int cols = static_cast<int>(plane.nx);
+        int rows = static_cast<int>(plane.ny) / 2; // Half-block: 2 pixels per row
+        if (rows < 1) rows = 1;
+
+        auto node = std::make_shared<ImagePlaceholderNode>(cols, rows, plane, nullptr);
+        placeholders->push_back(node);
+
+        return vbox({
+            text(plane.label) | bold | hcenter,
+            node,
+        }) | border;
+    }
+
+    // Canvas fallback (works on all terminals)
     int canvas_w = static_cast<int>(plane.nx);
     int canvas_h = static_cast<int>(plane.ny);
 
@@ -206,47 +286,63 @@ inline Element RenderSinglePlane(const ImagePlaneView& plane) {
     }) | border;
 }
 
-/// @brief Render the complete image preview section.
+/// @brief Render the complete content area (images + logs).
 ///
-/// Each plane is rendered at its native data resolution (set by the sender's
-/// preview_max_dim, default 128).  FTXUI handles clipping if the terminal
-/// is too narrow.
-///
-/// DrawBlock coordinate mapping:
-///   - x:  1 canvas pixel = 1 terminal column
-///   - y:  2 canvas pixels = 1 terminal row  (half-block ▄)
-///
-/// For 2D (1 plane): single image panel.
-/// For 3D (3 planes): MPR layout — axial + coronal side by side, sagittal below.
+/// Handles three cases:
+/// - No image: full-width scrolling logs
+/// - 2D (1 plane): side-by-side image + logs
+/// - 3D (3 planes): 2×2 quad layout — Axial, Coronal, Sagittal, Logs
 ///
 /// Must be called with state.mu locked.
-inline Element RenderImagePreview(const PGViewState& state) {
-    if (!state.has_image || state.latest_image.planes.empty())
-        return text("");
+inline Element RenderContentArea(const PGViewState& state,
+                                  GraphicsProto proto = GraphicsProto::None,
+                                  std::vector<std::shared_ptr<ImagePlaceholderNode>>* placeholders = nullptr) {
+    // No image: full-width logs
+    if (!state.has_image || state.latest_image.planes.empty()) {
+        return RenderLogs(state);
+    }
 
     const auto& img = state.latest_image;
     std::string iter_label = "iter " + std::to_string(img.iter);
 
     if (img.planes.size() == 1) {
-        // 2D: single image with iter label
+        // 2D: side-by-side — image | logs
         return vbox({
-            RenderSinglePlane(img.planes[0]),
+            hbox({
+                RenderSinglePlane(img.planes[0], proto, placeholders) | flex,
+                separator(),
+                RenderLogs(state) | flex,
+            }),
             text(iter_label) | dim | hcenter,
         });
     }
 
-    // 3D MPR: 2 across + 1 below
-    // Top row: Axial + Coronal side by side
-    // Bottom row: Sagittal + iter label
-    Elements top_row;
-    for (size_t i = 0; i < std::min(img.planes.size(), size_t(2)); i++)
-        top_row.push_back(RenderSinglePlane(img.planes[i]));
+    // 3D MPR: 2×2 quad layout
+    // Top row:    Axial    | Coronal
+    // Bottom row: Sagittal | Logs
+    Element top_left  = (img.planes.size() > 0)
+        ? RenderSinglePlane(img.planes[0], proto, placeholders)
+        : text("");
+    Element top_right = (img.planes.size() > 1)
+        ? RenderSinglePlane(img.planes[1], proto, placeholders)
+        : text("");
+    Element bot_left  = (img.planes.size() > 2)
+        ? RenderSinglePlane(img.planes[2], proto, placeholders)
+        : text("");
+    Element bot_right = RenderLogs(state);
 
-    Elements layout;
-    layout.push_back(hbox(std::move(top_row)));
-    if (img.planes.size() >= 3)
-        layout.push_back(RenderSinglePlane(img.planes[2]));
-    layout.push_back(text(iter_label) | dim | hcenter);
-
-    return vbox(std::move(layout));
+    return vbox({
+        hbox({
+            top_left | flex,
+            separator(),
+            top_right | flex,
+        }),
+        separator(),
+        hbox({
+            bot_left | flex,
+            separator(),
+            bot_right | flex,
+        }),
+        text(iter_label) | dim | hcenter,
+    });
 }

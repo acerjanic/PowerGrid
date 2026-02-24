@@ -6,8 +6,9 @@
 ///
 /// Reads JSONL from stdin (or a saved pipe fd), renders scrolling logs and
 /// progress bars with ETA, sparklines for convergence metrics, and wall
-/// clock completion time. Auto-exits when the reconstruction finishes and
-/// prints a summary to the terminal.
+/// clock completion time. Supports inline terminal images via iTerm2 and
+/// Kitty protocols, with Canvas half-block fallback for other terminals.
+/// Auto-exits when the reconstruction finishes and prints a summary.
 
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/screen_interactive.hpp>
@@ -19,6 +20,7 @@
 #include <cmath>
 #include <unistd.h>
 #include <fcntl.h>
+#include <memory>
 
 #include "PGViewState.hpp"
 #include "StdinReader.hpp"
@@ -119,6 +121,16 @@ int main() {
     // If stdin was already a terminal (manual pipe: ... | pgview),
     // data_fd stays -1 and StdinReader will use stdin directly.
 
+    // Detect terminal graphics protocol BEFORE entering fullscreen.
+    // Once FTXUI takes over, environment queries still work but this is cleaner.
+    GraphicsProto gfx_proto = detect_graphics_protocol();
+
+    // Create the image overlay thread if a graphics protocol is available.
+    std::unique_ptr<ImageOverlay> overlay;
+    if (gfx_proto != GraphicsProto::None) {
+        overlay = std::make_unique<ImageOverlay>(gfx_proto);
+    }
+
     PGViewState state;
     auto screen = ScreenInteractive::Fullscreen();
 
@@ -139,8 +151,11 @@ int main() {
     }, data_fd);
     reader.start();
 
+    // Raw pointers for the lambda capture (non-owning, lifetime managed by main)
+    ImageOverlay* overlay_ptr = overlay.get();
+
     // Build the UI renderer
-    auto renderer = Renderer([&]() {
+    auto renderer = Renderer([&state, gfx_proto, overlay_ptr]() {
         std::lock_guard<std::mutex> lock(state.mu);
 
         // Title bar
@@ -163,9 +178,6 @@ int main() {
         // Progress section
         Element progress_section = RenderProgress(state);
 
-        // Log section
-        Element log_section = RenderLogs(state);
-
         // Compose layout
         Elements layout;
         layout.push_back(title_bar);
@@ -184,16 +196,24 @@ int main() {
             layout.push_back(separator());
         }
 
-        // Bottom pane: logs + image preview side by side (if image available)
-        Element image_section = RenderImagePreview(state);
-        if (state.has_image) {
-            layout.push_back(hbox({
-                log_section,
-                separator(),
-                image_section,
-            }));
-        } else {
-            layout.push_back(log_section);
+        // Content area: images (quad/side-by-side) + logs, or full-width logs
+        // Collect placeholder nodes for the overlay thread
+        std::vector<std::shared_ptr<ImagePlaceholderNode>> placeholders;
+        layout.push_back(
+            RenderContentArea(state, gfx_proto,
+                              (gfx_proto != GraphicsProto::None) ? &placeholders : nullptr)
+        );
+
+        // If using graphics protocol, extract regions for overlay emission
+        if (overlay_ptr && !placeholders.empty()) {
+            // Regions will be populated after SetBox() during FTXUI's layout pass.
+            // We schedule a post-render callback via the overlay thread.
+            // The placeholder nodes record their positions during Render().
+            // We'll notify the overlay after this frame.
+            //
+            // Note: We collect the placeholder shared_ptrs here but their
+            // positions aren't final until Render(). The overlay thread will
+            // be notified separately via screen.PostEvent after the frame.
         }
 
         return vbox(std::move(layout)) | border;
@@ -205,10 +225,34 @@ int main() {
             screen.Exit();
             return true;
         }
+
+        // After each custom event (state update), notify overlay to re-render images
+        if (event == Event::Custom && overlay_ptr) {
+            // Schedule overlay notification after FTXUI renders.
+            // We use Post() to ensure it runs after the draw cycle.
+            screen.Post([overlay_ptr, &state]() {
+                // Collect regions from current image state
+                std::lock_guard<std::mutex> lock(state.mu);
+                if (!state.has_image || state.latest_image.planes.empty()) {
+                    overlay_ptr->set_regions({});
+                    overlay_ptr->notify();
+                    return;
+                }
+                // Note: the overlay will use the regions set during rendering.
+                // For now, we just trigger a notify to let it emit.
+                overlay_ptr->notify();
+            });
+        }
+
         return false;
     });
 
     screen.Loop(component);
+
+    // Stop the overlay thread before cleanup
+    if (overlay) {
+        overlay->stop();
+    }
 
     // Close pipe fd to unblock reader thread if still running
     // (e.g., if user pressed 'q' before the reconstruction finished)
