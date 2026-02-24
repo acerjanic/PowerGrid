@@ -6,7 +6,16 @@ cmake_minimum_required(VERSION 3.14) #CMake 3.14 required for FetchContent
 set(CMAKE_CXX_STANDARD 17)
 #set(CMAKE_CXX_EXTENSIONS ON)
 
-project("PowerGridTests" CXX)
+project("PowerGridTests" VERSION 1.9.0 LANGUAGES CXX)
+
+# Generate Version.h so PGLog.hpp can resolve POWERGRID_VERSION_STRING
+# in the standalone test build (which doesn't use the root CMakeLists.txt).
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/../Core/Version.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/Version.h"
+    @ONLY
+)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # Fetch spdlog and indicators for structured logging
 include(FetchContent)

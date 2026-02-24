@@ -6,7 +6,18 @@ cmake_minimum_required(VERSION 3.17) #CMake version 3.2 required to properly sup
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-project("PowerGrid" CXX)
+project("PowerGrid" VERSION 1.9.0 LANGUAGES CXX)
+
+# ---------------------------------------------------------------------------
+# Version header generation
+# ---------------------------------------------------------------------------
+# Generate a Version.h from the template so C++ code can reference
+# POWERGRID_VERSION_STRING without hardcoding a version number.
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/PowerGrid/Core/Version.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/Version.h"
+    @ONLY
+)
 
 # ---------------------------------------------------------------------------
 # Install RPATH configuration

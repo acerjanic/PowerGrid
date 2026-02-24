@@ -44,11 +44,18 @@ if(METAL_COMPUTE)
 endif()
 
 add_library(PGCommon SHARED ${PG_FILES})
-target_include_directories(PGCommon PUBLIC ${PROJECT_SOURCE_DIR}/PowerGrid)
+target_include_directories(PGCommon PUBLIC
+	${PROJECT_SOURCE_DIR}/PowerGrid
+	${CMAKE_BINARY_DIR}  # for generated Version.h
+)
 if(METAL_COMPUTE AND TARGET MetalShaders)
 	add_dependencies(PGCommon MetalShaders)
 endif()
 target_link_libraries(PGCommon ${LIBS})
-set_target_properties(PGCommon PROPERTIES LINK_DEPENDS_NO_SHARED true)
+set_target_properties(PGCommon PROPERTIES
+	LINK_DEPENDS_NO_SHARED true
+	VERSION   ${PROJECT_VERSION}
+	SOVERSION ${PROJECT_VERSION_MAJOR}
+)
 
 install(TARGETS PGCommon LIBRARY DESTINATION lib)

@@ -18,6 +18,8 @@ Developed by:
 
 #pragma once
 
+#include "Version.h"
+
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
@@ -456,7 +458,7 @@ inline void PG_LOG_REINIT_CLASSIC(const std::string& log_path = "powergrid.log")
 /// If pgview is not found or stdout isn't a terminal, automatically falls
 /// back to classic spdlog+indicators mode (human-readable colored output).
 inline void PG_TUI_START(const std::string& app_name,
-                         const std::string& version = "1.1.0") {
+                         const std::string& version = POWERGRID_VERSION_STRING) {
     if (!PG_TUI_MODE()) return;
 
     // Try to auto-spawn pgview
