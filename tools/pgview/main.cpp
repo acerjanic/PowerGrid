@@ -147,13 +147,23 @@ int main() {
     // Consumed by the Post() task to emit escape sequences.
     // Both accesses happen on the main thread (no mutex needed).
     std::vector<ImageRegion> rendered_regions;
+    uint64_t last_emitted_gen = 0; // tracks which image generation was last emitted
 
-    // Build the UI renderer
-    auto renderer = Renderer([&state, gfx_proto, &rendered_regions]() {
+    // Build the UI renderer.
+    // When a graphics protocol is available, the element tree is wrapped with
+    // a PostRenderNode that schedules image emission via screen.Post() after
+    // all ImagePlaceholderNodes have registered their regions. The Post() task
+    // runs on the NEXT event loop iteration — after FTXUI has flushed the
+    // current frame — so images are drawn on top of the already-visible frame.
+    // FTXUI's differential rendering won't overwrite the placeholder cells
+    // (unchanged spaces) on subsequent draws, so images persist.
+    //
+    // Images are only re-emitted when the image data changes (tracked by
+    // image_generation counter), not on every UI update.
+    auto renderer = Renderer([&]() {
         std::lock_guard<std::mutex> lock(state.mu);
 
-        // Clear regions from the previous frame. They were already consumed
-        // by the Post() task, but clear anyway for safety.
+        // Clear regions from the previous frame.
         rendered_regions.clear();
 
         // Title bar
@@ -204,29 +214,40 @@ int main() {
                                   ? &rendered_regions : nullptr)
         );
 
-        return vbox(std::move(layout)) | border;
+        auto result = vbox(std::move(layout)) | border;
+
+        // Wrap with post-render callback to schedule image emission.
+        // PostRenderNode fires after all children (including placeholder nodes)
+        // have completed their Render() calls, so rendered_regions is fully
+        // populated. The Post() task runs on the next event loop iteration,
+        // AFTER FTXUI has flushed this frame to the terminal.
+        //
+        // Only emit when the image data has changed (new PCG iteration)
+        // to avoid re-writing escape sequences on every log/progress update
+        // which causes flicker.
+        if (gfx_proto != GraphicsProto::None) {
+            uint64_t current_gen = state.image_generation;
+            result = with_post_render(std::move(result),
+                [&screen, gfx_proto, &rendered_regions, &last_emitted_gen, current_gen]() {
+                    if (current_gen == last_emitted_gen) return; // no new image data
+                    if (rendered_regions.empty()) return;
+                    last_emitted_gen = current_gen;
+                    auto regions = rendered_regions;
+                    screen.Post([gfx_proto, regions = std::move(regions)]() {
+                        emit_inline_images(gfx_proto, regions);
+                    });
+                });
+        }
+
+        return result;
     });
 
-    // Handle keyboard events (manual quit) and graphics protocol emission
+    // Handle keyboard events (manual quit)
     auto component = CatchEvent(renderer, [&](Event event) {
         if (event == Event::Character('q') || event == Event::Escape) {
             screen.Exit();
             return true;
         }
-
-        // After each state update, schedule image emission for the next
-        // event loop iteration. The Post() task runs AFTER the current
-        // frame is flushed to the terminal. FTXUI's differential rendering
-        // won't touch the placeholder cells (spaces that haven't changed),
-        // so the inline images persist until the next full redraw.
-        if (event == Event::Custom && gfx_proto != GraphicsProto::None) {
-            screen.Post([gfx_proto, &rendered_regions]() {
-                if (!rendered_regions.empty()) {
-                    emit_inline_images(gfx_proto, rendered_regions);
-                }
-            });
-        }
-
         return false;
     });
 

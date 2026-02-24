@@ -258,6 +258,13 @@ inline void emit_kitty(std::string& out, const ImageRegion& r) {
 
     std::string b64 = base64_encode(rgba.data(), rgba.size());
 
+    // Kitty graphics protocol: chunked transmission
+    // a=T  — transmit and display
+    // f=32 — raw RGBA format
+    // s/v  — image width/height in pixels
+    // c/r  — display size in terminal columns/rows
+    // q=2  — suppress OK response (prevents confusing FTXUI's input parser)
+    // m=0  — last chunk, m=1 — more chunks follow
     const size_t chunk_size = 4096;
     size_t offset = 0;
     bool first = true;
@@ -267,15 +274,19 @@ inline void emit_kitty(std::string& out, const ImageRegion& r) {
         size_t chunk = std::min(remaining, chunk_size);
         bool last = (offset + chunk >= b64.size());
 
-        out += "\033_G";
         if (first) {
-            out += "a=T,f=32"
+            // First chunk: includes all metadata
+            out += "\033_Ga=T,f=32,q=2"
                    ",s=" + std::to_string(r.px_w) +
                    ",v=" + std::to_string(r.px_h) +
-                   ",C=1";
+                   ",c=" + std::to_string(r.cols) +
+                   ",r=" + std::to_string(r.rows) +
+                   ",m=" + (last ? "0" : "1") + ";";
             first = false;
+        } else {
+            // Continuation chunks: only m= flag
+            out += "\033_Gm=" + std::string(last ? "0" : "1") + ";";
         }
-        out += last ? ",m=0;" : ",m=1;";
         out += b64.substr(offset, chunk);
         out += "\033\\";
 
@@ -299,9 +310,9 @@ inline void emit_inline_images(GraphicsProto proto,
 
     std::string output;
 
-    // Kitty: delete all placements before re-emitting (prevents stacking)
+    // Kitty: delete all visible placements before re-emitting (prevents stacking)
     if (proto == GraphicsProto::Kitty) {
-        output += "\033_Ga=d;\033\\";
+        output += "\033_Ga=d,d=A,q=2;\033\\";
     }
 
     // Save cursor

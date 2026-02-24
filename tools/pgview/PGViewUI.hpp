@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <ctime>
 #include <chrono>
+#include <functional>
 #include "PGViewState.hpp"
 #include "Sparkline.hpp"
 #include "GraphicsProtocol.hpp"
@@ -209,13 +210,60 @@ public:
     }
 
     void Render(ftxui::Screen& screen) override {
-        // Fill the area with spaces to claim it from FTXUI's differential renderer.
-        // These cells will remain "unchanged" on subsequent frames, so FTXUI
-        // won't overwrite the inline images we place here via escape sequences.
-        for (int y = box_.y_min; y <= box_.y_max; ++y) {
-            for (int x = box_.x_min; x <= box_.x_max; ++x) {
-                if (x >= 0 && x < screen.dimx() && y >= 0 && y < screen.dimy()) {
-                    screen.PixelAt(x, y).character = " ";
+        int box_w = box_.x_max - box_.x_min + 1;
+        int box_h = box_.y_max - box_.y_min + 1;
+
+        // Render half-block characters as a Canvas-like backdrop.
+        // When a graphics protocol is active, the inline image will be
+        // overlaid on top via escape sequences. The half-block rendering
+        // eliminates the "flash" problem: when image data changes, FTXUI's
+        // differential renderer writes new half-blocks (which already look
+        // like the image), so the transition from old-inline-image →
+        // new-half-blocks → new-inline-image is nearly invisible.
+        // Without this, the transition was old-image → spaces → new-image,
+        // creating an obvious flash.
+        if (!plane_.pixels.empty() && plane_.nx > 0 && plane_.ny > 0) {
+            double scale_x = static_cast<double>(plane_.nx) / box_w;
+            double scale_y = static_cast<double>(plane_.ny) / (box_h * 2);
+            int max_px = static_cast<int>(plane_.nx - 1);
+            int max_py = static_cast<int>(plane_.ny - 1);
+
+            for (int ty = 0; ty < box_h; ++ty) {
+                for (int tx = 0; tx < box_w; ++tx) {
+                    int sx = box_.x_min + tx;
+                    int sy = box_.y_min + ty;
+                    if (sx < 0 || sx >= screen.dimx() ||
+                        sy < 0 || sy >= screen.dimy())
+                        continue;
+
+                    // Map terminal cell to image pixels (2 pixel rows per cell)
+                    int px = std::min(static_cast<int>(tx * scale_x), max_px);
+                    int py_top = std::min(static_cast<int>((ty * 2) * scale_y), max_py);
+                    int py_bot = std::min(static_cast<int>((ty * 2 + 1) * scale_y), max_py);
+
+                    float v_top = std::clamp(
+                        plane_.pixels[static_cast<size_t>(py_top) * plane_.nx + px],
+                        0.0f, 1.0f);
+                    float v_bot = std::clamp(
+                        plane_.pixels[static_cast<size_t>(py_bot) * plane_.nx + px],
+                        0.0f, 1.0f);
+
+                    uint8_t g_top = static_cast<uint8_t>(v_top * 255.0f);
+                    uint8_t g_bot = static_cast<uint8_t>(v_bot * 255.0f);
+
+                    auto& pixel = screen.PixelAt(sx, sy);
+                    pixel.character = "\u2580"; // upper half block
+                    pixel.foreground_color = Color(g_top, g_top, g_top);
+                    pixel.background_color = Color(g_bot, g_bot, g_bot);
+                }
+            }
+        } else {
+            // No image data — fill with spaces
+            for (int y = box_.y_min; y <= box_.y_max; ++y) {
+                for (int x = box_.x_min; x <= box_.x_max; ++x) {
+                    if (x >= 0 && x < screen.dimx() && y >= 0 && y < screen.dimy()) {
+                        screen.PixelAt(x, y).character = " ";
+                    }
                 }
             }
         }
@@ -226,8 +274,8 @@ public:
             ImageRegion r;
             r.term_row = box_.y_min + 1; // FTXUI box is 0-based, ANSI is 1-based
             r.term_col = box_.x_min + 1;
-            r.cols = box_.x_max - box_.x_min + 1;
-            r.rows = box_.y_max - box_.y_min + 1;
+            r.cols = box_w;
+            r.rows = box_h;
             r.pixels = plane_.pixels; // copy
             r.px_w = plane_.nx;
             r.px_h = plane_.ny;
@@ -350,4 +398,48 @@ inline Element RenderContentArea(const PGViewState& state,
         }),
         text(iter_label) | dim | hcenter,
     });
+}
+
+// ---------------------------------------------------------------------------
+// Post-render callback wrapper
+// ---------------------------------------------------------------------------
+
+/// @brief FTXUI Node wrapper that calls a callback after its child renders.
+///
+/// Used to schedule image emission after FTXUI finishes its Render pass
+/// (when all ImagePlaceholderNode positions are finalized) but before
+/// FTXUI flushes the screen buffer. A Post() call from the callback
+/// ensures the emit task runs on the NEXT iteration — after the flush.
+class PostRenderNode : public ftxui::Node {
+public:
+    PostRenderNode(Element child, std::function<void()> callback)
+        : callback_(std::move(callback)) {
+        children_.push_back(std::move(child));
+    }
+
+    void ComputeRequirement() override {
+        Node::ComputeRequirement();
+        requirement_ = children_[0]->requirement();
+    }
+
+    void SetBox(ftxui::Box box) override {
+        Node::SetBox(box);
+        children_[0]->SetBox(box);
+    }
+
+    void Render(ftxui::Screen& screen) override {
+        children_[0]->Render(screen);
+        if (callback_) callback_();
+    }
+
+private:
+    std::function<void()> callback_;
+};
+
+/// @brief Wrap an Element with a post-render callback.
+///
+/// The callback fires after the wrapped element (and all its children)
+/// have completed their Render() calls.
+inline Element with_post_render(Element inner, std::function<void()> callback) {
+    return std::make_shared<PostRenderNode>(std::move(inner), std::move(callback));
 }

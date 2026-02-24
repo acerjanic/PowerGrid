@@ -91,6 +91,7 @@ struct PGViewState {
     /// Latest image preview for TUI display.
     ImageFrame latest_image;
     bool has_image = false;
+    uint64_t image_generation = 0; ///< Incremented on each new image frame.
 
     /// Session timing — set by set_start() and set_exit().
     std::chrono::steady_clock::time_point session_start_time;
@@ -180,6 +181,7 @@ struct PGViewState {
         std::lock_guard<std::mutex> lock(mu);
         latest_image = {bar_id, iter, std::move(planes)};
         has_image = true;
+        ++image_generation;
     }
 
     // --- Summary helpers (call with mu locked) ---
