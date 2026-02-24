@@ -182,20 +182,22 @@ inline Element RenderLogs(const PGViewState& state, size_t max_visible = 200) {
 // Image preview rendering
 // ---------------------------------------------------------------------------
 
-// Forward declaration for the overlay-aware variant
-class ImagePlaceholderNode;
-
 /// @brief Custom FTXUI Node that reserves space for an inline terminal image.
 ///
-/// During Render(), it fills the area with spaces and records the absolute
-/// terminal position so the ImageOverlay thread can emit escape sequences
-/// at the correct coordinates.
+/// During Render(), it fills the area with spaces (so FTXUI doesn't draw
+/// there) and pushes an ImageRegion with a COPY of the pixel data into the
+/// shared region vector. The main loop then emits escape sequences at
+/// those recorded positions via a Post() task.
 class ImagePlaceholderNode : public ftxui::Node {
 public:
+    /// @param cols      Requested width in terminal columns.
+    /// @param rows      Requested height in terminal rows.
+    /// @param plane     Image plane (pixels are copied during Render).
+    /// @param sink      Shared vector where regions are collected.
     ImagePlaceholderNode(int cols, int rows,
                          const ImagePlaneView& plane,
-                         ImageOverlay* overlay)
-        : cols_(cols), rows_(rows), plane_(plane), overlay_(overlay) {}
+                         std::vector<ImageRegion>* sink)
+        : cols_(cols), rows_(rows), plane_(plane), sink_(sink) {}
 
     void ComputeRequirement() override {
         requirement_.min_x = cols_;
@@ -204,19 +206,12 @@ public:
 
     void SetBox(ftxui::Box box) override {
         Node::SetBox(box);
-        // Record the position for the overlay thread.
-        // Box uses 0-based coordinates; terminal escape sequences use 1-based.
-        region_.term_row = box.y_min + 1;
-        region_.term_col = box.x_min + 1;
-        region_.cols = box.x_max - box.x_min + 1;
-        region_.rows = box.y_max - box.y_min + 1;
-        region_.pixels = plane_.pixels.data();
-        region_.px_w = plane_.nx;
-        region_.px_h = plane_.ny;
     }
 
     void Render(ftxui::Screen& screen) override {
-        // Fill the area with spaces to claim it from FTXUI
+        // Fill the area with spaces to claim it from FTXUI's differential renderer.
+        // These cells will remain "unchanged" on subsequent frames, so FTXUI
+        // won't overwrite the inline images we place here via escape sequences.
         for (int y = box_.y_min; y <= box_.y_max; ++y) {
             for (int x = box_.x_min; x <= box_.x_max; ++x) {
                 if (x >= 0 && x < screen.dimx() && y >= 0 && y < screen.dimy()) {
@@ -224,42 +219,52 @@ public:
                 }
             }
         }
-    }
 
-    /// Get the recorded image region for the overlay thread.
-    const ImageRegion& region() const { return region_; }
+        // Push a region with OWNED pixel data into the collection vector.
+        // At this point box_ is valid (SetBox was called before Render).
+        if (sink_ && !plane_.pixels.empty()) {
+            ImageRegion r;
+            r.term_row = box_.y_min + 1; // FTXUI box is 0-based, ANSI is 1-based
+            r.term_col = box_.x_min + 1;
+            r.cols = box_.x_max - box_.x_min + 1;
+            r.rows = box_.y_max - box_.y_min + 1;
+            r.pixels = plane_.pixels; // copy
+            r.px_w = plane_.nx;
+            r.px_h = plane_.ny;
+            sink_->push_back(std::move(r));
+        }
+    }
 
 private:
     int cols_, rows_;
     const ImagePlaneView& plane_;
-    ImageOverlay* overlay_;
-    ImageRegion region_;
+    std::vector<ImageRegion>* sink_;
 };
 
-/// @brief Render a single image plane as a labeled FTXUI Canvas element.
+/// @brief Render a single image plane as a labeled FTXUI element.
 ///
 /// When proto == None, uses DrawBlock (half-block characters) for 2:1 vertical
 /// sub-pixel resolution. When a graphics protocol is available, creates a
-/// placeholder node and registers the region with the overlay thread.
+/// placeholder node that reserves space and registers an ImageRegion (with
+/// copied pixel data) into the region_sink during FTXUI's Render pass.
 ///
-/// @param plane    The image plane data.
-/// @param proto    The detected graphics protocol (None = Canvas fallback).
-/// @param overlay  Pointer to the overlay thread (nullptr if proto == None).
-/// @param[out] regions  Collects ImageRegion entries for the overlay thread.
+/// @param plane        The image plane data.
+/// @param proto        The detected graphics protocol (None = Canvas fallback).
+/// @param region_sink  Collects ImageRegion entries for escape sequence emission.
 inline Element RenderSinglePlane(const ImagePlaneView& plane,
                                   GraphicsProto proto = GraphicsProto::None,
-                                  std::vector<std::shared_ptr<ImagePlaceholderNode>>* placeholders = nullptr) {
+                                  std::vector<ImageRegion>* region_sink = nullptr) {
     if (plane.pixels.empty() || plane.nx == 0 || plane.ny == 0)
         return text("");
 
-    if (proto != GraphicsProto::None && placeholders) {
-        // Graphics protocol path: placeholder node
+    if (proto != GraphicsProto::None && region_sink) {
+        // Graphics protocol path: placeholder node that reserves screen space.
+        // The actual image will be drawn via escape sequences after FTXUI flushes.
         int cols = static_cast<int>(plane.nx);
-        int rows = static_cast<int>(plane.ny) / 2; // Half-block: 2 pixels per row
+        int rows = static_cast<int>(plane.ny) / 2; // ~2 pixels per terminal row
         if (rows < 1) rows = 1;
 
-        auto node = std::make_shared<ImagePlaceholderNode>(cols, rows, plane, nullptr);
-        placeholders->push_back(node);
+        auto node = std::make_shared<ImagePlaceholderNode>(cols, rows, plane, region_sink);
 
         return vbox({
             text(plane.label) | bold | hcenter,
@@ -296,7 +301,7 @@ inline Element RenderSinglePlane(const ImagePlaneView& plane,
 /// Must be called with state.mu locked.
 inline Element RenderContentArea(const PGViewState& state,
                                   GraphicsProto proto = GraphicsProto::None,
-                                  std::vector<std::shared_ptr<ImagePlaceholderNode>>* placeholders = nullptr) {
+                                  std::vector<ImageRegion>* region_sink = nullptr) {
     // No image: full-width logs
     if (!state.has_image || state.latest_image.planes.empty()) {
         return RenderLogs(state);
@@ -309,7 +314,7 @@ inline Element RenderContentArea(const PGViewState& state,
         // 2D: side-by-side — image | logs
         return vbox({
             hbox({
-                RenderSinglePlane(img.planes[0], proto, placeholders) | flex,
+                RenderSinglePlane(img.planes[0], proto, region_sink) | flex,
                 separator(),
                 RenderLogs(state) | flex,
             }),
@@ -321,13 +326,13 @@ inline Element RenderContentArea(const PGViewState& state,
     // Top row:    Axial    | Coronal
     // Bottom row: Sagittal | Logs
     Element top_left  = (img.planes.size() > 0)
-        ? RenderSinglePlane(img.planes[0], proto, placeholders)
+        ? RenderSinglePlane(img.planes[0], proto, region_sink)
         : text("");
     Element top_right = (img.planes.size() > 1)
-        ? RenderSinglePlane(img.planes[1], proto, placeholders)
+        ? RenderSinglePlane(img.planes[1], proto, region_sink)
         : text("");
     Element bot_left  = (img.planes.size() > 2)
-        ? RenderSinglePlane(img.planes[2], proto, placeholders)
+        ? RenderSinglePlane(img.planes[2], proto, region_sink)
         : text("");
     Element bot_right = RenderLogs(state);
 
