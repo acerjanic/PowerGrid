@@ -208,10 +208,16 @@ int main() {
         // When a graphics protocol is available, RenderContentArea creates
         // ImagePlaceholderNode elements that push ImageRegion entries (with
         // copied pixel data) into rendered_regions during FTXUI's Render pass.
+        //
+        // flex ensures that non-flex children above (title, progress/sparklines)
+        // get their full required space first, and this area fills the rest.
+        // Without flex, the image planes' large min_y requests (64 rows each)
+        // cause FTXUI to proportionally shrink all children, squeezing the
+        // progress section and clipping the sparkline row.
         layout.push_back(
             RenderContentArea(state, gfx_proto,
                               (gfx_proto != GraphicsProto::None)
-                                  ? &rendered_regions : nullptr)
+                                  ? &rendered_regions : nullptr) | flex
         );
 
         auto result = vbox(std::move(layout)) | border;
