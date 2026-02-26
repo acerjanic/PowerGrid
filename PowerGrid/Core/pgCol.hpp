@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 
 #ifdef _OPENACC
 #include "openacc.h"
@@ -994,6 +995,130 @@ pgCol<pgComplex<T>> operator%(const pgCol<T>& W, const pgCol<pgComplex<T>>& X) {
     #endif
     for (arma::uword ii = 0; ii < W.n_elem; ii++) {
         out.at(ii) = pgComplex<T>(W.at(ii), T(0)) * X.at(ii);
+    }
+    return out;
+}
+
+// =========================================================================
+// Additional free functions for Phase 2: solver and penalty support
+// =========================================================================
+
+/// Schur (element-wise) dot product without conjugation: sum(A[i] * B[i]).
+/// Unlike cdot, this does NOT conjugate A. Used in norm_grad_pg denominator.
+template<typename T>
+pgComplex<T> accu_schur(const pgCol<pgComplex<T>>& A, const pgCol<pgComplex<T>>& B) {
+    T re = T(0), im = T(0);
+    for (arma::uword ii = 0; ii < A.n_elem; ii++) {
+        pgComplex<T> prod = A.at(ii) * B.at(ii); // no conjugate on A
+        re += prod.real();
+        im += prod.imag();
+    }
+    return pgComplex<T>(re, im);
+}
+
+/// Real overload: sum(A[i] * B[i]) for real vectors.
+template<typename T,
+         typename std::enable_if<!std::is_same<T, pgComplex<float>>::value &&
+                                  !std::is_same<T, pgComplex<double>>::value, int>::type = 0>
+T accu_schur(const pgCol<T>& A, const pgCol<T>& B) {
+    T acc = T(0);
+    for (arma::uword ii = 0; ii < A.n_elem; ii++) {
+        acc += A.at(ii) * B.at(ii);
+    }
+    return acc;
+}
+
+/// Normalized gradient magnitude for PCG convergence testing (pgCol version).
+/// Returns ||g|| / |Re(yi^T * (W .* yi))| where yi^T is the non-conjugate transpose.
+/// Provides a scale-invariant stopping criterion.
+template<typename T>
+T norm_grad_pg(const pgCol<pgComplex<T>>& g,
+               const pgCol<pgComplex<T>>& yi,
+               const pgCol<T>& W) {
+    T gNorm = norm(g);
+    // W % yi: real-weight × complex-vector (uses existing operator%)
+    pgCol<pgComplex<T>> Wyi = W % yi;
+    // accu_schur(yi, Wyi) = sum_i yi[i] * W[i]*yi[i] (no conjugate) = sum_i W[i]*yi[i]^2
+    pgComplex<T> dot_val = accu_schur(yi, Wyi);
+    T denom = std::abs(dot_val.real());
+    if (denom < std::numeric_limits<T>::epsilon()) return T(0);
+    return gNorm / denom;
+}
+
+/// Convert a real pgCol<T> to a complex pgCol<pgComplex<T>> with zero imaginary part.
+template<typename T,
+         typename std::enable_if<!std::is_same<T, pgComplex<float>>::value &&
+                                  !std::is_same<T, pgComplex<double>>::value, int>::type = 0>
+pgCol<pgComplex<T>> to_complex(const pgCol<T>& A) {
+    pgCol<pgComplex<T>> out(A.n_elem);
+    for (arma::uword ii = 0; ii < A.n_elem; ii++) {
+        out.at(ii) = pgComplex<T>(A.at(ii), T(0));
+    }
+    return out;
+}
+
+/// Element-wise log(1 + x) for real pgCol.
+template<typename T,
+         typename std::enable_if<!std::is_same<T, pgComplex<float>>::value &&
+                                  !std::is_same<T, pgComplex<double>>::value, int>::type = 0>
+pgCol<T> log1p(const pgCol<T>& A) {
+    pgCol<T> out(A.n_elem);
+    for (arma::uword ii = 0; ii < A.n_elem; ii++) {
+        out.at(ii) = std::log1p(A.at(ii));
+    }
+    return out;
+}
+
+/// Element-wise sqrt for real pgCol.
+template<typename T,
+         typename std::enable_if<!std::is_same<T, pgComplex<float>>::value &&
+                                  !std::is_same<T, pgComplex<double>>::value, int>::type = 0>
+pgCol<T> sqrt(const pgCol<T>& A) {
+    pgCol<T> out(A.n_elem);
+    for (arma::uword ii = 0; ii < A.n_elem; ii++) {
+        out.at(ii) = std::sqrt(A.at(ii));
+    }
+    return out;
+}
+
+/// Element-wise square of real pgCol: out[i] = A[i]*A[i].
+template<typename T,
+         typename std::enable_if<!std::is_same<T, pgComplex<float>>::value &&
+                                  !std::is_same<T, pgComplex<double>>::value, int>::type = 0>
+pgCol<T> square(const pgCol<T>& A) {
+    pgCol<T> out(A.n_elem);
+    for (arma::uword ii = 0; ii < A.n_elem; ii++) {
+        out.at(ii) = A.at(ii) * A.at(ii);
+    }
+    return out;
+}
+
+/// Scalar-divided-by-pgCol: out[i] = s / A[i].
+template<typename T>
+pgCol<T> operator/(const T& s, const pgCol<T>& A) {
+    pgCol<T> out(A.n_elem);
+    for (arma::uword ii = 0; ii < A.n_elem; ii++) {
+        out.at(ii) = s / A.at(ii);
+    }
+    return out;
+}
+
+/// Sum all elements of a real pgCol.
+template<typename T,
+         typename std::enable_if<!std::is_same<T, pgComplex<float>>::value &&
+                                  !std::is_same<T, pgComplex<double>>::value, int>::type = 0>
+T accu(const pgCol<T>& A) {
+    return sum(A);
+}
+
+/// Absolute value for a real pgCol (identity for non-negative, negate negatives).
+template<typename T,
+         typename std::enable_if<!std::is_same<T, pgComplex<float>>::value &&
+                                  !std::is_same<T, pgComplex<double>>::value, int>::type = 0>
+pgCol<T> abs(const pgCol<T>& A) {
+    pgCol<T> out(A.n_elem);
+    for (arma::uword ii = 0; ii < A.n_elem; ii++) {
+        out.at(ii) = std::abs(A.at(ii));
     }
     return out;
 }

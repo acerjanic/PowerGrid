@@ -31,6 +31,7 @@ Developed by:
 #define PowerGrid_Robject_h
 
 #include "Core/PGIncludes.h"
+#include "Core/pgCol.hpp"
 
 using namespace arma;
 using namespace std;
@@ -144,6 +145,45 @@ public:
   /// @param x     Current image estimate, same length.
   /// @returns     Scalar denominator value.
   CxT1 Denom(const Col<CxT1> &ddir, const Col<CxT1> &x) const;
+
+  // --- pgCol overloads (Phase 3: eliminate arma boundary in PCG solver) ---
+
+  /// @brief Forward finite-difference operator (pgCol overload).
+  pgCol<pgComplex<T1>> Cd(const pgCol<pgComplex<T1>>& d, arma::uword dim) const;
+
+  /// @brief Adjoint finite-difference operator (pgCol overload).
+  pgCol<pgComplex<T1>> Ctd(const pgCol<pgComplex<T1>>& d, arma::uword dim) const;
+
+  /// @brief Evaluate total penalty (pgCol overload).
+  T1 Penalty(const pgCol<pgComplex<T1>>& x) const;
+
+  /// @brief Compute gradient of penalty (pgCol overload).
+  pgCol<pgComplex<T1>> Gradient(const pgCol<pgComplex<T1>>& x) const;
+
+  /// @brief Compute quadratic surrogate denominator (pgCol overload).
+  pgComplex<T1> Denom(const pgCol<pgComplex<T1>>& ddir, const pgCol<pgComplex<T1>>& x) const;
+
+  // --- pgCol virtual potential functions ---
+  /// @brief Penalty weight function (pgCol overload).
+  virtual pgCol<pgComplex<T1>> wpot(const pgCol<pgComplex<T1>>& d) const {
+      pgCol<pgComplex<T1>> out(d.n_elem);
+      out.ones();
+      return out;
+  }
+
+  /// @brief Penalty derivative function (pgCol overload).
+  virtual pgCol<pgComplex<T1>> dpot(const pgCol<pgComplex<T1>>& d) const {
+      return d;
+  }
+
+  /// @brief Penalty potential function (pgCol overload).
+  virtual pgCol<pgComplex<T1>> pot(const pgCol<pgComplex<T1>>& d) const {
+      // ½|d|² for quadratic default
+      pgCol<T1> mag = abs(d);
+      pgCol<T1> sq = mag % mag;
+      sq /= T1(2);
+      return to_complex(sq);
+  }
 };
 
 // Explicit Instantiation

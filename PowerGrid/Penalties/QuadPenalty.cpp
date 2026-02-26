@@ -63,6 +63,26 @@ Col<complex<T1> > QuadPenalty<T1>::pot(const Col<complex<T1> > &d) const {
         return conv_to<Col<complex<T1> > >::from(temp);
 }
 
+template <typename T1>
+pgCol<pgComplex<T1>> QuadPenalty<T1>::wpot(const pgCol<pgComplex<T1>>& d) const {
+    pgCol<pgComplex<T1>> out(d.n_elem);
+    out.ones();
+    return out;
+}
+
+template <typename T1>
+pgCol<pgComplex<T1>> QuadPenalty<T1>::dpot(const pgCol<pgComplex<T1>>& d) const {
+    return d;
+}
+
+template <typename T1>
+pgCol<pgComplex<T1>> QuadPenalty<T1>::pot(const pgCol<pgComplex<T1>>& d) const {
+    pgCol<T1> mag = abs(d);
+    pgCol<T1> sq = mag % mag;
+    sq /= T1(2);
+    return to_complex(sq);
+}
+
 // Explicit Instantiation
 template class QuadPenalty<float>;
 template class QuadPenalty<double>;

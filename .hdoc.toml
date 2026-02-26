@@ -1,8 +1,8 @@
 [project]
 name               = "PowerGrid"
-version            = "1.0.0"
+version            = "2.0.0"
 git_repo_url       = "https://github.com/acerjanic/PowerGrid/"
-git_default_branch = "HPCSDK_25.1"
+git_default_branch = "feature/metal-compute"
 
 [paths]
 compile_commands = "build/compile_commands.json"

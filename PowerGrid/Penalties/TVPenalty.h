@@ -81,6 +81,11 @@ public:
   /// @returns  Per-element potential values, same length as @p d.
   Col<CxT1> pot(const Col<CxT1> &d) const;
 
+  // pgCol overloads
+  pgCol<pgComplex<T1>> wpot(const pgCol<pgComplex<T1>>& d) const override;
+  pgCol<pgComplex<T1>> dpot(const pgCol<pgComplex<T1>>& d) const override;
+  pgCol<pgComplex<T1>> pot(const pgCol<pgComplex<T1>>& d) const override;
+
 private:
   /// @brief Smoothing parameter δ for the Fair potential approximation.
   T1 Delta;

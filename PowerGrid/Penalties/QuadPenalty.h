@@ -79,6 +79,11 @@ Col<CxT1> dpot(const Col<CxT1> &d) const;
 /// @param d  Finite-difference vector.
 /// @returns  Per-element values ½|d[k]|².
 Col<CxT1> pot(const Col<CxT1> &d) const;
+
+// pgCol overloads
+pgCol<pgComplex<T1>> wpot(const pgCol<pgComplex<T1>>& d) const override;
+pgCol<pgComplex<T1>> dpot(const pgCol<pgComplex<T1>>& d) const override;
+pgCol<pgComplex<T1>> pot(const pgCol<pgComplex<T1>>& d) const override;
 };
 
 // Explicit Instantiation

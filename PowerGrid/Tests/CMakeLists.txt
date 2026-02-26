@@ -57,6 +57,7 @@ set(UTILITY_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/../FFT/fftCPU.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../Penalties/Robject.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../Penalties/QuadPenalty.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Penalties/TVPenalty.cpp
 )
 
 # Operator sources needed for encoding operator tests
@@ -78,6 +79,7 @@ set(TEST_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/pgColCplxTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/pgMatTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/pgPhase2Tests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/penaltyTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/utilityTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/operatorTests.cpp
     ${UTILITY_SOURCES}

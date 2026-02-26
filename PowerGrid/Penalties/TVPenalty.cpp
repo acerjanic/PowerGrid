@@ -67,6 +67,49 @@ Col<complex<T1>> TVPenalty<T1>::pot(const Col<complex<T1>> &d) const {
   return out;
 }
 
+// pgCol overloads
+// wpot(d) = 1 / sqrt(1 + (|d|/delta)^2)
+template <typename T1>
+pgCol<pgComplex<T1>> TVPenalty<T1>::wpot(const pgCol<pgComplex<T1>>& d) const {
+    RANGE()
+    pgCol<T1> mag = abs(d);                   // |d|
+    mag /= this->Delta;                        // |d|/delta
+    pgCol<T1> sq = mag % mag;                  // (|d|/delta)^2
+    sq += T1(1);                               // 1 + (|d|/delta)^2
+    pgCol<T1> s = sqrt(sq);                    // sqrt(...)
+    T1 one = T1(1);
+    pgCol<T1> invs = one / s;                  // 1/sqrt(...)
+    return to_complex(invs);
+}
+
+// dpot(d) = d / sqrt(1 + (|d|/delta)^2)
+template <typename T1>
+pgCol<pgComplex<T1>> TVPenalty<T1>::dpot(const pgCol<pgComplex<T1>>& d) const {
+    RANGE()
+    pgCol<T1> mag = abs(d);                   // |d|
+    mag /= this->Delta;                        // |d|/delta
+    pgCol<T1> sq = mag % mag;                  // (|d|/delta)^2
+    sq += T1(1);                               // 1 + (|d|/delta)^2
+    pgCol<T1> s = sqrt(sq);                    // sqrt(...)
+    pgCol<pgComplex<T1>> out = to_complex(s);  // cast denom to complex
+    pgCol<pgComplex<T1>> result = d / out;     // d / sqrt(...)
+    return result;
+}
+
+// pot(d) = delta^2 * (sqrt(1 + (|d|/delta)^2) - 1)
+template <typename T1>
+pgCol<pgComplex<T1>> TVPenalty<T1>::pot(const pgCol<pgComplex<T1>>& d) const {
+    RANGE()
+    pgCol<T1> mag = abs(d);                   // |d|
+    mag /= this->Delta;                        // |d|/delta
+    pgCol<T1> sq = mag % mag;                  // (|d|/delta)^2
+    sq += T1(1);                               // 1 + (|d|/delta)^2
+    pgCol<T1> s = sqrt(sq);                    // sqrt(...)
+    s -= T1(1);                                // sqrt(...) - 1
+    s %= (this->Delta * this->Delta);          // delta^2 * (sqrt(...) - 1)
+    return to_complex(s);
+}
+
 // Explicit Instantiation
 template class TVPenalty<double>;
 template class TVPenalty<float>;

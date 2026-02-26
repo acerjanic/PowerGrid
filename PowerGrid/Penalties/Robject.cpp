@@ -197,6 +197,100 @@ complex<T1> Robject<T1>::Denom(const Col<complex<T1> > &ddir,
         return penal * cxBeta;
 }
 
+template <typename T1>
+pgCol<pgComplex<T1>> Robject<T1>::Cd(const pgCol<pgComplex<T1>>& d, arma::uword dim) const {
+    pgCol<pgComplex<T1>> out(Nx * Ny * Nz);
+    out.zeros();
+    arma::uword ll, jj, kk;
+    switch (dim) {
+    case 0: ll = 1; jj = 0; kk = 0; break;
+    case 1: ll = 0; jj = 1; kk = 0; break;
+    case 2: ll = 0; jj = 0; kk = 1; break;
+    default:
+        std::cout << "Warning: regularization along dimension > 3 undefined!" << std::endl;
+        return out;
+    }
+    arma::uword offset = ll + jj * Ny + kk * Nx * Ny;
+    for (arma::uword ii = offset; ii < Ny * Nx * Nz; ii++) {
+        out.at(ii) = d.at(ii) - d.at(ii - offset);
+    }
+    return out;
+}
+
+template <typename T1>
+pgCol<pgComplex<T1>> Robject<T1>::Ctd(const pgCol<pgComplex<T1>>& d, arma::uword dim) const {
+    pgCol<pgComplex<T1>> out(Nx * Ny * Nz);
+    out.zeros();
+    arma::uword ll, jj, kk;
+    switch (dim) {
+    case 0: ll = 1; jj = 0; kk = 0; break;
+    case 1: ll = 0; jj = 1; kk = 0; break;
+    case 2: ll = 0; jj = 0; kk = 1; break;
+    default:
+        std::cout << "Warning: regularization along dimension > 3 undefined!" << std::endl;
+        return out;
+    }
+    arma::uword n = Ny * Nx * Nz;
+    arma::uword offset = ll + jj * Ny + kk * Nx * Ny;
+    for (arma::uword i = 0; i < offset; i++) {
+        out.at(i) = pgComplex<T1>(T1(0), T1(0)) - d.at(i + offset);
+    }
+    for (arma::uword i = offset; i < n - offset; i++) {
+        out.at(i) = d.at(i) - d.at(i + offset);
+    }
+    for (arma::uword i = n - offset; i < n; i++) {
+        out.at(i) = d.at(i);
+    }
+    return out;
+}
+
+template <typename T1>
+T1 Robject<T1>::Penalty(const pgCol<pgComplex<T1>>& x) const {
+    RANGE()
+    T1 penal = T1(0);
+    arma::uword nd = ((this->Nz == 1) || (this->Dims2Penalize == 2)) ? 2 : 3;
+    for (arma::uword ii = 0; ii < nd; ii++) {
+        pgCol<pgComplex<T1>> d = this->Cd(x, ii);
+        d = this->pot(d);
+        pgComplex<T1> s = sum(d);
+        penal += std::abs(s.real());
+    }
+    return this->Beta * penal;
+}
+
+template <typename T1>
+pgCol<pgComplex<T1>> Robject<T1>::Gradient(const pgCol<pgComplex<T1>>& x) const {
+    RANGE()
+    pgCol<pgComplex<T1>> g(x.n_elem);
+    g.zeros();
+    arma::uword nd = ((this->Nz == 1) || (this->Dims2Penalize == 2)) ? 2 : 3;
+    for (arma::uword ii = 0; ii < nd; ii++) {
+        pgCol<pgComplex<T1>> d = this->Cd(x, ii);
+        d = this->dpot(d);
+        d = this->Ctd(d, ii);
+        g += d;
+    }
+    g %= pgComplex<T1>(this->Beta, T1(0));
+    return g;
+}
+
+template <typename T1>
+pgComplex<T1> Robject<T1>::Denom(const pgCol<pgComplex<T1>>& ddir,
+                                  const pgCol<pgComplex<T1>>& x) const {
+    RANGE()
+    pgComplex<T1> penal(T1(0), T1(0));
+    pgComplex<T1> cxBeta(this->Beta, T1(0));
+    arma::uword nd = ((this->Nz == 1) || (this->Dims2Penalize == 2)) ? 2 : 3;
+    for (arma::uword ii = 0; ii < nd; ii++) {
+        pgCol<pgComplex<T1>> Cdir = this->Cd(ddir, ii);
+        pgCol<pgComplex<T1>> Cx = this->wpot(this->Cd(x, ii));
+        Cx %= Cdir;
+        pgComplex<T1> temp = cdot(Cdir, Cx);
+        penal += temp;
+    }
+    return penal * cxBeta;
+}
+
 // Explicit Instantiation
 template class Robject<float>;
 template class Robject<double>;

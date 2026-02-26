@@ -51,6 +51,16 @@ struct has_pgcol_ops<TObj, T1,
         decltype(std::declval<const TObj&>() * std::declval<const pgCol<pgComplex<T1>>&>()),
         decltype(std::declval<const TObj&>() / std::declval<const pgCol<pgComplex<T1>>&>())
     >> : std::true_type {};
+
+/// Detects whether Robj has a pgCol<pgComplex<T1>> overload for Gradient().
+/// Penalty classes derived from Robject<T1> satisfy this after Phase 3.
+template<typename, typename, typename = void>
+struct has_pgcol_penalty : std::false_type {};
+
+template<typename Robj, typename T1>
+struct has_pgcol_penalty<Robj, T1,
+    std::void_t<decltype(std::declval<const Robj&>().Gradient(
+        std::declval<const pgCol<pgComplex<T1>>&>()))>> : std::true_type {};
 } // namespace detail
 #endif
 
@@ -161,14 +171,14 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       if (ngrad_pg.has_nan())
         PG_WARN("ngrad has NaN at iteration {}", ii);
 
-      if (norm_grad<T1>(ngrad_pg.getArma(), yi, W) < 1e-10) {
+      if (norm_grad_pg<T1>(ngrad_pg, yi_pg, W_pg) < 1e-10) {
         PG_INFO("Terminating early: zero gradient at iteration {}", ii);
         PG_PROGRESS_DONE(pcg_bar_idx);
         return x_pg.getArma();
       }
 
       // Subtract regularizer gradient
-      pgCol<pgComplex<T1>> rgrad_pg(R.Gradient(x_pg.getArma())); // arma boundary
+      pgCol<pgComplex<T1>> rgrad_pg = R.Gradient(x_pg); // pgCol overload
       ngrad_pg -= rgrad_pg;                                  // Metal cvec_sub
 
       // Direction (conjugate gradient update)
@@ -217,9 +227,8 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
         // Compute x + step * ddir for regularizer
         pgCol<pgComplex<T1>> xstep = x_pg + (ddir_pg % step_pg); // Metal ops
 
-        CxT1 pdenom = R.Denom(ddir_pg.getArma(), xstep.getArma()); // arma boundary
-        T1 denom_re = dAWAd_re + std::real(pdenom);
-        T1 denom_im = std::imag(pdenom);
+        pgComplex<T1> pdenom = R.Denom(ddir_pg, xstep); // pgCol overload
+        T1 denom_re = dAWAd_re + pdenom.real();
 
         if (std::abs(denom_re) < 1e-20 || std::isinf(denom_re) || std::isnan(denom_re)) {
           T1 n = norm(ngrad_pg);
@@ -234,9 +243,8 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
           }
         }
 
-        Col<CxT1> pgrad_arma = R.Gradient(xstep.getArma());  // arma boundary
-        pgCol<pgComplex<T1>> pgrad_pg(pgrad_arma);
-        pgComplex<T1> pdot = cdot(ddir_pg, pgrad_pg);         // Metal cvec_cdot
+        pgCol<pgComplex<T1>> pgrad_pg = R.Gradient(xstep); // pgCol overload
+        pgComplex<T1> pdot = cdot(ddir_pg, pgrad_pg);      // Metal cvec_cdot
         T1 pdot_re = pdot.real();
 
         T1 step_update = (-dAWr_re + step_pg.real() * dAWAd_re + pdot_re) / denom_re;
@@ -253,7 +261,7 @@ Col<complex<T1>> solve_pwls_pcg(const Col<complex<T1>> &xInitial, Tobj const &A,
       x_pg += ddir_pg % step_pg;                             // Metal cvec_mul_scalar + add
 
       T1 errNorm = norm(yi_pg - Ax_pg);
-      T1 penaltyVal = R.Penalty(x_pg.getArma());
+      T1 penaltyVal = R.Penalty(x_pg); // pgCol overload
       PG_DEBUG("PCG iteration {}/{}: error norm = {}, penalty = {}", ii + 1, niter, errNorm, penaltyVal);
       PG_PROGRESS_TICK(pcg_bar_idx, static_cast<size_t>(ii + 1), fmt::format("iter {}/{} err={:.4e}", ii + 1, niter, errNorm));
       PG_METRICS(pcg_bar_idx, static_cast<size_t>(ii + 1), static_cast<double>(errNorm), static_cast<double>(penaltyVal));

@@ -1,1 +1,4 @@
 BasedOnStyle: WebKit
+ColumnLimit: 120
+SortIncludes: true
+IncludeBlocks: Regroup
